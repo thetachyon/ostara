@@ -1,0 +1,15 @@
+//! ostara: high-performance Rust reimplementation of the OSIRIS
+//! (osirisai.live) open-source intelligence platform's API core.
+//!
+//! Scope (v0.1): feed aggregation, normalization, caching, and HTTP
+//! delivery. The WebGL globe UI is explicitly out of scope.
+//!
+//! The crate is split into a library (so criterion benchmarks and tests can
+//! exercise the parse/normalize hot paths without networking) and a thin
+//! binary (`src/main.rs`) that wires up the axum server.
+
+pub mod cache;
+pub mod error;
+pub mod feeds;
+pub mod routes;
+pub mod time;
