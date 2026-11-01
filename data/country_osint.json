@@ -1,0 +1,4570 @@
+{
+ "meta": {
+  "version": "1.0",
+  "generated": "2026-11-01",
+  "provenance": [
+   {
+    "source": "PawelMurdzek/Poirot-Osint OSINT/regional/* (47 country pages)",
+    "url": "https://github.com/PawelMurdzek/Poirot-Osint",
+    "license": "No LICENSE file in repo; only factual link data extracted (names + URLs), no prose copied",
+    "used_for": "per-country categorized resources"
+   },
+   {
+    "source": "paulpogoda/OSINT-for-countries",
+    "url": "https://github.com/paulpogoda/OSINT-for-countries",
+    "license": "No LICENSE file in repo; only link data extracted",
+    "used_for": "per-country link collections"
+   },
+   {
+    "source": "jivoi/awesome-osint \u2014 Main National Search Engines",
+    "url": "https://github.com/jivoi/awesome-osint",
+    "license": "CC-BY-SA 4.0",
+    "used_for": "national search engines"
+   },
+   {
+    "source": "CasualSecurityInc/Bellingcat-OSINT-Toolkit (companies-finance skill)",
+    "url": "https://github.com/CasualSecurityInc/Bellingcat-OSINT-Toolkit",
+    "license": "Reference only; URLs verified against public sources",
+    "used_for": "global resource selection"
+   }
+  ],
+  "categories": [
+   "search",
+   "people",
+   "business",
+   "government",
+   "news",
+   "social",
+   "finance",
+   "collections"
+  ],
+  "coverage_note": "full = 10+ resources across 4+ categories; partial = 4+ resources; links = pointer collections only."
+ },
+ "global": [
+  {
+   "name": "OCCRP Aleph",
+   "url": "https://aleph.occrp.org",
+   "note": "Sanctions, corporate registries, leaks search",
+   "access": "free"
+  },
+  {
+   "name": "OpenSanctions",
+   "url": "https://www.opensanctions.org",
+   "note": "Consolidated sanctions and PEP data",
+   "access": "free"
+  },
+  {
+   "name": "OpenCorporates",
+   "url": "https://opencorporates.com",
+   "note": "Global company registry index",
+   "access": "freemium"
+  },
+  {
+   "name": "ICIJ Offshore Leaks",
+   "url": "https://offshoreleaks.icij.org",
+   "note": "Offshore entities database",
+   "access": "free"
+  },
+  {
+   "name": "OpenOwnership Register",
+   "url": "https://register.openownership.org",
+   "note": "Beneficial ownership records",
+   "access": "free"
+  },
+  {
+   "name": "GLEIF",
+   "url": "https://www.gleif.org",
+   "note": "Legal Entity Identifier lookup",
+   "access": "free"
+  },
+  {
+   "name": "CourtListener",
+   "url": "https://www.courtlistener.com",
+   "note": "US court opinions and filings",
+   "access": "free"
+  },
+  {
+   "name": "OSINT Guru",
+   "url": "https://osintguru.azurewebsites.net",
+   "note": "Country OSINT directory, ~195 countries",
+   "access": "free"
+  },
+  {
+   "name": "CybDetective OSINT Map",
+   "url": "https://cybdetective.com",
+   "note": "World map of OSINT tools",
+   "access": "free"
+  }
+ ],
+ "countries": [
+  {
+   "name": "Albania",
+   "iso2": "AL",
+   "iso3": "ALB",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "A GUIDE TO INVESTIGATIVE REPORTING IN ALBANIA",
+      "url": "https://www.osce.org/files/f/documents/3/0/201276.pdf",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Argentina",
+   "iso2": "AR",
+   "iso3": "ARG",
+   "categories": {
+    "search": [
+     {
+      "name": "clarin.com",
+      "url": "https://www.clarin.com",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "lanacion.com.ar",
+      "url": "https://www.lanacion.com.ar",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "pagina12.com.ar",
+      "url": "https://www.pagina12.com.ar",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "infobae.com",
+      "url": "https://www.infobae.com",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "perfil.com",
+      "url": "https://www.perfil.com",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "chequeado.com",
+      "url": "https://chequeado.com",
+      "note": "Online",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "afip.gob.ar",
+      "url": "https://www.afip.gob.ar",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "boletinoficial.gob.ar",
+      "url": "https://www.boletinoficial.gob.ar",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "datos.gob.ar",
+      "url": "https://datos.gob.ar",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "indec.gob.ar",
+      "url": "https://www.indec.gob.ar",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "pjn.gov.ar",
+      "url": "https://www.pjn.gov.ar",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT OF ARGENTINA Part 1",
+      "url": "https://web.archive.org/web/20231224134904/https://t.me/OsintLosena/565",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT OF ARGENTINA Part 2",
+      "url": "https://web.archive.org/web/20231224135235/https://t.me/OsintLosena/566",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 13
+  },
+  {
+   "name": "Armenia",
+   "iso2": "AM",
+   "iso3": "ARM",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Armenia",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Armenia",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Australia",
+   "iso2": "AU",
+   "iso3": "AUS",
+   "categories": {
+    "search": [
+     {
+      "name": "abc.net.au",
+      "url": "https://www.abc.net.au",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "smh.com.au",
+      "url": "https://www.smh.com.au",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "theage.com.au",
+      "url": "https://www.theage.com.au",
+      "note": "National",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "asic.gov.au",
+      "url": "https://asic.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "abr.business.gov.au",
+      "url": "https://abr.business.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "asx.com.au",
+      "url": "https://www.asx.com.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "austlii.edu.au",
+      "url": "https://www.austlii.edu.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "fedcourt.gov.au",
+      "url": "https://www.fedcourt.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "aec.gov.au",
+      "url": "https://www.aec.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.au",
+      "url": "https://data.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "foi.gov.au",
+      "url": "https://www.foi.gov.au",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "DFW1N-OSINT GitHub Repository",
+      "url": "https://github.com/DFW1N/DFW1N-OSINT",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "Australian OSINT Public Data Sources",
+      "url": "https://osint.fans/australia-osint-data-sources",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "Australian OSINT",
+      "url": "https://start.me/p/L10kJ6/australian-osint",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 14
+  },
+  {
+   "name": "Austria",
+   "iso2": "AT",
+   "iso3": "AUT",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Austria OSINT",
+      "url": "https://osintteam.blog/osint-austria-188ac5b7ed5e",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Belarus",
+   "iso2": "BY",
+   "iso3": "BLR",
+   "categories": {
+    "search": [
+     {
+      "name": "belta.by",
+      "url": "https://www.belta.by",
+      "note": "State / regime",
+      "access": "unknown"
+     },
+     {
+      "name": "zerkalo.io",
+      "url": "https://zerkalo.io",
+      "note": "Independent (mostly in exile post",
+      "access": "unknown"
+     },
+     {
+      "name": "belsat.eu",
+      "url": "https://belsat.eu",
+      "note": "Independent (mostly in exile post",
+      "access": "unknown"
+     },
+     {
+      "name": "charter97.org",
+      "url": "https://charter97.org",
+      "note": "Independent (mostly in exile post",
+      "access": "unknown"
+     },
+     {
+      "name": "euroradio.fm",
+      "url": "https://euroradio.fm",
+      "note": "Independent (mostly in exile post",
+      "access": "unknown"
+     },
+     {
+      "name": "svaboda.org",
+      "url": "https://www.svaboda.org",
+      "note": "Independent (mostly in exile post",
+      "access": "unknown"
+     },
+     {
+      "name": "motolko.help / @HajunBY",
+      "url": "https://t.me/Hajun_BY",
+      "note": "Specific Belarus",
+      "access": "unknown"
+     },
+     {
+      "name": "spring96.org",
+      "url": "https://spring96.org",
+      "note": "Specific Belarus",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "egr.gov.by",
+      "url": "https://egr.gov.by",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT-Tools-Belarus | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Belarus",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "Belarus",
+      "url": "https://github.com/soxoj/counter-osint-guide-en/blob/main/pages/belarus.md",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 11
+  },
+  {
+   "name": "Belgium",
+   "iso2": "BE",
+   "iso3": "BEL",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Belgium",
+      "url": "https://github.com/ts4rin4/OSINT-Tools-Belgium",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Brazil",
+   "iso2": "BR",
+   "iso3": "BRA",
+   "categories": {
+    "search": [
+     {
+      "name": "busca.uol.com.br",
+      "url": "https://busca.uol.com.br",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "reclameaqui.com.br",
+      "url": "https://www.reclameaqui.com.br",
+      "note": "Brazilian",
+      "access": "unknown"
+     },
+     {
+      "name": "zapimoveis.com.br",
+      "url": "https://www.zapimoveis.com.br",
+      "note": "Real estate",
+      "access": "unknown"
+     },
+     {
+      "name": "theintercept.com/brasil",
+      "url": "https://theintercept.com/brasil",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "apublica.org",
+      "url": "https://apublica.org",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "brasilapi.com.br",
+      "url": "https://brasilapi.com.br",
+      "note": "Specifically Brazilian OSINT Tools",
+      "access": "unknown"
+     },
+     {
+      "name": "gov.br/pf",
+      "url": "https://www.gov.br/pf/pt-br",
+      "note": "Specifically Brazilian OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "servicos.receita.fazenda.gov.br",
+      "url": "https://servicos.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "cvm.gov.br",
+      "url": "https://www.gov.br/cvm",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "in.gov.br",
+      "url": "https://www.in.gov.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "portaldatransparencia.gov.br",
+      "url": "https://portaldatransparencia.gov.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "portal.tcu.gov.br",
+      "url": "https://portal.tcu.gov.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "cnj.jus.br",
+      "url": "https://www.cnj.jus.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "jusbrasil.com.br",
+      "url": "https://www.jusbrasil.com.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "tse.jus.br",
+      "url": "https://www.tse.jus.br",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "folha.uol.com.br",
+      "url": "https://www.folha.uol.com.br",
+      "note": "Major media groups (and outlets)",
+      "access": "unknown"
+     },
+     {
+      "name": "estadao.com.br",
+      "url": "https://www.estadao.com.br",
+      "note": "Major media groups (and outlets)",
+      "access": "unknown"
+     },
+     {
+      "name": "uol.com.br",
+      "url": "https://www.uol.com.br",
+      "note": "Major media groups (and outlets)",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT-Brazuca",
+      "url": "https://github.com/osintbrazuca/osint-brazuca",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 19
+  },
+  {
+   "name": "Bulgaria",
+   "iso2": "BG",
+   "iso3": "BGR",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Bulgaria",
+      "url": "https://github.com/LinaYorda/OSINT-Tools-Bulgaria",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Canada",
+   "iso2": "CA",
+   "iso3": "CAN",
+   "categories": {
+    "search": [
+     {
+      "name": "theglobeandmail.com",
+      "url": "https://www.theglobeandmail.com",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "cbc.ca",
+      "url": "https://www.cbc.ca",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "citizenlab.ca",
+      "url": "https://citizenlab.ca",
+      "note": "Specifically Canadian OSINT",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "corporationscanada.ic.gc.ca",
+      "url": "https://www.ic.gc.ca/eic/site/cd-dgc.nsf/eng/home",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "registreentreprises.gouv.qc.ca",
+      "url": "https://www.registreentreprises.gouv.qc.ca",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "open.canada.ca",
+      "url": "https://open.canada.ca",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "canlii.org",
+      "url": "https://www.canlii.org",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "sedarplus.ca",
+      "url": "https://www.sedarplus.ca",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "open.canada.ca/atip",
+      "url": "https://open.canada.ca/en/access-information-privacy",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Resources in Canada",
+      "url": "https://start.me/p/aLe0vp/osint-resources-in-canada",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "Canada OSINT (CANOSINT)",
+      "url": "https://start.me/p/9E5BLR/canosint",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "Canada OSINT",
+      "url": "https://start.me/p/6rOJQp/canada-osint",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "Canada",
+      "url": "https://start.me/p/dlbyRn/canada",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "Canadian OSINT",
+      "url": "https://github.com/S3V3N11S/Canadian-OSINT-",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 14
+  },
+  {
+   "name": "Chile",
+   "iso2": "CL",
+   "iso3": "CHL",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [
+     {
+      "name": "cmfchile.cl",
+      "url": "https://www.cmfchile.cl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "diariooficial.interior.gob.cl",
+      "url": "https://www.diariooficial.interior.gob.cl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "pjud.cl",
+      "url": "https://www.pjud.cl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "datos.gob.cl",
+      "url": "https://datos.gob.cl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "elmercurio.com",
+      "url": "https://www.emol.com",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "elmostrador.cl",
+      "url": "https://www.elmostrador.cl",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "ciperchile.cl",
+      "url": "https://www.ciperchile.cl",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "China",
+   "iso2": "CN",
+   "iso3": "CHN",
+   "categories": {
+    "search": [
+     {
+      "name": "Baidu (China)",
+      "url": "https://www.baidu.com",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT China Resources",
+      "url": "https://start.me/p/GE7JQb/osint",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT China",
+      "url": "https://start.me/p/7kLY9R/osint-chine",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-China | GitHub",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-China",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 4
+  },
+  {
+   "name": "Colombia",
+   "iso2": "CO",
+   "iso3": "COL",
+   "categories": {
+    "search": [
+     {
+      "name": "eltiempo.com",
+      "url": "https://www.eltiempo.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "elespectador.com",
+      "url": "https://www.elespectador.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "cuestionpublica.com",
+      "url": "https://cuestionpublica.com",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "lasillavacia.com",
+      "url": "https://www.lasillavacia.com",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "connectas.org",
+      "url": "https://www.connectas.org",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "rues.org.co",
+      "url": "https://www.rues.org.co",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ramajudicial.gov.co",
+      "url": "https://www.ramajudicial.gov.co",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "datos.gov.co",
+      "url": "https://www.datos.gov.co",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT in Colombia",
+      "url": "https://github.com/BeHackerPro/OSINT_in_Colombia",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "GEOINT Colombia",
+      "url": "https://github.com/Bugs-B0unt3r/geoint-colombia",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 10
+  },
+  {
+   "name": "Czech Republic",
+   "iso2": "CZ",
+   "iso3": "CZE",
+   "categories": {
+    "search": [
+     {
+      "name": "seznam.cz",
+      "url": "https://www.seznam.cz",
+      "note": "Languages & Search",
+      "access": "unknown"
+     },
+     {
+      "name": "investigace.cz",
+      "url": "https://www.investigace.cz",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "denikn.cz",
+      "url": "https://denikn.cz",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "hlidacipes.org",
+      "url": "https://hlidacipes.org",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "Seznam (Czech Republic)",
+      "url": "https://seznam.cz",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "justice.cz",
+      "url": "https://or.justice.cz",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ares.gov.cz",
+      "url": "https://ares.gov.cz",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.cz",
+      "url": "https://data.gov.cz",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "idnes.cz",
+      "url": "https://www.idnes.cz",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Car Info from Licence Plate (SPZ)",
+      "url": "https://www.epojisteni.cz",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "Cadastral Information",
+      "url": "https://ikatastr.cz",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "Business Lookup",
+      "url": "https://www.firmy.cz",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "Business License Lookup (I\u010cO)",
+      "url": "https://rejstrik-firem.kurzy.cz/ico/vyhledavani",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 13
+  },
+  {
+   "name": "Denmark",
+   "iso2": "DK",
+   "iso3": "DNK",
+   "categories": {
+    "search": [
+     {
+      "name": "danwatch.dk",
+      "url": "https://danwatch.dk",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "cvr.dk",
+      "url": "https://datacvr.virk.dk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "statstidende.dk",
+      "url": "https://www.statstidende.dk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "opendata.dk",
+      "url": "https://www.opendata.dk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "politiken.dk",
+      "url": "https://politiken.dk",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 5
+  },
+  {
+   "name": "Egypt",
+   "iso2": "EG",
+   "iso3": "EGY",
+   "categories": {
+    "search": [
+     {
+      "name": "ahram.org.eg",
+      "url": "https://www.ahram.org.eg",
+      "note": "State / state",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "gafi.gov.eg",
+      "url": "https://www.gafi.gov.eg",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "madamasr.com",
+      "url": "https://www.madamasr.com",
+      "note": "Independent (heavily pressured)",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "links",
+   "resource_count": 3
+  },
+  {
+   "name": "Ethiopia",
+   "iso2": "ET",
+   "iso3": "ETH",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "links",
+   "resource_count": 0
+  },
+  {
+   "name": "France",
+   "iso2": "FR",
+   "iso3": "FRA",
+   "categories": {
+    "search": [
+     {
+      "name": "qwant.com",
+      "url": "https://www.qwant.com",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "lemonde.fr",
+      "url": "https://www.lemonde.fr",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "lefigaro.fr",
+      "url": "https://www.lefigaro.fr",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "mediapart.fr",
+      "url": "https://www.mediapart.fr",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "disclose.ngo",
+      "url": "https://disclose.ngo",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "osintfr.com",
+      "url": "https://www.osintfr.com",
+      "note": "Specifically French OSINT Tools",
+      "access": "unknown"
+     },
+     {
+      "name": "Orange (France)",
+      "url": "https://www.orange.fr",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "pappers.fr",
+      "url": "https://www.pappers.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "insee.fr/sirene",
+      "url": "https://avis-situation-sirene.insee.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "infogreffe.fr",
+      "url": "https://www.infogreffe.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "bodacc.fr",
+      "url": "https://www.bodacc.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "amf-france.org",
+      "url": "https://www.amf-france.org",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "cadastre.gouv.fr",
+      "url": "https://www.cadastre.gouv.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "legifrance.gouv.fr",
+      "url": "https://www.legifrance.gouv.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "hatvp.fr",
+      "url": "https://www.hatvp.fr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "doctissimo.fr",
+      "url": "https://www.doctissimo.fr",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 16
+  },
+  {
+   "name": "Germany",
+   "iso2": "DE",
+   "iso3": "DEU",
+   "categories": {
+    "search": [
+     {
+      "name": "ecosia.org",
+      "url": "https://www.ecosia.org",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "metager.org",
+      "url": "https://metager.org",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "spiegel.de",
+      "url": "https://www.spiegel.de",
+      "note": "Major dailies / weeklies",
+      "access": "unknown"
+     },
+     {
+      "name": "correctiv.org",
+      "url": "https://correctiv.org",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "northdata.com",
+      "url": "https://www.northdata.com",
+      "note": "Specifically German OSINT Tools",
+      "access": "unknown"
+     },
+     {
+      "name": "fragdenstaat.de",
+      "url": "https://fragdenstaat.de",
+      "note": "Specifically German OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "handelsregister.de",
+      "url": "https://www.handelsregister.de",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "unternehmensregister.de",
+      "url": "https://www.unternehmensregister.de",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "bundesanzeiger.de",
+      "url": "https://www.bundesanzeiger.de",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "transparenzregister.de",
+      "url": "https://www.transparenzregister.de",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "bafin.de",
+      "url": "https://www.bafin.de",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "xing.com",
+      "url": "https://www.xing.com",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "Greece",
+   "iso2": "GR",
+   "iso3": "GRC",
+   "categories": {
+    "search": [
+     {
+      "name": "reportersunited.gr",
+      "url": "https://www.reportersunited.gr",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "insidestory.gr",
+      "url": "https://insidestory.gr",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "wearesolomon.com",
+      "url": "https://wearesolomon.com",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "businessportal.gr",
+      "url": "https://www.businessportal.gr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "et.gr",
+      "url": "https://www.et.gr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.gr",
+      "url": "https://data.gov.gr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "kathimerini.gr",
+      "url": "https://www.kathimerini.gr",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "Hungary",
+   "iso2": "HU",
+   "iso3": "HUN",
+   "categories": {
+    "search": [
+     {
+      "name": "telex.hu",
+      "url": "https://telex.hu",
+      "note": "Independent (mostly online)",
+      "access": "unknown"
+     },
+     {
+      "name": "hvg.hu",
+      "url": "https://hvg.hu",
+      "note": "Independent (mostly online)",
+      "access": "unknown"
+     },
+     {
+      "name": "444.hu",
+      "url": "https://444.hu",
+      "note": "Independent (mostly online)",
+      "access": "unknown"
+     },
+     {
+      "name": "direkt36.hu",
+      "url": "https://www.direkt36.hu",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "atlatszo.hu",
+      "url": "https://atlatszo.hu",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "e-cegjegyzek.hu",
+      "url": "https://www.e-cegjegyzek.hu",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.hu",
+      "url": "http://data.gov.hu",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Resources for Hungary",
+      "url": "https://start.me/p/kxGLzd/hun-osint",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 8
+  },
+  {
+   "name": "Iceland",
+   "iso2": "IS",
+   "iso3": "ISL",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Iceland OSINT",
+      "url": "https://start.me/p/RM4Xae/iceland",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "India",
+   "iso2": "IN",
+   "iso3": "IND",
+   "categories": {
+    "search": [
+     {
+      "name": "bhashini.gov.in",
+      "url": "https://bhashini.gov.in",
+      "note": "Languages",
+      "access": "unknown"
+     },
+     {
+      "name": "thehindu.com",
+      "url": "https://www.thehindu.com",
+      "note": "National (English)",
+      "access": "unknown"
+     },
+     {
+      "name": "timesofindia.indiatimes.com",
+      "url": "https://timesofindia.indiatimes.com",
+      "note": "National (English)",
+      "access": "unknown"
+     },
+     {
+      "name": "ndtv.com",
+      "url": "https://www.ndtv.com",
+      "note": "National (English)",
+      "access": "unknown"
+     },
+     {
+      "name": "thewire.in",
+      "url": "https://thewire.in",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "caravanmagazine.in",
+      "url": "https://caravanmagazine.in",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "altnews.in",
+      "url": "https://www.altnews.in",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "bhuvan.nrsc.gov.in",
+      "url": "https://bhuvan.nrsc.gov.in",
+      "note": "Specifically Indian OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "mca.gov.in",
+      "url": "https://www.mca.gov.in",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "nseindia.com",
+      "url": "https://www.nseindia.com",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "bseindia.com",
+      "url": "https://www.bseindia.com",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ecourts.gov.in",
+      "url": "https://ecourts.gov.in",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "sci.gov.in",
+      "url": "https://www.sci.gov.in",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "sharechat.com",
+      "url": "https://sharechat.com",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT resources in India",
+      "url": "https://start.me/p/vjR5wL/osint-resources-in-india",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT of India",
+      "url": "https://unishka.substack.com/p/osint-of-india",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 16
+  },
+  {
+   "name": "Indonesia",
+   "iso2": "ID",
+   "iso3": "IDN",
+   "categories": {
+    "search": [
+     {
+      "name": "kompas.com",
+      "url": "https://www.kompas.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "detik.com",
+      "url": "https://www.detik.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "tempo.co",
+      "url": "https://www.tempo.co",
+      "note": "Major",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "ahu.go.id",
+      "url": "https://ahu.go.id",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ojk.go.id",
+      "url": "https://www.ojk.go.id",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "idx.co.id",
+      "url": "https://www.idx.co.id",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "kpk.go.id",
+      "url": "https://www.kpk.go.id",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.go.id",
+      "url": "https://data.go.id",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "kaskus.co.id",
+      "url": "https://www.kaskus.co.id",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT of Indonesia",
+      "url": "https://substack.com/home/post/p-173005581",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 10
+  },
+  {
+   "name": "Iran",
+   "iso2": "IR",
+   "iso3": "IRN",
+   "categories": {
+    "search": [
+     {
+      "name": "aparat.com",
+      "url": "https://www.aparat.com",
+      "note": "Domestic state",
+      "access": "unknown"
+     },
+     {
+      "name": "eitaa.com",
+      "url": "https://eitaa.com",
+      "note": "Domestic state",
+      "access": "unknown"
+     },
+     {
+      "name": "irna.ir",
+      "url": "https://www.irna.ir",
+      "note": "State / regime",
+      "access": "unknown"
+     },
+     {
+      "name": "isna.ir",
+      "url": "https://www.isna.ir",
+      "note": "State / regime",
+      "access": "unknown"
+     },
+     {
+      "name": "farsnews.ir",
+      "url": "https://www.farsnews.ir",
+      "note": "State / regime",
+      "access": "unknown"
+     },
+     {
+      "name": "tasnimnews.com",
+      "url": "https://www.tasnimnews.com",
+      "note": "State / regime",
+      "access": "unknown"
+     },
+     {
+      "name": "bbc.com/persian",
+      "url": "https://www.bbc.com/persian",
+      "note": "Exile / diaspora (most influential investigative)",
+      "access": "unknown"
+     },
+     {
+      "name": "Gerdoo (Iran)",
+      "url": "https://gerdoo.me",
+      "note": "National search engine",
+      "access": "free"
+     },
+     {
+      "name": "Parseek (Iran)",
+      "url": "https://www.parseek.com",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT OF IRAN Part 1",
+      "url": "https://web.archive.org/web/20231224135808/https://t.me/OsintLosena/568",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT OF IRAN Part 2",
+      "url": "https://web.archive.org/web/20231224135949/https://t.me/OsintLosena/569",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-Iran | GitHub",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Iran",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "Ireland",
+   "iso2": "IE",
+   "iso3": "IRL",
+   "categories": {
+    "search": [
+     {
+      "name": "irishtimes.com",
+      "url": "https://www.irishtimes.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "independent.ie",
+      "url": "https://www.independent.ie",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "thejournal.ie",
+      "url": "https://www.thejournal.ie",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "the-ditch.com",
+      "url": "https://the-ditch.com",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "cro.ie",
+      "url": "https://www.cro.ie",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "irisoifigiuil.ie",
+      "url": "https://www.irisoifigiuil.ie",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "courts.ie",
+      "url": "https://www.courts.ie",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ipoi.gov.ie",
+      "url": "https://www.ipoi.gov.ie",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.ie",
+      "url": "https://data.gov.ie",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [
+     {
+      "name": "dataprotection.ie",
+      "url": "https://www.dataprotection.ie",
+      "note": "Why Ireland Matters for Tech / Privacy OSINT",
+      "access": "unknown"
+     }
+    ],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 10
+  },
+  {
+   "name": "Israel",
+   "iso2": "IL",
+   "iso3": "ISR",
+   "categories": {
+    "search": [
+     {
+      "name": "ynet.co.il",
+      "url": "https://www.ynet.co.il",
+      "note": "Hebrew major",
+      "access": "unknown"
+     },
+     {
+      "name": "haaretz.co.il",
+      "url": "https://www.haaretz.co.il",
+      "note": "Hebrew major",
+      "access": "unknown"
+     },
+     {
+      "name": "kan.org.il",
+      "url": "https://www.kan.org.il",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "972mag.com",
+      "url": "https://www.972mag.com",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "shomrim.news",
+      "url": "https://www.shomrim.news",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "gov.il/en/Departments/justice/company",
+      "url": "https://www.gov.il/en/Departments/justice/company",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "oknesset.org",
+      "url": "https://oknesset.org",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "tase.co.il",
+      "url": "https://www.tase.co.il",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "elyon.court.gov.il",
+      "url": "https://www.elyon.court.gov.il",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Israel",
+      "url": "https://github.com/ranlo/OSINT-Tools-Israel",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 10
+  },
+  {
+   "name": "Italy",
+   "iso2": "IT",
+   "iso3": "ITA",
+   "categories": {
+    "search": [
+     {
+      "name": "corriere.it",
+      "url": "https://www.corriere.it",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "repubblica.it",
+      "url": "https://www.repubblica.it",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "irpimedia.irpi.eu",
+      "url": "https://irpimedia.irpi.eu",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "registroimprese.it",
+      "url": "https://www.registroimprese.it",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "consob.it",
+      "url": "https://www.consob.it",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "dati.gov.it",
+      "url": "https://dati.gov.it",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 6
+  },
+  {
+   "name": "Japan",
+   "iso2": "JP",
+   "iso3": "JPN",
+   "categories": {
+    "search": [
+     {
+      "name": "jisho.org",
+      "url": "https://jisho.org",
+      "note": "Translation",
+      "access": "unknown"
+     },
+     {
+      "name": "yahoo.co.jp",
+      "url": "https://www.yahoo.co.jp",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "line.me",
+      "url": "https://line.me",
+      "note": "Messaging",
+      "access": "unknown"
+     },
+     {
+      "name": "5ch.net",
+      "url": "https://5ch.net",
+      "note": "Imageboards (anonymous, hugely influential)",
+      "access": "unknown"
+     },
+     {
+      "name": "nicovideo.jp",
+      "url": "https://www.nicovideo.jp",
+      "note": "Video / creative",
+      "access": "unknown"
+     },
+     {
+      "name": "pixiv.net",
+      "url": "https://www.pixiv.net",
+      "note": "Video / creative",
+      "access": "unknown"
+     },
+     {
+      "name": "booth.pm",
+      "url": "https://booth.pm",
+      "note": "Video / creative",
+      "access": "unknown"
+     },
+     {
+      "name": "note.com",
+      "url": "https://note.com",
+      "note": "Blogging / content",
+      "access": "unknown"
+     },
+     {
+      "name": "hatenablog.com",
+      "url": "https://hatenablog.com",
+      "note": "Blogging / content",
+      "access": "unknown"
+     },
+     {
+      "name": "wantedly.com",
+      "url": "https://www.wantedly.com",
+      "note": "Career / professional",
+      "access": "unknown"
+     },
+     {
+      "name": "nhk.or.jp",
+      "url": "https://www.nhk.or.jp",
+      "note": "Public broadcaster",
+      "access": "unknown"
+     },
+     {
+      "name": "tansajp.org",
+      "url": "https://tansajp.org",
+      "note": "Niche / investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "postcode.jp",
+      "url": "https://postcode.jp",
+      "note": "Specifically Japanese OSINT Tools",
+      "access": "unknown"
+     },
+     {
+      "name": "itp.ne.jp",
+      "url": "https://itp.ne.jp",
+      "note": "Specifically Japanese OSINT Tools",
+      "access": "unknown"
+     },
+     {
+      "name": "mapion.co.jp",
+      "url": "https://www.mapion.co.jp",
+      "note": "Specifically Japanese OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "nta.go.jp",
+      "url": "https://www.nta.go.jp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "houjin-bangou.nta.go.jp",
+      "url": "https://www.houjin-bangou.nta.go.jp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "disclosure.edinet-fsa.go.jp",
+      "url": "https://disclosure2.edinet-fsa.go.jp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "courts.go.jp",
+      "url": "https://www.courts.go.jp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "whois.nic.ad.jp",
+      "url": "https://whois.nic.ad.jp",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "mixi.jp",
+      "url": "https://mixi.jp",
+      "note": "Microblogs / social",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Japan GitHub Repository",
+      "url": "https://github.com/Coordinate-Cat/OSINT-JAPAN",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "Phone Number Lookup Tips",
+      "url": "https://osintteam.blog/osint-in-japan-\u65e5\u672c-phone-numbers-b95eeb3cd1c7",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 23
+  },
+  {
+   "name": "Kazakhstan",
+   "iso2": "KZ",
+   "iso3": "KAZ",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Kazakhstan GitHub",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Kazakhstan",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Kenya",
+   "iso2": "KE",
+   "iso3": "KEN",
+   "categories": {
+    "search": [
+     {
+      "name": "africauncensored.online",
+      "url": "https://africauncensored.online",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "theelephant.info",
+      "url": "https://www.theelephant.info",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "brs.go.ke",
+      "url": "https://brs.go.ke",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ecitizen.go.ke",
+      "url": "https://www.ecitizen.go.ke",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "kenyagazette.co.ke",
+      "url": "https://kenyagazette.co.ke",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "kenyalaw.org",
+      "url": "http://kenyalaw.org",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "opendata.go.ke",
+      "url": "https://www.opendata.go.ke",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "Kyrgyzstan",
+   "iso2": "KG",
+   "iso3": "KGZ",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Kyrgyzstan GitHub",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Kyrgyzstan",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Malaysia",
+   "iso2": "MY",
+   "iso3": "MYS",
+   "categories": {
+    "search": [
+     {
+      "name": "thestar.com.my",
+      "url": "https://www.thestar.com.my",
+      "note": "Major (English)",
+      "access": "unknown"
+     },
+     {
+      "name": "malaysiakini.com",
+      "url": "https://www.malaysiakini.com",
+      "note": "Major (English)",
+      "access": "unknown"
+     },
+     {
+      "name": "sarawakreport.org",
+      "url": "https://www.sarawakreport.org",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "ssm.com.my",
+      "url": "https://www.ssm.com.my",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "federalgazette.agc.gov.my",
+      "url": "https://www.federalgazette.agc.gov.my",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.my",
+      "url": "https://data.gov.my",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT in Malaysia resources",
+      "url": "https://start.me/p/KMqwBB/osint-in-malaysia-resources",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "Mexico",
+   "iso2": "MX",
+   "iso3": "MEX",
+   "categories": {
+    "search": [
+     {
+      "name": "reforma.com",
+      "url": "https://www.reforma.com",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "eluniversal.com.mx",
+      "url": "https://www.eluniversal.com.mx",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "proceso.com.mx",
+      "url": "https://www.proceso.com.mx",
+      "note": "National",
+      "access": "unknown"
+     },
+     {
+      "name": "animalpolitico.com",
+      "url": "https://www.animalpolitico.com",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "quintoelab.org",
+      "url": "https://www.quintoelab.org",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "insightcrime.org",
+      "url": "https://insightcrime.org",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "borderlandbeat.com",
+      "url": "https://www.borderlandbeat.com",
+      "note": "Narco / Crime OSINT",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "cnbv.gob.mx",
+      "url": "https://www.cnbv.gob.mx",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "dof.gob.mx",
+      "url": "https://www.dof.gob.mx",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ine.mx",
+      "url": "https://www.ine.mx",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "home.inai.org.mx",
+      "url": "https://home.inai.org.mx",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Mexico-Focused OSINT Tools and Techniques",
+      "url": "https://osint2h22v.substack.com/p/mexico-focused-osint-tools-and-techniques",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "Morocco",
+   "iso2": "MA",
+   "iso3": "MAR",
+   "categories": {
+    "search": [
+     {
+      "name": "ledesk.ma",
+      "url": "https://ledesk.ma",
+      "note": "Independent / online",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "ompic.ma",
+      "url": "https://www.ompic.ma",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.ma",
+      "url": "https://data.gov.ma",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "hespress.com",
+      "url": "https://www.hespress.com",
+      "note": "Search & Social",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 4
+  },
+  {
+   "name": "Netherlands",
+   "iso2": "NL",
+   "iso3": "NLD",
+   "categories": {
+    "search": [
+     {
+      "name": "nos.nl",
+      "url": "https://nos.nl",
+      "note": "Public broadcasters",
+      "access": "unknown"
+     },
+     {
+      "name": "ftm.nl",
+      "url": "https://www.ftm.nl",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "decorrespondent.nl",
+      "url": "https://decorrespondent.nl",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "marktplaats.nl",
+      "url": "https://www.marktplaats.nl",
+      "note": "Specifically Dutch OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "kvk.nl",
+      "url": "https://www.kvk.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "afm.nl",
+      "url": "https://www.afm.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "rechtspraak.nl",
+      "url": "https://www.rechtspraak.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "staatscourant.officielebekendmakingen.nl",
+      "url": "https://staatscourant.officielebekendmakingen.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "pdok.nl",
+      "url": "https://www.pdok.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.overheid.nl",
+      "url": "https://data.overheid.nl",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Awesome Dutch OSINT GitHub Repository",
+      "url": "https://github.com/wvanderp/awesome-dutch-osint",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-Netherlands | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Netherlands/tree/master",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "New Zealand",
+   "iso2": "NZ",
+   "iso3": "NZL",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT New Zealand",
+      "url": "https://www.osint.nz",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Nigeria",
+   "iso2": "NG",
+   "iso3": "NGA",
+   "categories": {
+    "search": [
+     {
+      "name": "premiumtimesng.com",
+      "url": "https://premiumtimesng.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "saharareporters.com",
+      "url": "https://saharareporters.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "thecable.ng",
+      "url": "https://www.thecable.ng",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "cac.gov.ng",
+      "url": "https://www.cac.gov.ng",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "inec.gov.ng",
+      "url": "https://www.inec.gov.ng",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.ng",
+      "url": "https://data.gov.ng",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "nairaland.com",
+      "url": "https://www.nairaland.com",
+      "note": "Search & Social",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "North Korea",
+   "iso2": "KP",
+   "iso3": "PRK",
+   "categories": {
+    "search": [
+     {
+      "name": "kcnawatch.org",
+      "url": "https://kcnawatch.org",
+      "note": "Aggregators (essential",
+      "access": "unknown"
+     },
+     {
+      "name": "nknews.org",
+      "url": "https://www.nknews.org",
+      "note": "Aggregators (essential",
+      "access": "unknown"
+     },
+     {
+      "name": "dailynk.com",
+      "url": "https://www.dailynk.com",
+      "note": "Aggregators (essential",
+      "access": "unknown"
+     },
+     {
+      "name": "38north.org",
+      "url": "https://www.38north.org",
+      "note": "Aggregators (essential",
+      "access": "unknown"
+     },
+     {
+      "name": "accessdprk.com",
+      "url": "https://accessdprk.com",
+      "note": "Satellite Imagery",
+      "access": "unknown"
+     },
+     {
+      "name": "rimjingang.com",
+      "url": "https://www.rimjin-gang.com",
+      "note": "Defector & Source",
+      "access": "unknown"
+     },
+     {
+      "name": "hrnk.org",
+      "url": "https://www.hrnk.org",
+      "note": "Defector & Source",
+      "access": "unknown"
+     },
+     {
+      "name": "nkleadershipwatch.wordpress.com",
+      "url": "https://nkleadershipwatch.wordpress.com",
+      "note": "Specifically NK OSINT Tools / Resources",
+      "access": "unknown"
+     },
+     {
+      "name": "beyondparallel.csis.org",
+      "url": "https://beyondparallel.csis.org",
+      "note": "Specifically NK OSINT Tools / Resources",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [
+     {
+      "name": "kcna.kp",
+      "url": "http://www.kcna.kp",
+      "note": "State news / propaganda outlets",
+      "access": "unknown"
+     },
+     {
+      "name": "rodong.rep.kp",
+      "url": "http://www.rodong.rep.kp",
+      "note": "State news / propaganda outlets",
+      "access": "unknown"
+     },
+     {
+      "name": "naenara.com.kp",
+      "url": "http://www.naenara.com.kp",
+      "note": "State news / propaganda outlets",
+      "access": "unknown"
+     },
+     {
+      "name": "uriminzokkiri.com",
+      "url": "http://www.uriminzokkiri.com",
+      "note": "State news / propaganda outlets",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT-Tools-North-Korea | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-North-Korea",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 14
+  },
+  {
+   "name": "Pakistan",
+   "iso2": "PK",
+   "iso3": "PAK",
+   "categories": {
+    "search": [
+     {
+      "name": "dawn.com",
+      "url": "https://www.dawn.com",
+      "note": "Major",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "secp.gov.pk",
+      "url": "https://www.secp.gov.pk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "ecp.gov.pk",
+      "url": "https://www.ecp.gov.pk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.pk",
+      "url": "https://data.gov.pk",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Phone Numbers Search",
+      "url": "https://paksim.info",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "CNIC Search",
+      "url": "https://e.fbr.gov.pk/esbn/Verification",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "Companies Search",
+      "url": "https://eservices.secp.gov.pk/eServices/NameSearch.jsp",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "Peru",
+   "iso2": "PE",
+   "iso3": "PER",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [
+     {
+      "name": "sunarp.gob.pe",
+      "url": "https://www.sunarp.gob.pe",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "sunat.gob.pe",
+      "url": "https://www.sunat.gob.pe",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "elperuano.pe",
+      "url": "https://www.elperuano.pe",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "pj.gob.pe",
+      "url": "https://www.pj.gob.pe",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "datosabiertos.gob.pe",
+      "url": "https://www.datosabiertos.gob.pe",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "elcomercio.pe",
+      "url": "https://elcomercio.pe",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "idl-reporteros.pe",
+      "url": "https://www.idl-reporteros.pe",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "convoca.pe",
+      "url": "https://convoca.pe",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "ojo-publico.com",
+      "url": "https://ojo-publico.com",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 9
+  },
+  {
+   "name": "Philippines",
+   "iso2": "PH",
+   "iso3": "PHL",
+   "categories": {
+    "search": [
+     {
+      "name": "inquirer.net",
+      "url": "https://www.inquirer.net",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "rappler.com",
+      "url": "https://www.rappler.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "pcij.org",
+      "url": "https://pcij.org",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "verafiles.org",
+      "url": "https://verafiles.org",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "Alleba (Philippines)",
+      "url": "https://www.alleba.com",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "sec.gov.ph",
+      "url": "https://www.sec.gov.ph",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "lawphil.net",
+      "url": "https://lawphil.net",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "officialgazette.gov.ph",
+      "url": "https://www.officialgazette.gov.ph",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.ph",
+      "url": "https://data.gov.ph",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 9
+  },
+  {
+   "name": "Poland",
+   "iso2": "PL",
+   "iso3": "POL",
+   "categories": {
+    "search": [
+     {
+      "name": "tvp.pl",
+      "url": "https://www.tvp.pl",
+      "note": "Public broadcaster",
+      "access": "unknown"
+     },
+     {
+      "name": "pap.pl",
+      "url": "https://www.pap.pl",
+      "note": "Public broadcaster",
+      "access": "unknown"
+     },
+     {
+      "name": "oko.press",
+      "url": "https://oko.press",
+      "note": "Independent investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "ekrs.ms.gov.pl",
+      "url": "https://ekrs.ms.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "aplikacja.ceidg.gov.pl",
+      "url": "https://aplikacja.ceidg.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "imsig.pl",
+      "url": "https://www.imsig.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "wyszukiwarkaregon.stat.gov.pl",
+      "url": "https://wyszukiwarkaregon.stat.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "geoportal.gov.pl",
+      "url": "https://www.geoportal.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "ekw.ms.gov.pl",
+      "url": "https://ekw.ms.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     },
+     {
+      "name": "orzeczenia.ms.gov.pl",
+      "url": "https://orzeczenia.ms.gov.pl",
+      "note": "Government & Corporate Registries",
+      "access": "unknown"
+     }
+    ],
+    "government": [
+     {
+      "name": "otodom.pl",
+      "url": "https://www.otodom.pl",
+      "note": "Real Estate / Vehicles",
+      "access": "unknown"
+     },
+     {
+      "name": "olx.pl",
+      "url": "https://www.olx.pl",
+      "note": "Real Estate / Vehicles",
+      "access": "unknown"
+     },
+     {
+      "name": "allegro.pl",
+      "url": "https://allegro.pl",
+      "note": "Real Estate / Vehicles",
+      "access": "unknown"
+     },
+     {
+      "name": "otomoto.pl",
+      "url": "https://www.otomoto.pl",
+      "note": "Real Estate / Vehicles",
+      "access": "unknown"
+     }
+    ],
+    "news": [
+     {
+      "name": "wyborcza.pl",
+      "url": "https://wyborcza.pl",
+      "note": "Major commercial dailies / news",
+      "access": "unknown"
+     },
+     {
+      "name": "rp.pl",
+      "url": "https://www.rp.pl",
+      "note": "Major commercial dailies / news",
+      "access": "unknown"
+     },
+     {
+      "name": "onet.pl",
+      "url": "https://www.onet.pl",
+      "note": "Major commercial dailies / news",
+      "access": "unknown"
+     },
+     {
+      "name": "wp.pl",
+      "url": "https://www.wp.pl",
+      "note": "Major commercial dailies / news",
+      "access": "unknown"
+     }
+    ],
+    "social": [
+     {
+      "name": "wykop.pl",
+      "url": "https://www.wykop.pl",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Poland OSINTFRAMEWORK",
+      "url": "https://osintframework.pl",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT Poland",
+      "url": "https://github.com/9wind/OSINT-Poland",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "Otwarte Zrodla",
+      "url": "https://otwartezrodla.pl",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-Poland | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Poland",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 23
+  },
+  {
+   "name": "Portugal",
+   "iso2": "PT",
+   "iso3": "PRT",
+   "categories": {
+    "search": [
+     {
+      "name": "SAPO (Portugal)",
+      "url": "https://www.sapo.pt",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Romania",
+   "iso2": "RO",
+   "iso3": "ROU",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [
+     {
+      "name": "onrc.ro",
+      "url": "https://www.onrc.ro",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "termene.ro",
+      "url": "https://termene.ro",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "portal.just.ro",
+      "url": "https://portal.just.ro",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.ro",
+      "url": "https://data.gov.ro",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "hotnews.ro",
+      "url": "https://www.hotnews.ro",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "recorder.ro",
+      "url": "https://recorder.ro",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "rise.org.ro",
+      "url": "https://www.rise.org.ro",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 7
+  },
+  {
+   "name": "Russia",
+   "iso2": "RU",
+   "iso3": "RUS",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT: Darkweb & Russia",
+      "url": "https://start.me/p/kx5qL5/osint-darkweb-russia",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT Russie IEC-IES",
+      "url": "https://start.me/p/0PeKwy/osint-russie-iec-ies",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-Russia | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Russia",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 3
+  },
+  {
+   "name": "Saudi Arabia",
+   "iso2": "SA",
+   "iso3": "SAU",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Saudi Arabia | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Saudi-Arabia",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Singapore",
+   "iso2": "SG",
+   "iso3": "SGP",
+   "categories": {
+    "search": [
+     {
+      "name": "straitstimes.com",
+      "url": "https://www.straitstimes.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "channelnewsasia.com",
+      "url": "https://www.channelnewsasia.com",
+      "note": "Major",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "bizfile.gov.sg",
+      "url": "https://www.bizfile.gov.sg",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "mas.gov.sg",
+      "url": "https://www.mas.gov.sg",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.sg",
+      "url": "https://data.gov.sg",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "hardwarezone.com.sg",
+      "url": "https://forums.hardwarezone.com.sg",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 6
+  },
+  {
+   "name": "Slovenia",
+   "iso2": "SI",
+   "iso3": "SVN",
+   "categories": {
+    "search": [
+     {
+      "name": "Najdi (Slovenia)",
+      "url": "https://www.najdi.si",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "South Africa",
+   "iso2": "ZA",
+   "iso3": "ZAF",
+   "categories": {
+    "search": [
+     {
+      "name": "news24.com",
+      "url": "https://www.news24.com",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "iol.co.za",
+      "url": "https://www.iol.co.za",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "dailymaverick.co.za",
+      "url": "https://www.dailymaverick.co.za",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "mg.co.za",
+      "url": "https://mg.co.za",
+      "note": "Major",
+      "access": "unknown"
+     },
+     {
+      "name": "amabhungane.org",
+      "url": "https://amabhungane.org",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "openup.org.za",
+      "url": "https://openup.org.za",
+      "note": "Specifically South African OSINT",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "cipc.co.za",
+      "url": "http://www.cipc.co.za",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "jse.co.za",
+      "url": "https://www.jse.co.za",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "elections.org.za",
+      "url": "https://www.elections.org.za",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "pmg.org.za",
+      "url": "https://pmg.org.za",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "saflii.org",
+      "url": "http://www.saflii.org",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT South Africa",
+      "url": "https://start.me/p/KMAbkB/osint-south-africa",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "South Korea",
+   "iso2": "KR",
+   "iso3": "KOR",
+   "categories": {
+    "search": [
+     {
+      "name": "naver.com",
+      "url": "https://www.naver.com",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "daum.net",
+      "url": "https://www.daum.net",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "zum.com",
+      "url": "https://www.zum.com",
+      "note": "Search",
+      "access": "unknown"
+     },
+     {
+      "name": "kakao.com",
+      "url": "https://www.kakao.com",
+      "note": "Messaging",
+      "access": "unknown"
+     },
+     {
+      "name": "cafe.naver.com",
+      "url": "https://cafe.naver.com",
+      "note": "Communities",
+      "access": "unknown"
+     },
+     {
+      "name": "dcinside.com",
+      "url": "https://www.dcinside.com",
+      "note": "Communities",
+      "access": "unknown"
+     },
+     {
+      "name": "theqoo.net",
+      "url": "https://theqoo.net",
+      "note": "Communities",
+      "access": "unknown"
+     },
+     {
+      "name": "todayhumor.co.kr",
+      "url": "https://www.todayhumor.co.kr",
+      "note": "Communities",
+      "access": "unknown"
+     },
+     {
+      "name": "blog.naver.com",
+      "url": "https://blog.naver.com",
+      "note": "Blog / content",
+      "access": "unknown"
+     },
+     {
+      "name": "tistory.com",
+      "url": "https://www.tistory.com",
+      "note": "Blog / content",
+      "access": "unknown"
+     },
+     {
+      "name": "brunch.co.kr",
+      "url": "https://brunch.co.kr",
+      "note": "Blog / content",
+      "access": "unknown"
+     },
+     {
+      "name": "afreecatv.com",
+      "url": "https://www.afreecatv.com",
+      "note": "Video",
+      "access": "free"
+     },
+     {
+      "name": "weverse.io",
+      "url": "https://weverse.io",
+      "note": "Video",
+      "access": "unknown"
+     },
+     {
+      "name": "map.naver.com",
+      "url": "https://map.naver.com",
+      "note": "Maps & Geolocation",
+      "access": "unknown"
+     },
+     {
+      "name": "map.kakao.com",
+      "url": "https://map.kakao.com",
+      "note": "Maps & Geolocation",
+      "access": "unknown"
+     },
+     {
+      "name": "map.vworld.kr",
+      "url": "https://map.vworld.kr",
+      "note": "Maps & Geolocation",
+      "access": "unknown"
+     },
+     {
+      "name": "ohmynews.com",
+      "url": "https://www.ohmynews.com",
+      "note": "Major dailies (with political alignment)",
+      "access": "unknown"
+     },
+     {
+      "name": "kbs.co.kr",
+      "url": "https://www.kbs.co.kr",
+      "note": "Public broadcaster",
+      "access": "unknown"
+     },
+     {
+      "name": "newstapa.org",
+      "url": "https://newstapa.org",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "sisain.co.kr",
+      "url": "https://www.sisain.co.kr",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "dart.fss.or.kr",
+      "url": "https://dart.fss.or.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "scourt.go.kr",
+      "url": "https://www.scourt.go.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "korea.go.kr",
+      "url": "https://www.korea.go.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "kipris.or.kr",
+      "url": "https://www.kipris.or.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "kosis.kr",
+      "url": "https://kosis.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.go.kr",
+      "url": "https://www.data.go.kr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Korea GitHub Repository",
+      "url": "https://github.com/SwanLeeSec/rokinttool",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     },
+     {
+      "name": "Korean OSINT Tips",
+      "url": "https://osintstan.medium.com/top-five-korean-osint-tips-b578e2dec010",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 28
+  },
+  {
+   "name": "Spain",
+   "iso2": "ES",
+   "iso3": "ESP",
+   "categories": {
+    "search": [
+     {
+      "name": "elpais.com",
+      "url": "https://elpais.com",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "elmundo.es",
+      "url": "https://www.elmundo.es",
+      "note": "Major dailies",
+      "access": "unknown"
+     },
+     {
+      "name": "elconfidencial.com",
+      "url": "https://www.elconfidencial.com",
+      "note": "Online",
+      "access": "unknown"
+     },
+     {
+      "name": "civio.es",
+      "url": "https://civio.es",
+      "note": "Online",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "rmc.es",
+      "url": "https://www.rmc.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "boe.es/diarioborme",
+      "url": "https://boe.es/diario_borme",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "cnmv.es",
+      "url": "https://www.cnmv.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "sedecatastro.gob.es",
+      "url": "https://www.sedecatastro.gob.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "poderjudicial.es",
+      "url": "https://www.poderjudicial.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "boe.es",
+      "url": "https://www.boe.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "datos.gob.es",
+      "url": "https://datos.gob.es",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "forocoches.com",
+      "url": "https://www.forocoches.com",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 12
+  },
+  {
+   "name": "Sweden",
+   "iso2": "SE",
+   "iso3": "SWE",
+   "categories": {
+    "search": [
+     {
+      "name": "Eniro (Sweden)",
+      "url": "https://www.eniro.se",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "bolagsverket.se",
+      "url": "https://www.bolagsverket.se",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "allabolag.se",
+      "url": "https://www.allabolag.se",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "oppnadata.se",
+      "url": "https://www.oppnadata.se",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "dn.se",
+      "url": "https://www.dn.se",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [
+     {
+      "name": "flashback.org",
+      "url": "https://www.flashback.org",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 6
+  },
+  {
+   "name": "Switzerland",
+   "iso2": "CH",
+   "iso3": "CHE",
+   "categories": {
+    "search": [
+     {
+      "name": "nzz.ch",
+      "url": "https://www.nzz.ch",
+      "note": "Major (German)",
+      "access": "unknown"
+     },
+     {
+      "name": "republik.ch",
+      "url": "https://www.republik.ch",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "Search.ch (Switzerland)",
+      "url": "https://www.search.ch",
+      "note": "National search engine",
+      "access": "free"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "zefix.ch",
+      "url": "https://www.zefix.ch",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "finma.ch",
+      "url": "https://www.finma.ch",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "opendata.swiss",
+      "url": "https://opendata.swiss",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "moneyhouse.ch",
+      "url": "https://www.moneyhouse.ch",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Swiss Online Investigation Toolkit",
+      "url": "https://docs.google.com/spreadsheets/u/0/d/1LHP3gfppDBBPENffw9R7FrhpRxhmP0UhaLiklbQN7tA/htmlview#",
+      "note": "Community link collection",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 8
+  },
+  {
+   "name": "Syria",
+   "iso2": "SY",
+   "iso3": "SYR",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT-Tools-Syria | GitHub",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Syria",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Taiwan",
+   "iso2": "TW",
+   "iso3": "TWN",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT-Tools-Taiwan | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Taiwan",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Tajikistan",
+   "iso2": "TJ",
+   "iso3": "TJK",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Tajikistan",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Tajikistan",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Thailand",
+   "iso2": "TH",
+   "iso3": "THA",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [
+     {
+      "name": "dbd.go.th",
+      "url": "https://www.dbd.go.th",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.go.th",
+      "url": "https://data.go.th",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [
+     {
+      "name": "bangkokpost.com",
+      "url": "https://www.bangkokpost.com",
+      "note": "News & Media",
+      "access": "unknown"
+     },
+     {
+      "name": "prachatai.com",
+      "url": "https://prachatai.com",
+      "note": "News & Media",
+      "access": "unknown"
+     }
+    ],
+    "social": [
+     {
+      "name": "pantip.com",
+      "url": "https://pantip.com",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": [
+     {
+      "name": "Awesome OSINT Thai",
+      "url": "https://github.com/wasdee/awesome-osint-thai",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "partial",
+   "resource_count": 6
+  },
+  {
+   "name": "Turkey",
+   "iso2": "TR",
+   "iso3": "TUR",
+   "categories": {
+    "search": [
+     {
+      "name": "bianet.org",
+      "url": "https://bianet.org",
+      "note": "Independent / exile / online",
+      "access": "unknown"
+     },
+     {
+      "name": "medyascope.tv",
+      "url": "https://medyascope.tv",
+      "note": "Independent / exile / online",
+      "access": "unknown"
+     },
+     {
+      "name": "theblacksea.eu",
+      "url": "https://theblacksea.eu",
+      "note": "Investigative",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "mersis.gtb.gov.tr",
+      "url": "https://mersis.gtb.gov.tr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "tbmm.gov.tr",
+      "url": "https://www.tbmm.gov.tr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "spk.gov.tr",
+      "url": "https://www.spk.gov.tr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "tuik.gov.tr",
+      "url": "https://tuik.gov.tr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "resmigazete.gov.tr",
+      "url": "https://www.resmigazete.gov.tr",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [
+     {
+      "name": "cumhuriyet.com.tr",
+      "url": "https://www.cumhuriyet.com.tr",
+      "note": "Major dailies (mostly pro",
+      "access": "unknown"
+     },
+     {
+      "name": "sozcu.com.tr",
+      "url": "https://www.sozcu.com.tr",
+      "note": "Major dailies (mostly pro",
+      "access": "unknown"
+     }
+    ],
+    "news": [],
+    "social": [
+     {
+      "name": "eksisozluk.com",
+      "url": "https://eksisozluk.com",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "full",
+   "resource_count": 11
+  },
+  {
+   "name": "Ukraine",
+   "iso2": "UA",
+   "iso3": "UKR",
+   "categories": {
+    "search": [
+     {
+      "name": "pravda.com.ua",
+      "url": "https://www.pravda.com.ua",
+      "note": "Major Ukrainian",
+      "access": "unknown"
+     },
+     {
+      "name": "hromadske.ua",
+      "url": "https://hromadske.ua",
+      "note": "Major Ukrainian",
+      "access": "unknown"
+     },
+     {
+      "name": "kyivindependent.com",
+      "url": "https://kyivindependent.com",
+      "note": "Major Ukrainian",
+      "access": "unknown"
+     },
+     {
+      "name": "nv.ua",
+      "url": "https://nv.ua",
+      "note": "Major Ukrainian",
+      "access": "unknown"
+     },
+     {
+      "name": "radiosvoboda.org/schemes",
+      "url": "https://www.radiosvoboda.org/schemes",
+      "note": "Investigative",
+      "access": "unknown"
+     },
+     {
+      "name": "geoconfirmed.org",
+      "url": "https://geoconfirmed.org",
+      "note": "Conflict / War",
+      "access": "unknown"
+     },
+     {
+      "name": "deepstatemap.live",
+      "url": "https://deepstatemap.live",
+      "note": "Conflict / War",
+      "access": "unknown"
+     },
+     {
+      "name": "oryxspioenkop.com",
+      "url": "https://www.oryxspioenkop.com",
+      "note": "Conflict / War",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "youcontrol.com.ua",
+      "url": "https://youcontrol.com.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "opendatabot.ua",
+      "url": "https://opendatabot.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "usr.minjust.gov.ua",
+      "url": "https://usr.minjust.gov.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "reyestr.court.gov.ua",
+      "url": "https://reyestr.court.gov.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "nacp.gov.ua",
+      "url": "https://nacp.gov.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "prozorro.gov.ua",
+      "url": "https://prozorro.gov.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "map.land.gov.ua",
+      "url": "https://map.land.gov.ua",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 15
+  },
+  {
+   "name": "United Arab Emirates",
+   "iso2": "AE",
+   "iso3": "ARE",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Emirates",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Emirates",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "United Kingdom",
+   "iso2": "GB",
+   "iso3": "GBR",
+   "categories": {
+    "search": [
+     {
+      "name": "thebureauinvestigates.com",
+      "url": "https://www.thebureauinvestigates.com",
+      "note": "Investigative / accountability",
+      "access": "unknown"
+     },
+     {
+      "name": "britishnewspaperarchive.co.uk",
+      "url": "https://www.britishnewspaperarchive.co.uk",
+      "note": "Specifically UK OSINT Tools",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "find-and-update.company-information.service.gov.uk",
+      "url": "https://find-and-update.company-information.service.gov.uk",
+      "note": "Companies House",
+      "access": "unknown"
+     }
+    ],
+    "government": [
+     {
+      "name": "gov.uk/search-property-information-land-registry",
+      "url": "https://www.gov.uk/search-property-information-land-registry",
+      "note": "Land Registry",
+      "access": "unknown"
+     },
+     {
+      "name": "register-of-charities.charitycommission.gov.uk",
+      "url": "https://register-of-charities.charitycommission.gov.uk",
+      "note": "Other Government & Regulatory",
+      "access": "unknown"
+     },
+     {
+      "name": "thegazette.co.uk",
+      "url": "https://www.thegazette.co.uk",
+      "note": "Other Government & Regulatory",
+      "access": "unknown"
+     },
+     {
+      "name": "register.fca.org.uk",
+      "url": "https://register.fca.org.uk",
+      "note": "Other Government & Regulatory",
+      "access": "unknown"
+     },
+     {
+      "name": "bailii.org",
+      "url": "https://www.bailii.org",
+      "note": "Court Records",
+      "access": "unknown"
+     }
+    ],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT UK Resources",
+      "url": "https://start.me/p/gyq0Rz/united-kingdom",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "UK OSINT",
+      "url": "https://www.uk-osint.net",
+      "note": "Community link collection",
+      "access": "unknown"
+     },
+     {
+      "name": "OSINT-Tools-UK | Github",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-UK",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 11
+  },
+  {
+   "name": "United States",
+   "iso2": "US",
+   "iso3": "USA",
+   "categories": {
+    "search": [
+     {
+      "name": "muckrock.com",
+      "url": "https://www.muckrock.com",
+      "note": "FOIA (Freedom of Information Act)",
+      "access": "free"
+     },
+     {
+      "name": "zillow.com",
+      "url": "https://www.zillow.com",
+      "note": "Real estate",
+      "access": "unknown"
+     },
+     {
+      "name": "redfin.com",
+      "url": "https://www.redfin.com",
+      "note": "Real estate",
+      "access": "unknown"
+     },
+     {
+      "name": "familysearch.org",
+      "url": "https://www.familysearch.org",
+      "note": "Vital records",
+      "access": "unknown"
+     },
+     {
+      "name": "findagrave.com",
+      "url": "https://www.findagrave.com",
+      "note": "Vital records",
+      "access": "unknown"
+     },
+     {
+      "name": "truepeoplesearch.com",
+      "url": "https://www.truepeoplesearch.com",
+      "note": "Free (ad",
+      "access": "free"
+     },
+     {
+      "name": "fastpeoplesearch.com",
+      "url": "https://www.fastpeoplesearch.com",
+      "note": "Free (ad",
+      "access": "free"
+     },
+     {
+      "name": "thatsthem.com",
+      "url": "https://thatsthem.com",
+      "note": "Free (ad",
+      "access": "free"
+     },
+     {
+      "name": "beenverified.com",
+      "url": "https://www.beenverified.com",
+      "note": "Paid (consumer)",
+      "access": "paid"
+     },
+     {
+      "name": "spokeo.com",
+      "url": "https://www.spokeo.com",
+      "note": "Paid (consumer)",
+      "access": "paid"
+     },
+     {
+      "name": "propublica.org",
+      "url": "https://www.propublica.org",
+      "note": "Investigative non",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "sec.gov/edgar",
+      "url": "https://www.sec.gov/edgar",
+      "note": "Securities & Companies",
+      "access": "unknown"
+     },
+     {
+      "name": "opencorporates.com",
+      "url": "https://opencorporates.com",
+      "note": "Securities & Companies",
+      "access": "unknown"
+     },
+     {
+      "name": "opensecrets.org",
+      "url": "https://www.opensecrets.org",
+      "note": "Securities & Companies",
+      "access": "unknown"
+     },
+     {
+      "name": "fec.gov",
+      "url": "https://www.fec.gov",
+      "note": "Securities & Companies",
+      "access": "unknown"
+     }
+    ],
+    "government": [
+     {
+      "name": "pacer.uscourts.gov",
+      "url": "https://pacer.uscourts.gov",
+      "note": "Court Records",
+      "access": "unknown"
+     },
+     {
+      "name": "courtlistener.com",
+      "url": "https://www.courtlistener.com",
+      "note": "Court Records",
+      "access": "unknown"
+     },
+     {
+      "name": "justia.com",
+      "url": "https://www.justia.com",
+      "note": "Court Records",
+      "access": "unknown"
+     },
+     {
+      "name": "unicourt.com",
+      "url": "https://unicourt.com",
+      "note": "Court records (state)",
+      "access": "unknown"
+     },
+     {
+      "name": "registry.faa.gov",
+      "url": "https://registry.faa.gov",
+      "note": "Vehicles / Transportation",
+      "access": "unknown"
+     }
+    ],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "US OSINT",
+      "url": "https://start.me/p/GEQXv7/osint-us",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     },
+     {
+      "name": "CNTY USA",
+      "url": "https://start.me/p/kxMBv9/cnty-usa",
+      "note": "Curated start.me link board",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "full",
+   "resource_count": 22
+  },
+  {
+   "name": "Uzbekistan",
+   "iso2": "UZ",
+   "iso3": "UZB",
+   "categories": {
+    "search": [],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": [
+     {
+      "name": "OSINT Tools Uzbekistan",
+      "url": "https://github.com/paulpogoda/OSINT-Tools-Uzbekistan",
+      "note": "Community OSINT link collection (GitHub)",
+      "access": "unknown"
+     }
+    ]
+   },
+   "coverage": "links",
+   "resource_count": 1
+  },
+  {
+   "name": "Venezuela",
+   "iso2": "VE",
+   "iso3": "VEN",
+   "categories": {
+    "search": [
+     {
+      "name": "elpitazo.net",
+      "url": "https://elpitazo.net",
+      "note": "Independent (in",
+      "access": "unknown"
+     },
+     {
+      "name": "efectococuyo.com",
+      "url": "https://efectococuyo.com",
+      "note": "Independent (in",
+      "access": "unknown"
+     },
+     {
+      "name": "armando.info",
+      "url": "https://armando.info",
+      "note": "Exile / diaspora",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [],
+    "government": [],
+    "news": [],
+    "social": [],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "links",
+   "resource_count": 3
+  },
+  {
+   "name": "Vietnam",
+   "iso2": "VN",
+   "iso3": "VNM",
+   "categories": {
+    "search": [
+     {
+      "name": "nhandan.vn",
+      "url": "https://nhandan.vn",
+      "note": "State / state",
+      "access": "unknown"
+     },
+     {
+      "name": "vnexpress.net",
+      "url": "https://vnexpress.net",
+      "note": "State / state",
+      "access": "unknown"
+     },
+     {
+      "name": "tuoitre.vn",
+      "url": "https://tuoitre.vn",
+      "note": "State / state",
+      "access": "unknown"
+     },
+     {
+      "name": "thanhnien.vn",
+      "url": "https://thanhnien.vn",
+      "note": "State / state",
+      "access": "unknown"
+     },
+     {
+      "name": "the88project.org",
+      "url": "https://the88project.org",
+      "note": "Independent / exile / blogs",
+      "access": "unknown"
+     },
+     {
+      "name": "luatkhoa.com",
+      "url": "https://www.luatkhoa.com",
+      "note": "Independent / exile / blogs",
+      "access": "unknown"
+     }
+    ],
+    "people": [],
+    "business": [
+     {
+      "name": "dangkykinhdoanh.gov.vn",
+      "url": "https://dangkykinhdoanh.gov.vn",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     },
+     {
+      "name": "data.gov.vn",
+      "url": "https://data.gov.vn",
+      "note": "Government & Corporate Records",
+      "access": "unknown"
+     }
+    ],
+    "government": [],
+    "news": [],
+    "social": [
+     {
+      "name": "zalo.me",
+      "url": "https://zalo.me",
+      "note": "Social Networks",
+      "access": "unknown"
+     },
+     {
+      "name": "voz.vn",
+      "url": "https://voz.vn",
+      "note": "Social Networks",
+      "access": "unknown"
+     }
+    ],
+    "finance": [],
+    "collections": []
+   },
+   "coverage": "partial",
+   "resource_count": 10
+  }
+ ]
+}

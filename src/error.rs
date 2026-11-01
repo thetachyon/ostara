@@ -34,6 +34,14 @@ impl ApiError {
         }
     }
 
+    pub fn not_found(error: impl Into<String>, detail: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::NOT_FOUND,
+            error: error.into(),
+            detail: detail.into(),
+        }
+    }
+
     pub fn internal(error: impl Into<String>, detail: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,

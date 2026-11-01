@@ -436,3 +436,95 @@ async fn threatfox_query_params_accepted_when_disabled() {
     let g = get("/api/threatfox?days=3&limit=10&malware=emotet").await;
     assert_eq!(g.status, StatusCode::SERVICE_UNAVAILABLE);
 }
+
+// ---------------------------------------------------------------------------
+// Country OSINT directory (static curated data)
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn country_osint_by_name_iso2_iso3() {
+    for q in [
+        "Japan",
+        "jp",
+        "JPN",
+        "united%20kingdom",
+        "United%20States",
+        "de",
+    ] {
+        let g = get(&format!("/api/country-osint?country={}", q)).await;
+        assert_eq!(g.status, StatusCode::OK, "country={q} should be 200");
+        assert!(
+            g.body.get("name").and_then(|v| v.as_str()).is_some(),
+            "pack must have a name, got: {}",
+            body_preview(&g)
+        );
+        assert!(
+            g.body
+                .get("categories")
+                .and_then(|v| v.as_object())
+                .is_some(),
+            "pack must have categories, got: {}",
+            body_preview(&g)
+        );
+    }
+}
+
+#[tokio::test]
+async fn country_osint_missing_param_is_400() {
+    let g = get("/api/country-osint").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(
+        g.body.get("error").and_then(|v| v.as_str()).is_some(),
+        "400 body must carry 'error', got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn country_osint_unknown_country_is_404() {
+    let g = get("/api/country-osint?country=Narnia").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND);
+    assert!(
+        g.body
+            .get("detail")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("/api/country-osint/countries"),
+        "404 detail must point at the country list, got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn country_osint_countries_list() {
+    let g = get("/api/country-osint/countries").await;
+    assert_eq!(g.status, StatusCode::OK);
+    let arr = g.body.as_array().expect("countries list is an array");
+    assert!(arr.len() >= 20, "expected 20+ countries, got {}", arr.len());
+    for c in arr {
+        for f in ["name", "iso2", "iso3", "coverage", "resource_count"] {
+            assert!(c.get(f).is_some(), "country entry missing {f}: {c}");
+        }
+        let cov = c.get("coverage").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["full", "partial", "links"].contains(&cov),
+            "bad coverage {cov:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn country_osint_global() {
+    let g = get("/api/country-osint/global").await;
+    assert_eq!(g.status, StatusCode::OK);
+    assert!(
+        g.body.get("count").and_then(|v| v.as_u64()).unwrap_or(0) >= 5,
+        "global list should have several resources, got: {}",
+        body_preview(&g)
+    );
+    assert!(
+        g.body.get("resources").and_then(|v| v.as_array()).is_some(),
+        "global must have resources array, got: {}",
+        body_preview(&g)
+    );
+}

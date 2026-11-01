@@ -356,6 +356,19 @@ Server-sent events: a `hello` event, then a `digest` event every 15 s with
 feed counts plus auto-extracted highlights (M6+ quakes, emergency-squawk
 aircraft). Never errors — a failing feed contributes nothing.
 
+### `GET /api/country-osint` — country OSINT directory
+
+Curated per-country OSINT resource packs (`data/country_osint.json`,
+embedded at compile time). `?country=<name|iso2|iso3>` returns one pack —
+resources grouped by category (search, people, business, government, news,
+social, finance, collections) with an honest coverage badge (`full` /
+`partial` / `links`). Missing param → 400, unknown country → 404 pointing
+at the list. `/api/country-osint/countries` lists all 66 covered countries;
+`/api/country-osint/global` returns country-agnostic resources (OCCRP
+Aleph, OpenSanctions, OpenCorporates, ICIJ Offshore Leaks, …). Link data
+only — no prose copied from the source collections; provenance is recorded
+in the JSON's `meta.provenance`.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,
@@ -373,6 +386,9 @@ binary serves it directly). Map-first UX modeled on OSIRIS:
   transparency, IP/ASN, CVE, gated port scan with inline responsible-use
   notice), entity-graph explorer (search → expandable tree, v1), region
   dossier (right-click the map → `/api/dossier` composite).
+- "Countries" button: Country OSINT directory drawer — searchable country
+  list with coverage badges and filters; each pack renders grouped clickable
+  resources with free/paid badges, plus a global-resources view.
 - Keyboard: `F` fullscreen, `L` layers, `I` intel, `R` reset view, `S` copy
   share link, `?` help, `ESC` close. `S` encodes `#c=lat,lon,zoom&l=layers`
   and the app restores from the hash on load.

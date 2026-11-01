@@ -20,6 +20,7 @@
     <button data-act="intel" title="Intel feed (I)">Intel</button>
     <button data-act="feeds" title="Data feeds">Feeds</button>
     <button data-act="recon" title="RECON toolkit">RECON</button>
+    <button data-act="country" title="Country OSINT directory">Countries</button>
     <button data-act="graph" title="Entity graph">Graph</button>
     <button data-act="share" title="Copy share link (S)">Share</button>
     <button data-act="help" title="Keyboard shortcuts (?)">?</button>
@@ -58,8 +59,24 @@
   <div id="recon-body"></div>
 </aside>
 
-<aside id="graphp" class="panel right wide hidden">
-  <div class="panel-head"><h2>Entity graph <span class="v1tag">v1 · tree view</span></h2><button class="x" data-close="graphp" title="Close (ESC)">×</button></div>
+<aside id="cosp" class="panel right wide hidden">
+  <div class="panel-head"><h2>Country OSINT <span class="v1tag">curated directory</span></h2><button class="x" data-close="cosp" title="Close (ESC)">×</button></div>
+  <div class="co-search"><input id="co-q" placeholder="search country, e.g. Japan or JP" spellcheck="false" /></div>
+  <div class="co-chips" id="co-chips">
+    <button data-f="all" class="on">all</button>
+    <button data-f="full">full</button>
+    <button data-f="partial">partial</button>
+    <button data-f="links">links</button>
+    <span class="m" id="co-count"></span>
+  </div>
+  <button id="co-global">🌐 global resources (sanctions, corporate, leaks)</button>
+  <div class="co-split">
+    <div id="co-list"><div class="empty">loading…</div></div>
+    <div id="co-body"><div class="empty">pick a country to see its OSINT resource pack — search engines, registries, people lookup, news</div></div>
+  </div>
+</aside>
+
+<aside id="graphp" class="panel right wide hidden">  <div class="panel-head"><h2>Entity graph <span class="v1tag">v1 · tree view</span></h2><button class="x" data-close="graphp" title="Close (ESC)">×</button></div>
   <div class="graph-search">
     <input id="graph-q" placeholder="entity, e.g. 25544 or N123AB" spellcheck="false" />
     <button id="graph-go">Search</button>
@@ -100,6 +117,7 @@
 
 <script src="/layers.js"></script>
 <script src="/recon.js"></script>
+<script src="/country.js"></script>
 <script src="/graph.js"></script>
 <script src="/app.js"></script>
 </body>

@@ -224,3 +224,33 @@ a { color: var(--accent); }
   #dossier { right: 10px; width: calc(100vw - 20px); }
   .ticker { display: none; }
 }
+
+/* country OSINT drawer */
+.badge { display: inline-block; font-size: 9px; font-family: var(--mono); border: 1px solid var(--border); border-radius: 8px; padding: 1px 7px; color: var(--dim); vertical-align: 1px; }
+.badge.ok { color: var(--good); border-color: var(--good); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.bad { color: var(--bad); border-color: var(--bad); }
+.badge.mut { color: var(--dim); }
+.co-search { display: flex; gap: 6px; padding: 10px 12px 4px; }
+.co-search input { flex: 1; background: var(--bg2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 8px; font-size: 12px; }
+.co-chips { display: flex; gap: 6px; align-items: center; padding: 6px 12px; flex-wrap: wrap; }
+.co-chips button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 10px; padding: 2px 10px; font-size: 11px; cursor: pointer; }
+.co-chips button.on { color: var(--accent); border-color: var(--accent); }
+.co-chips .m { margin-left: auto; }
+#co-global { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 3px 10px; font-size: 11px; cursor: pointer; margin: 0 12px 6px; }
+#co-global:hover { color: var(--accent); border-color: var(--accent); }
+.co-split { display: flex; gap: 10px; padding: 0 12px 12px; min-height: 0; }
+#co-list { width: 200px; flex: none; overflow-y: auto; border-right: 1px solid var(--border); padding-right: 8px; max-height: 60vh; }
+.co-row { display: block; width: 100%; text-align: left; background: transparent; border: none; border-left: 2px solid transparent; color: var(--text); padding: 5px 6px; cursor: pointer; font-size: 12px; }
+.co-row:hover { background: var(--bg2); }
+.co-row.on { border-left-color: var(--accent); background: var(--bg2); }
+.co-row .co-name { display: block; }
+.co-row .co-meta { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+#co-body { flex: 1; overflow-y: auto; min-width: 0; max-height: 60vh; padding-right: 4px; }
+.co-head h3 { margin: 2px 0 4px; font-size: 14px; }
+.co-cat { margin: 10px 0; }
+.co-cat h4 { margin: 0 0 4px; font-size: 12px; color: var(--accent); font-weight: 600; }
+.co-res { padding: 5px 0; border-bottom: 1px dotted var(--border); font-size: 12px; }
+.co-res a { text-decoration: none; }
+.co-res a:hover { text-decoration: underline; }
+.co-res .m { font-size: 11px; color: var(--muted); }

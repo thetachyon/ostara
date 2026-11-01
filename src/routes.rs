@@ -1032,6 +1032,7 @@ pub fn app(state: AppState) -> Router {
         .merge(feeds::routes())
         .merge(crate::recon::routes())
         .merge(crate::dossier::routes())
+        .merge(crate::country_osint::routes())
         .merge(crate::graph::routes())
         .merge(crate::intel::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take

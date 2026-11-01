@@ -360,7 +360,7 @@ window.OST = window.OST || {};
 
   /* ---------------- panels ---------------- */
 
-  const RIGHT_PANELS = ["intel", "feeddrawer", "recon", "graphp"];
+  const RIGHT_PANELS = ["intel", "feeddrawer", "recon", "cosp", "graphp"];
   let rightOpen = "intel";
 
   function openPanel(id) {
@@ -434,6 +434,7 @@ window.OST = window.OST || {};
         else if (act === "intel") openPanel("intel");
         else if (act === "feeds") { openPanel("feeddrawer"); OST.openFeedTab(feedTab); }
         else if (act === "recon") openPanel("recon");
+        else if (act === "country") openPanel("cosp");
         else if (act === "graph") openPanel("graphp");
         else if (act === "help") openPanel("help");
         else if (act === "refresh-all") refreshAll().then(() => OST.toast("layers refreshed"));
@@ -484,11 +485,13 @@ window.OST = window.OST || {};
     initIntel();
     OST.initRecon();
     OST.initGraph();
+    OST.initCountry();
     OST.openFeedTab(OST.LIST_FEEDS[0].id);
     initKeys();
     // default: layers + intel visible
     document.getElementById("feeddrawer").classList.add("hidden");
     document.getElementById("recon").classList.add("hidden");
+    document.getElementById("cosp").classList.add("hidden");
     document.getElementById("graphp").classList.add("hidden");
     document.getElementById("dossier").classList.add("hidden");
     document.getElementById("help").classList.add("hidden");
