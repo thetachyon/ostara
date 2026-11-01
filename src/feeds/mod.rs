@@ -11,17 +11,21 @@
 //!   without networking)
 //! - a `*Response` struct that is the exact JSON shape served.
 
+pub mod bluesky;
 pub mod cameras;
 pub mod conflicts;
 pub mod cyber;
 pub mod fires;
 pub mod flights;
+pub mod gnews;
 pub mod helio;
 pub mod markets;
+pub mod mastodon;
 pub mod n2yo;
 pub mod news;
 pub mod nuclear;
 pub mod quakes;
+pub mod rss;
 pub mod satellites;
 pub mod telegram;
 pub mod threatfox;
@@ -170,4 +174,8 @@ pub fn routes() -> axum::Router<crate::routes::AppState> {
         .route("/api/nuclear", get(nuclear::handler))
         .route("/api/conflicts", get(conflicts::handler))
         .route("/api/space-weather", get(helio::handler))
+        .route("/api/bluesky", get(bluesky::handler))
+        .route("/api/mastodon", get(mastodon::handler))
+        .route("/api/rss", get(rss::handler))
+        .route("/api/gnews", get(gnews::handler))
 }

@@ -469,6 +469,10 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         conflicts,
         helio,
         telegram,
+        bluesky,
+        mastodon,
+        rss,
+        gnews,
     ) = tokio::join!(
         feed_count(
             &state,
@@ -652,6 +656,62 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
                 }
             }
         ),
+        feed_count(
+            &state,
+            "bluesky",
+            "bluesky:stats".to_string(),
+            feeds::bluesky::TTL,
+            |c| {
+                Box::pin(async move {
+                    let r = feeds::bluesky::fetch(&c, "news", 5).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::bluesky::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
+        feed_count(
+            &state,
+            "mastodon",
+            "mastodon:stats".to_string(),
+            feeds::mastodon::TTL,
+            |c| {
+                Box::pin(async move {
+                    let r = feeds::mastodon::fetch(&c, None, 5).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::mastodon::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
+        feed_count(
+            &state,
+            "rss",
+            "rss:stats".to_string(),
+            feeds::rss::TTL,
+            |c| {
+                Box::pin(async move {
+                    let r = feeds::rss::fetch(&c, Some("bbc"), 5).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::rss::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
+        feed_count(
+            &state,
+            "gnews",
+            "gnews:stats".to_string(),
+            feeds::gnews::TTL,
+            |c| {
+                Box::pin(async move {
+                    let r = feeds::gnews::fetch(&c, "news", 5).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::gnews::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
         helio_probe(&state),
     );
 
@@ -734,6 +794,10 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         nuclear_stat,
         vessels_stat,
         telegram,
+        bluesky,
+        mastodon,
+        rss,
+        gnews,
     ] {
         if !stat.ok {
             degraded = true;
@@ -943,6 +1007,10 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         nuclear,
         conflicts,
         helio,
+        bluesky,
+        mastodon,
+        rss,
+        gnews,
     ) = tokio::join!(
         run_probe(state.client.clone(), "flights", |c| async move {
             feeds::flights::fetch(&c, "mil", 1)
@@ -1013,12 +1081,24 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
             let config = config.clone();
             move |c| async move { feeds::helio::probe_detail(&c, &config).await }
         }),
+        run_probe(state.client.clone(), "bluesky", |c| async move {
+            feeds::bluesky::probe_detail(&c).await
+        }),
+        run_probe(state.client.clone(), "mastodon", |c| async move {
+            feeds::mastodon::probe_detail(&c).await
+        }),
+        run_probe(state.client.clone(), "rss", |c| async move {
+            feeds::rss::probe_detail(&c).await
+        }),
+        run_probe(state.client.clone(), "gnews", |c| async move {
+            feeds::gnews::probe_detail(&c).await
+        }),
     );
 
     let mut feeds_map = HashMap::new();
     for (name, report) in [
         flights, quakes, weather, satellites, news, cameras, fires, n2yo, vessels, cyber,
-        threatfox, telegram, markets, nuclear, conflicts, helio,
+        threatfox, telegram, markets, nuclear, conflicts, helio, bluesky, mastodon, rss, gnews,
     ] {
         feeds_map.insert(name, report);
     }

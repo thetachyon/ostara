@@ -800,3 +800,81 @@ async fn vessels_invalid_bbox_400() {
     let resp = app.oneshot(req).await.expect("oneshot serves");
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
+
+// ---------------------------------------------------------------------------
+// EMBERS media feeds: Bluesky / Mastodon (social), RSS / Google News (traditional)
+// ---------------------------------------------------------------------------
+
+/// Contract helper: a feed route returns 200 with its shape, or an honest
+/// 503/400 — never a 500, never HTML.
+async fn assert_media_feed_contract(uri: &str, shape_keys: &[&str]) {
+    let g = get(uri).await;
+    assert!(
+        g.status == StatusCode::OK || g.status == StatusCode::SERVICE_UNAVAILABLE,
+        "{uri}: expected 200 or honest 503, got: {}",
+        body_preview(&g)
+    );
+    if g.status == StatusCode::OK {
+        for k in shape_keys {
+            assert!(
+                g.body.get(*k).is_some(),
+                "{uri}: 200 body missing '{k}', got: {}",
+                body_preview(&g)
+            );
+        }
+        assert!(
+            g.body.get("count").and_then(|v| v.as_u64()).is_some(),
+            "{uri}: 200 body missing numeric 'count', got: {}",
+            body_preview(&g)
+        );
+    } else {
+        assert!(
+            g.body.get("error").and_then(|v| v.as_str()).is_some(),
+            "{uri}: 503 body must carry 'error', got: {}",
+            body_preview(&g)
+        );
+    }
+}
+
+#[tokio::test]
+async fn bluesky_missing_q_is_400() {
+    let g = get("/api/bluesky").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(g.body.get("error").and_then(|v| v.as_str()).is_some());
+}
+
+#[tokio::test]
+async fn bluesky_contract() {
+    assert_media_feed_contract("/api/bluesky?q=test&limit=1", &["query", "posts"]).await;
+}
+
+#[tokio::test]
+async fn mastodon_contract() {
+    // q is optional: bare route returns the latest timeline snapshot.
+    assert_media_feed_contract("/api/mastodon?limit=1", &["instance", "posts"]).await;
+    assert_media_feed_contract("/api/mastodon?q=test&limit=1", &["query", "posts"]).await;
+}
+
+#[tokio::test]
+async fn rss_contract() {
+    assert_media_feed_contract("/api/rss?outlet=bbc&limit=1", &["outlet", "items"]).await;
+}
+
+#[tokio::test]
+async fn rss_unknown_outlet_is_400() {
+    let g = get("/api/rss?outlet=reuters").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(g.body.get("error").and_then(|v| v.as_str()).is_some());
+}
+
+#[tokio::test]
+async fn gnews_missing_q_is_400() {
+    let g = get("/api/gnews").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(g.body.get("error").and_then(|v| v.as_str()).is_some());
+}
+
+#[tokio::test]
+async fn gnews_contract() {
+    assert_media_feed_contract("/api/gnews?q=test&limit=1", &["query", "items"]).await;
+}

@@ -1,4 +1,4 @@
-/* OSTARA feeds.js — dedicated Feeds panel: a structured browser for all 16 feed
+/* OSTARA feeds.js — dedicated Feeds panel: a structured browser for all 20 feed
  * categories, distinct from the SSE intel stream and the country inspector.
  * Category navigator with live counts + health dots, per-category inputs,
  * tables/cards/kv renderers, manual + auto refresh, and "show on map"
@@ -313,6 +313,94 @@ window.OST = window.OST || {};
             `<div class="feed-item"><div class="m">@${esc(m.channel || "")} · ${esc(m.date || "")} · 👁 ${m.views != null ? m.views : "?"}</div>` +
             `<div>${esc((m.text || "").slice(0, 280))}${(m.text || "").length > 280 ? "…" : ""}</div>` +
             (m.url ? `<div class="m"><a href="${esc(m.url)}" target="_blank" rel="noopener">open</a></div>` : "") + `</div>`
+          ).join("") + genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
+      id: "bluesky", label: "Bluesky", health: "bluesky",
+      group: "global",
+      note: "keyless · public posts via api.bsky.app",
+      inputs: [
+        { name: "q", placeholder: "search query", required: true },
+        { name: "limit", placeholder: "limit", value: "25" },
+      ],
+      validate: (p) => (p.q && p.q.trim() ? null : "enter a search query"),
+      url: (p) => `/api/bluesky?q=${encodeURIComponent(p.q || "")}&limit=${encodeURIComponent(p.limit || "25")}`,
+      render(j, el) {
+        const rows = (j.posts || []).slice(0, ROW_CAP).map((p) => [
+          esc("@" + (p.author_handle || "?")),
+          esc((p.text || "").slice(0, 120)) + ((p.text || "").length > 120 ? "…" : ""),
+          p.like_count != null ? p.like_count : "—",
+          p.repost_count != null ? p.repost_count : "—",
+          p.reply_count != null ? p.reply_count : "—",
+          esc((p.created_at || "").slice(0, 16).replace("T", " ")),
+        ]);
+        el.innerHTML = table(["Author", "Text", "Likes", "Reposts", "Replies", "Time"], rows) +
+          `<div class="m" style="margin-top:6px">${(j.posts || []).length} posts · q=${esc(j.query || "")}</div>` + genLine(j);
+        this.count = (j.posts || []).length;
+      },
+    },
+    {
+      id: "mastodon", label: "Mastodon", health: "mastodon",
+      group: "global",
+      note: "fosstodon.org public timeline · keyless · q filters the snapshot client-side",
+      inputs: [
+        { name: "q", placeholder: "filter text (optional)" },
+        { name: "limit", placeholder: "limit", value: "20" },
+      ],
+      url: (p) => `/api/mastodon?limit=${encodeURIComponent(p.limit || "20")}` +
+        (p.q ? `&q=${encodeURIComponent(p.q)}` : ""),
+      render(j, el) {
+        const rows = (j.posts || []).slice(0, ROW_CAP).map((p) => [
+          esc("@" + (p.account || "?")),
+          esc((p.text || "").slice(0, 120)) + ((p.text || "").length > 120 ? "…" : ""),
+          p.reblogs != null ? p.reblogs : "—",
+          p.favourites != null ? p.favourites : "—",
+          esc((p.created_at || "").slice(0, 16).replace("T", " ")),
+        ]);
+        el.innerHTML = table(["Account", "Text", "Boosts", "Faves", "Time"], rows) +
+          `<div class="m" style="margin-top:6px">${(j.posts || []).length} of ${j.fetched != null ? j.fetched : "?"} fetched${j.query ? ` · filter=${esc(j.query)}` : ""}</div>` + genLine(j);
+        this.count = (j.posts || []).length;
+      },
+    },
+    {
+      id: "rss", label: "RSS News", health: "rss",
+      group: "global",
+      note: "curated outlets · keyless (Reuters/AP have no public RSS — excluded)",
+      inputs: [
+        { name: "outlet", type: "select", options: ["all", "bbc", "aljazeera", "dw", "france24"], value: "all" },
+        { name: "limit", placeholder: "limit", value: "25" },
+      ],
+      url: (p) => `/api/rss?outlet=${encodeURIComponent(p.outlet || "all")}&limit=${encodeURIComponent(p.limit || "25")}`,
+      render(j, el) {
+        const items = j.items || [];
+        el.innerHTML = `<div class="m" style="margin-bottom:6px">${items.length} item${items.length === 1 ? "" : "s"} · ${esc(j.outlet || "")}</div>` +
+          items.slice(0, ROW_CAP).map((i) =>
+            `<div class="feed-item"><div><a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a></div>` +
+            `<div class="m">${esc(i.outlet || "")} · ${esc((i.published || "").slice(0, 16).replace("T", " "))}</div>` +
+            (i.summary ? `<div>${esc(i.summary.slice(0, 200))}${i.summary.length > 200 ? "…" : ""}</div>` : "") + `</div>`
+          ).join("") + genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
+      id: "gnews", label: "Google News", health: "gnews",
+      group: "global",
+      note: "keyless RSS · q is country-queryable (e.g. protest France)",
+      inputs: [
+        { name: "q", placeholder: "search query", required: true },
+        { name: "limit", placeholder: "limit", value: "25" },
+      ],
+      validate: (p) => (p.q && p.q.trim() ? null : "enter a search query"),
+      url: (p) => `/api/gnews?q=${encodeURIComponent(p.q || "")}&limit=${encodeURIComponent(p.limit || "25")}`,
+      render(j, el) {
+        const items = j.items || [];
+        el.innerHTML = `<div class="m" style="margin-bottom:6px">${items.length} item${items.length === 1 ? "" : "s"} · q=${esc(j.query || "")}</div>` +
+          items.slice(0, ROW_CAP).map((i) =>
+            `<div class="feed-item"><div><a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a></div>` +
+            `<div class="m">${esc((i.published || "").slice(0, 16).replace("T", " "))}</div>` +
+            (i.summary ? `<div>${esc(i.summary.slice(0, 200))}${i.summary.length > 200 ? "…" : ""}</div>` : "") + `</div>`
           ).join("") + genLine(j);
         this.count = items.length;
       },

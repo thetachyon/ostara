@@ -290,6 +290,19 @@ feed is proven by a test (`tests/phase1_keyed.rs`).
 | `GET /api/cyber/threats` | URLhaus + ThreatFox | `THREATFOX_API_KEY` (both abuse.ch APIs 401 keyless) | 503 when unset |
 | `GET /api/threatfox` | ThreatFox `get_iocs` | `THREATFOX_API_KEY` (no keyless tier — HTTP 401) | 503 when unset |
 | `GET /api/telegram?channel=` | `t.me/s` public previews | — | keyless; 400 bad/allowlist-blocked channel, 503 upstream failure |
+| `GET /api/bluesky?q=&limit=` | Bluesky public AppView search | — | keyless; 400 missing q, 503 upstream failure |
+| `GET /api/mastodon?q=&limit=` | fosstodon.org public timeline | — | keyless; q filters the snapshot client-side (no keyless server search exists) |
+| `GET /api/rss?outlet=&limit=` | BBC / Al Jazeera / DW / France24 RSS | — | keyless; outlet ∈ all,bbc,aljazeera,dw,france24 (Reuters/AP have no public RSS) |
+| `GET /api/gnews?q=&limit=` | Google News RSS | — | keyless; 400 missing q, 503 upstream failure; q is country-queryable |
+
+### Deliberately excluded sources
+
+- **X/Twitter** — API is paid-only; no keyless tier. Not integrated.
+- **Reddit** — public JSON endpoints are bot-walled for unauthenticated
+  server access (verified 2026-11-01: `www.reddit.com` serves a challenge
+  page, `old.reddit.com` returns empty). Not integrated.
+- **Reuters / AP RSS** — Reuters RSS endpoints return 401, AP serves 403 /
+  offers no public RSS (verified 2026-11-01). Excluded from the RSS outlet list.
 | `GET /api/markets` | CoinGecko | — | keyless |
 | `GET /api/nuclear?country=` | embedded registry (189 stations) | — | static |
 | `GET /api/conflicts` | GDACS RSS | — | keyless; `note` field states scope |

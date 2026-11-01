@@ -10,6 +10,9 @@
 //!   `api.gdeltproject.org` is unreachable via both (host-level, not a
 //!   code bug); `celestrak.org` returns HTTP 200 via curl but reqwest
 //!   fails with "error sending request" — a proxy/client interaction.
+//! - 2026-11-01: `fosstodon.org` (mastodon feed) returns 200 via curl but
+//!   reqwest stalls at connect past the 6s budget — same proxy/client
+//!   interaction class as celestrak.org.
 //!
 //! These tests FAIL honestly in such environments: they are liveness
 //! probes, and a failed probe is information. Do not #[ignore] them and
@@ -288,4 +291,77 @@ async fn telegram_live() {
             }
         }
     }
+}
+
+#[tokio::test]
+async fn bluesky_live() {
+    let client = live_client();
+    let r = probe("bluesky", "api.bsky.app", || {
+        feeds::bluesky::fetch(&client, "news", 3)
+    })
+    .await;
+    assert_eq!(r.query, "news", "LIVE-FAIL bluesky: unexpected query echo");
+    for p in &r.posts {
+        assert!(
+            !p.author_handle.is_empty(),
+            "LIVE-FAIL bluesky: post missing author handle"
+        );
+        assert!(
+            p.url.starts_with("https://bsky.app/profile/"),
+            "LIVE-FAIL bluesky: bad post url {}",
+            p.url
+        );
+    }
+}
+
+#[tokio::test]
+async fn mastodon_live() {
+    let client = live_client();
+    let r = probe("mastodon", "fosstodon.org", || {
+        feeds::mastodon::fetch(&client, None, 3)
+    })
+    .await;
+    assert!(
+        r.fetched > 0,
+        "LIVE-FAIL mastodon: timeline returned zero statuses"
+    );
+    for p in &r.posts {
+        assert!(!p.id.is_empty(), "LIVE-FAIL mastodon: status missing id");
+        assert!(
+            !p.text.contains('<'),
+            "LIVE-FAIL mastodon: HTML leaked into text"
+        );
+    }
+}
+
+#[tokio::test]
+async fn rss_live() {
+    let client = live_client();
+    let r = probe("rss", "feeds.bbci.co.uk", || {
+        feeds::rss::fetch(&client, Some("bbc"), 3)
+    })
+    .await;
+    assert_eq!(r.outlet, "bbc", "LIVE-FAIL rss: unexpected outlet echo");
+    assert!(!r.items.is_empty(), "LIVE-FAIL rss: zero items from BBC");
+    for i in &r.items {
+        assert!(
+            i.link.starts_with("http"),
+            "LIVE-FAIL rss: bad link {}",
+            i.link
+        );
+    }
+}
+
+#[tokio::test]
+async fn gnews_live() {
+    let client = live_client();
+    let r = probe("gnews", "news.google.com", || {
+        feeds::gnews::fetch(&client, "news", 3)
+    })
+    .await;
+    assert_eq!(r.query, "news", "LIVE-FAIL gnews: unexpected query echo");
+    assert!(
+        !r.items.is_empty(),
+        "LIVE-FAIL gnews: zero items (Google may be blocking)"
+    );
 }
