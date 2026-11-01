@@ -44,7 +44,10 @@ pub struct AppState {
 
 /// Fetch the normalized response (or reuse the cached bytes), serialize once,
 /// store, and return the bytes plus a cache-hit flag.
-async fn cached_bytes<T, Fut>(
+///
+/// `pub(crate)` so `country_inspect` can reuse the exact TTL cache paths of
+/// the normal feed endpoints.
+pub(crate) async fn cached_bytes<T, Fut>(
     state: &AppState,
     key: &str,
     ttl: Duration,
@@ -1033,6 +1036,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::recon::routes())
         .merge(crate::dossier::routes())
         .merge(crate::country_osint::routes())
+        .merge(crate::country_inspect::routes())
         .merge(crate::graph::routes())
         .merge(crate::intel::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take

@@ -65,7 +65,7 @@ pub struct CountryQuery {
     pub country: Option<String>,
 }
 
-fn find_country(q: &str) -> Option<&'static Country> {
+pub(crate) fn find_country(q: &str) -> Option<&'static Country> {
     let q = q.trim().to_lowercase();
     dataset().countries.iter().find(|c| {
         c.name.to_lowercase() == q || c.iso2.to_lowercase() == q || c.iso3.to_lowercase() == q

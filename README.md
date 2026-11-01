@@ -369,6 +369,28 @@ Aleph, OpenSanctions, OpenCorporates, ICIJ Offshore Leaks, …). Link data
 only — no prose copied from the source collections; provenance is recorded
 in the JSON's `meta.provenance`.
 
+### `GET /api/country/inspect` — click-a-country
+
+`?lat=&lon=` resolves a map click to a country and returns its OSINT pack
+plus the country-tagged feed items in one response. Resolution uses a
+compact embedded table (`data/country_bboxes.json`, built by
+`scripts/gen_country_bboxes.py` from the public-domain datasets/geo-countries
+110m GeoJSON — one bbox per polygon, since a single full-geometry bbox is
+broken-wide for far-flung territories): the point goes to the country whose
+containing polygon bbox it sits deepest inside; a point in no bbox resolves
+to the nearest metropolitan center within 500 km, otherwise
+`country: null` with an "international waters" note. No polygon data ships —
+borders are coarse by design and the response names its resolution method
+(`bbox` | `nearest-country` | `international-waters`). Feed sections reuse
+the normal endpoints' TTL cache paths: `news` (GDELT `sourcecountry:`
+query), `conflicts` (GDACS country name), `nuclear` (static registry).
+Cameras (`location` is city text), fires/quakes (no country field), flights
+(no country in the normalized struct), and the rest carry no country field
+and are excluded. Missing/invalid coords → 400. In the UI, left-clicking
+empty map area opens the Country panel (top resources per category with a
+full-pack shortcut into the Countries drawer, plus news/alerts/nuclear
+sections); marker popups and right-click dossier are unchanged.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,

@@ -121,14 +121,17 @@ window.OST = window.OST || {};
 
     map.on("click", (e) => {
       const ids = OST.MAP_LAYERS.map((l) => l.id).filter((id) => map.getLayer(id));
-      if (!ids.length) return;
-      const feats = map.queryRenderedFeatures(e.point, { layers: ids });
-      if (!feats.length) return;
-      const p = feats[0].properties;
-      new maplibregl.Popup({ closeButton: true })
-        .setLngLat(feats[0].geometry.coordinates)
-        .setHTML(`<b>${p.title || ""}</b><br/>${p.desc || ""}`)
-        .addTo(map);
+      const feats = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : [];
+      if (feats.length) {
+        const p = feats[0].properties;
+        new maplibregl.Popup({ closeButton: true })
+          .setLngLat(feats[0].geometry.coordinates)
+          .setHTML(`<b>${p.title || ""}</b><br/>${p.desc || ""}`)
+          .addTo(map);
+        return;
+      }
+      // empty map area → country inspect (OSINT pack + country-tagged feeds)
+      if (OST.inspectCountry) OST.inspectCountry(e.lngLat.lat, e.lngLat.lng);
     });
 
     // right-click → region dossier (single contextmenu; dbl-right-click is finicky)
@@ -360,7 +363,7 @@ window.OST = window.OST || {};
 
   /* ---------------- panels ---------------- */
 
-  const RIGHT_PANELS = ["intel", "feeddrawer", "recon", "cosp", "graphp"];
+  const RIGHT_PANELS = ["intel", "feeddrawer", "recon", "cosp", "graphp", "insp"];
   let rightOpen = "intel";
 
   function openPanel(id) {

@@ -254,3 +254,20 @@ a { color: var(--accent); }
 .co-res a { text-decoration: none; }
 .co-res a:hover { text-decoration: underline; }
 .co-res .m { font-size: 11px; color: var(--muted); }
+
+/* country inspect panel */
+#insp-title .iso { font-size: 10px; color: var(--muted); font-family: var(--mono); font-weight: 400; }
+.insp-sec { margin: 12px 0; }
+.insp-sec h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.insp-sec h3 .m { font-size: 11px; color: var(--dim); font-family: var(--mono); }
+.insp-cat h4 { margin: 8px 0 4px; font-size: 12px; color: var(--accent); font-weight: 600; text-transform: capitalize; }
+.insp-list { list-style: none; margin: 0; padding: 0; }
+.insp-list li { padding: 4px 0; border-bottom: 1px dotted var(--border); font-size: 12px; }
+.insp-list li:last-child { border-bottom: none; }
+.insp-list a { text-decoration: none; }
+.insp-list a:hover { text-decoration: underline; }
+.insp-list .m { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.insp-list .acc { font-size: 10px; color: var(--dim); border: 1px solid var(--border); border-radius: 8px; padding: 0 6px; }
+.insp-note { font-size: 11px; color: var(--warn, #e0a458); background: var(--bg2); border-radius: 6px; padding: 6px 8px; margin: 8px 0; }
+.insp-full { display: block; width: 100%; margin-top: 8px; background: var(--bg2); color: var(--accent); border: 1px solid var(--border); border-radius: 6px; padding: 7px; cursor: pointer; font-size: 12px; }
+.insp-full:hover { border-color: var(--accent); }

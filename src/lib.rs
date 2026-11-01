@@ -10,6 +10,7 @@
 
 pub mod cache;
 pub mod config;
+pub mod country_inspect;
 pub mod country_osint;
 pub mod dossier;
 pub mod error;

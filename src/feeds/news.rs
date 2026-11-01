@@ -43,7 +43,7 @@ struct GdeltResponse {
 }
 
 /// Normalized article record served by `/api/news`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NewsArticle {
     pub url: String,
     pub title: String,
@@ -54,7 +54,7 @@ pub struct NewsArticle {
     pub seen_at: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NewsResponse {
     pub query: String,
     pub count: usize,

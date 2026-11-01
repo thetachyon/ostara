@@ -528,3 +528,80 @@ async fn country_osint_global() {
         body_preview(&g)
     );
 }
+
+// ---------------------------------------------------------------------------
+// Country inspect: click-to-identify (bbox resolver + OSINT + feed sections)
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn country_inspect_paris_shape() {
+    let g = get("/api/country/inspect?lat=48.85&lon=2.35").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let country = g.body.get("country").expect("country key");
+    assert_eq!(
+        country.get("iso3").and_then(|v| v.as_str()),
+        Some("FRA"),
+        "got: {}",
+        body_preview(&g)
+    );
+    assert_eq!(
+        g.body.get("resolution").and_then(|v| v.as_str()),
+        Some("bbox"),
+        "got: {}",
+        body_preview(&g)
+    );
+    // OSINT pack rides along when the directory covers the country.
+    let osint = g.body.get("osint").expect("osint key");
+    assert!(
+        osint.get("name").and_then(|v| v.as_str()).is_some(),
+        "osint pack must have a name, got: {}",
+        body_preview(&g)
+    );
+    // Feed sections are always present; ok may be false when upstream is
+    // unreachable from the sandbox — the contract is shape, not liveness.
+    for feed in ["news", "conflicts", "nuclear"] {
+        let sec = g
+            .body
+            .get("feeds")
+            .and_then(|f| f.get(feed))
+            .unwrap_or_else(|| panic!("feeds.{feed} missing: {}", body_preview(&g)));
+        assert!(sec.get("ok").and_then(|v| v.as_bool()).is_some());
+        assert!(sec.get("count").and_then(|v| v.as_u64()).is_some());
+        assert!(sec.get("items").and_then(|v| v.as_array()).is_some());
+    }
+}
+
+#[tokio::test]
+async fn country_inspect_international_waters() {
+    let g = get("/api/country/inspect?lat=-45&lon=-30").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert!(
+        g.body.get("country").and_then(|v| v.as_null()).is_some(),
+        "ocean point must resolve to null country, got: {}",
+        body_preview(&g)
+    );
+    assert_eq!(
+        g.body.get("resolution").and_then(|v| v.as_str()),
+        Some("international-waters"),
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn country_inspect_bad_coords_are_400() {
+    for uri in [
+        "/api/country/inspect",
+        "/api/country/inspect?lat=48.85",
+        "/api/country/inspect?lat=91&lon=2",
+        "/api/country/inspect?lat=48&lon=181",
+    ] {
+        let g = get(uri).await;
+        assert_eq!(
+            g.status,
+            StatusCode::BAD_REQUEST,
+            "{uri} should be 400, got: {}",
+            body_preview(&g)
+        );
+    }
+}

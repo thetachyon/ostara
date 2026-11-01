@@ -36,7 +36,7 @@
 use std::time::Duration;
 
 use axum::{extract::State, response::IntoResponse};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{cached_bytes, get_text, json_bytes};
 use crate::{
@@ -55,7 +55,7 @@ pub const FEED: &str = "gdacs";
 const MAX_EVENTS: usize = 100;
 
 /// One normalized event.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConflictEvent {
     pub title: String,
     pub country: Option<String>,
@@ -65,13 +65,13 @@ pub struct ConflictEvent {
     pub source: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConflictsResponse {
     pub count: usize,
     pub generated_at: String,
     /// Scope caveat: GDACS covers natural disasters, not armed conflict;
     /// ACLED (keyed) is the armed-conflict alternative.
-    pub note: &'static str,
+    pub note: String,
     pub events: Vec<ConflictEvent>,
 }
 
@@ -139,7 +139,7 @@ pub async fn fetch(client: &reqwest::Client) -> Result<ConflictsResponse, FeedEr
     Ok(ConflictsResponse {
         count: events.len(),
         generated_at: now_iso8601(),
-        note: SCOPE_NOTE,
+        note: SCOPE_NOTE.to_string(),
         events,
     })
 }
