@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OSTARA — open-source intelligence globe</title>
+<title>OSTARA — omni-spectrum intelligence globe</title>
 <link href="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.css" rel="stylesheet" />
 <link href="/style.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.js"></script>
@@ -12,25 +12,95 @@
 <div id="map"></div>
 
 <header id="hud">
-  <div class="brand">OSTARA <span>osint globe</span></div>
-  <div id="ticker" class="ticker">connecting to intel stream…</div>
-  <div id="clock" class="clock"></div>
+  <div class="brand">OSTARA <span>omni-spectrum intel</span></div>
+  <div id="ticker" class="ticker" title="SSE intel digest — /api/intel/stream">connecting to intel stream…</div>
+  <div class="hud-right">
+    <span id="clock" class="clock" title="UTC"></span>
+    <button data-act="layers" title="Layer panel (L)">Layers</button>
+    <button data-act="intel" title="Intel feed (I)">Intel</button>
+    <button data-act="feeds" title="Data feeds">Feeds</button>
+    <button data-act="recon" title="RECON toolkit">RECON</button>
+    <button data-act="graph" title="Entity graph">Graph</button>
+    <button data-act="share" title="Copy share link (S)">Share</button>
+    <button data-act="help" title="Keyboard shortcuts (?)">?</button>
+  </div>
 </header>
 
-<aside id="layers">
-  <h2>Layers</h2>
-  <div id="layer-list"></div>
-  <p class="hint">Data: ostara API · refresh 5 min</p>
+<aside id="layers" class="panel left">
+  <div class="panel-head"><h2>Layers</h2>
+    <button data-act="refresh-all" title="Refresh all layers">⟳</button>
+    <button class="x" data-close="layers" title="Close (ESC)">×</button>
+  </div>
+  <h3>Map layers</h3>
+  <div id="map-layer-list"></div>
+  <h3>Data feeds</h3>
+  <div id="feed-list"></div>
+  <div class="theme-row"><span>Theme</span>
+    <button data-theme-set="dark">dark</button><button data-theme-set="light">light</button>
+  </div>
+  <p class="hint">right-click map → region dossier</p>
 </aside>
 
-<div id="legend">
-  <span><i class="dot" style="background:#ff9f43"></i>aircraft</span>
-  <span><i class="dot" style="background:#ff5252"></i>earthquake</span>
-  <span><i class="dot" style="background:#ff3d00"></i>fire</span>
-  <span><i class="dot" style="background:#ffd600"></i>nuclear</span>
-  <span><i class="dot" style="background:#40c4ff"></i>camera</span>
+<aside id="intel" class="panel right">
+  <div class="panel-head"><h2>Intel feed</h2><button class="x" data-close="intel" title="Close (ESC)">×</button></div>
+  <div id="intel-list"><div class="empty">waiting for intel stream…</div></div>
+</aside>
+
+<aside id="feeddrawer" class="panel right wide hidden">
+  <div class="panel-head"><h2 id="feeddrawer-title">Feeds</h2><button class="x" data-close="feeddrawer" title="Close (ESC)">×</button></div>
+  <div id="feed-tabs" class="tabs"></div>
+  <div id="feed-body"></div>
+</aside>
+
+<aside id="recon" class="panel right wide hidden">
+  <div class="panel-head"><h2>RECON toolkit</h2><button class="x" data-close="recon" title="Close (ESC)">×</button></div>
+  <div id="recon-tabs" class="tabs"></div>
+  <div id="recon-body"></div>
+</aside>
+
+<aside id="graphp" class="panel right wide hidden">
+  <div class="panel-head"><h2>Entity graph <span class="v1tag">v1 · tree view</span></h2><button class="x" data-close="graphp" title="Close (ESC)">×</button></div>
+  <div class="graph-search">
+    <input id="graph-q" placeholder="entity, e.g. 25544 or N123AB" spellcheck="false" />
+    <button id="graph-go">Search</button>
+  </div>
+  <div id="graph-body"><div class="empty">search an entity to explore its neighbours — click a node to expand</div></div>
+</aside>
+
+<div id="dossier" class="card hidden">
+  <div class="panel-head"><h2>Region dossier</h2><button class="x" data-close="dossier" title="Close (ESC)">×</button></div>
+  <div id="dossier-body"></div>
 </div>
 
+<div id="help" class="overlay hidden">
+  <div class="card">
+    <div class="panel-head"><h2>Keyboard shortcuts</h2><button class="x" data-close="help" title="Close (ESC)">×</button></div>
+    <table class="keys">
+      <tr><td><kbd>F</kbd></td><td>toggle fullscreen</td></tr>
+      <tr><td><kbd>L</kbd></td><td>toggle layer panel</td></tr>
+      <tr><td><kbd>I</kbd></td><td>toggle intel feed</td></tr>
+      <tr><td><kbd>R</kbd></td><td>reset view to global</td></tr>
+      <tr><td><kbd>S</kbd></td><td>copy share link (center + layers)</td></tr>
+      <tr><td><kbd>?</kbd></td><td>this help</td></tr>
+      <tr><td><kbd>ESC</kbd></td><td>close panels / popups</td></tr>
+    </table>
+    <p class="hint">Right-click the map for a region dossier. Click any point for details.</p>
+  </div>
+</div>
+
+<footer id="statusbar">
+  <span id="health-dots" title="feed health — /api/health/feeds"></span>
+  <span id="api-lat" title="API round-trip latency">api —</span>
+  <span id="layer-counts"></span>
+  <span class="spacer"></span>
+  <span class="dim">ostara · keyless feeds live · keyed feeds degrade when unconfigured</span>
+</footer>
+
+<div id="toasts"></div>
+
+<script src="/layers.js"></script>
+<script src="/recon.js"></script>
+<script src="/graph.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

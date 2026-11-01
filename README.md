@@ -358,11 +358,27 @@ aircraft). Never errors — a failing feed contributes nothing.
 
 ### Web UI — MapLibre globe
 
-`GET /` serves the static bundle from `web/` (MapLibre GL JS globe via
-CDN, dark map-first UI): five toggleable layers (aircraft, earthquakes,
-wildfires, nuclear facilities, public cameras), click popups, and a live
-ticker fed by the SSE intel stream. API routes take precedence; anything
-unmatched falls through to the static files.
+`GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,
+dark intel-terminal aesthetic with a light theme, zero build step — the Rust
+binary serves it directly). Map-first UX modeled on OSIRIS:
+
+- Full-viewport globe, floating HUD (brand, live UTC clock, SSE intel ticker),
+  bottom status bar (per-feed health dots from `/api/health/feeds`, API latency).
+- Left rail: 6 toggleable map layers (aircraft, vessels, wildfires,
+  earthquakes, nuclear facilities, public cameras) with per-layer counts,
+  manual refresh, and 5-minute auto-refresh; plus 8 data feeds (news, markets,
+  conflicts, cyber IOCs, ThreatFox, Telegram, space weather, satellites) that
+  open as list overlays. Click any point for a detail popup.
+- Right side: SSE intel-feed panel, RECON toolkit drawer (DNS, WHOIS, cert
+  transparency, IP/ASN, CVE, gated port scan with inline responsible-use
+  notice), entity-graph explorer (search → expandable tree, v1), region
+  dossier (right-click the map → `/api/dossier` composite).
+- Keyboard: `F` fullscreen, `L` layers, `I` intel, `R` reset view, `S` copy
+  share link, `?` help, `ESC` close. `S` encodes `#c=lat,lon,zoom&l=layers`
+  and the app restores from the hash on load.
+- Resilience: every fetch has a timeout; a down feed shows a toast and a red
+  health dot, never a spinner forever. Works with no API keys configured
+  (keyed feeds degrade server-side).
 
 ## Public cameras
 
