@@ -1,34 +1,33 @@
 //! Country inspect: click-to-identify for the map UI.
 //!
 //! `GET /api/country/inspect?lat=&lon=` resolves a map click to a country
-//! and returns that country's OSINT resource pack plus the country-tagged
-//! items from the other feeds, in one response.
-//!
-//! **No polygon data is shipped.** Resolution uses a compact embedded table
-//! (`data/country_bboxes.json`, built by `scripts/gen_country_bboxes.py`
-//! from the public-domain datasets/geo-countries 110m GeoJSON): one bbox
-//! per polygon per country — a single full-geometry bbox is broken-wide for
-//! far-flung territories (NZL's spans 357° of longitude, which would make
-//! the South Atlantic "New Zealand"). A point resolves to the country whose
-//! containing polygon bbox it sits deepest inside (nearest-edge distance);
-//! a point in no bbox resolves to the nearest metropolitan center (center of
-//! the largest polygon's bbox) within 500 km, otherwise it is reported as
-//! international waters. This is deliberately coarse at borders; the
-//! response names the resolution method so the UI can caveat it.
+//! (see [`crate::geo`]) and returns that country's OSINT resource pack plus
+//! the country-tagged items from the other feeds, in one response.
 //!
 //! Feed sections reuse the exact TTL cache paths of the normal endpoints
 //! (`cached_bytes` with the same keys/TTLs) — a cache miss fetches upstream
-//! exactly as `/api/news` or `/api/conflicts` would. Only feeds whose
-//! normalized structs genuinely carry a country field are included:
-//! `news` (GDELT `sourcecountry`, via a `sourcecountry:` query), `conflicts`
-//! (GDACS `gdacs:country` name), `nuclear` (static registry `country` name).
-//! Verified NOT country-taggable and excluded: cameras (`location` is
-//! city-level free text), fires (lat/lon only), quakes (place string),
-//! flights (normalized struct has no country field), vessels (disabled),
-//! cyber/threatfox/telegram/markets/helio/satellites/n2yo/weather (no
-//! country field).
-
-use std::sync::OnceLock;
+//! exactly as the normal endpoint would.
+//!
+//! Country-taggable feeds and their mechanisms:
+//! - `news` — GDELT `sourcecountry`, via a `sourcecountry:` query;
+//! - `conflicts` — GDACS `gdacs:country` free-text name;
+//! - `nuclear` — static registry `country` name;
+//! - `flights` — aircraft lat/lon tested against the country's polygon
+//!   bboxes ([`crate::geo::point_in_country_bboxes`]);
+//! - `quakes` — epicenter lat/lon, same bbox test;
+//! - `cameras` — registry lat/lon, same bbox test.
+//!
+//! Deliberately excluded:
+//! - `markets` — CoinGecko crypto top-coins. Crypto assets are inherently
+//!   global; no country attribution exists in the data, and any
+//!   instrument→country mapping would be guesswork. Left out, not faked.
+//! - `cyber` / `threatfox` — IOCs are IPs/domains/URLs/hashes. Country
+//!   resolution would need a GeoIP database, which we do not ship; a small
+//!   embedded prefix table would be far too coarse and actively dangerous
+//!   for intel use, and reverse-DNS is not geolocation. Left out, not faked.
+//! - `fires` (lat/lon only, no country semantics needed), `vessels`
+//!   (disabled), `telegram`/`helio`/`satellites`/`n2yo`/`weather` (no
+//!   country field).
 
 use axum::{
     Json, Router,
@@ -41,158 +40,9 @@ use crate::{
     country_osint,
     error::ApiError,
     feeds,
+    geo::{ResolveMethod, point_in_country_bboxes, resolve_country},
     routes::{AppState, cached_bytes},
 };
-
-static BBOX_JSON: &str = include_str!("../data/country_bboxes.json");
-
-/// Nearest-centroid fallback radius: beyond this the point is ocean.
-const NEAREST_KM: f64 = 500.0;
-
-#[derive(Debug, Deserialize, Clone)]
-struct CountryBox {
-    name: String,
-    iso2: String,
-    iso3: String,
-    /// One bbox per polygon, [west, south, east, north]; west > east means
-    /// antimeridian crossing. Per-polygon (not one full-geometry bbox):
-    /// a single bbox is broken-wide for far-flung territories — NZL's spans
-    /// 357° of longitude, which would make the South Atlantic "New Zealand".
-    bboxes: Vec<[f64; 4]>,
-    /// Center of the largest polygon's bbox — metropolitan-territory proxy
-    /// for the ocean fallback. (A coordinate-mean centroid would be dragged
-    /// by overseas territories, e.g. France's mean centroid lands in the
-    /// Atlantic.)
-    /// [lon, lat].
-    metro: [f64; 2],
-}
-
-#[derive(Debug, Deserialize)]
-struct BboxDataset {
-    #[allow(dead_code)]
-    meta: serde_json::Value,
-    countries: Vec<CountryBox>,
-}
-
-fn boxes() -> &'static [CountryBox] {
-    static DATA: OnceLock<BboxDataset> = OnceLock::new();
-    DATA.get_or_init(|| serde_json::from_str(BBOX_JSON).expect("data/country_bboxes.json parses"))
-        .countries
-        .as_slice()
-}
-
-fn haversine_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
-    const R: f64 = 6371.0;
-    let (p1, p2) = (lat1.to_radians(), lat2.to_radians());
-    let dp = p2 - p1;
-    let dl = (lon2 - lon1).to_radians();
-    let a = (dp / 2.0).sin().powi(2) + p1.cos() * p2.cos() * (dl / 2.0).sin().powi(2);
-    2.0 * R * a.sqrt().asin()
-}
-
-fn norm_lon(lon: f64) -> f64 {
-    ((lon + 540.0) % 360.0) - 180.0
-}
-
-fn in_bbox(lat: f64, lon: f64, b: &[f64; 4]) -> bool {
-    let [w, s, e, n] = *b;
-    if lat < s || lat > n {
-        return false;
-    }
-    if w <= e {
-        lon >= w && lon <= e
-    } else {
-        // Antimeridian-crossing bbox.
-        lon >= w || lon <= e
-    }
-}
-
-/// Angular distance (degrees) from an interior point to the nearest bbox
-/// edge. Used to break ties between overlapping polygon bboxes: the point
-/// is assigned to the territory it sits deepest inside. (Ties happen because
-/// overseas territories inflate overlaps — e.g. the Caribbean Netherlands'
-/// bbox also covers Paris.)
-fn edge_distance(lat: f64, lon: f64, b: &[f64; 4]) -> f64 {
-    let [w, s, e, n] = *b;
-    let d_lat = (lat - s).min(n - lat);
-    let d_lon = if w <= e {
-        (lon - w).min(e - lon)
-    } else if lon >= w {
-        // Western piece [w, 180]: east edge wraps across the antimeridian.
-        (lon - w).min((180.0 - lon) + (e + 180.0))
-    } else {
-        // Eastern piece [-180, e]: west edge wraps across the antimeridian.
-        ((lon + 180.0) + (180.0 - w)).min(e - lon)
-    };
-    d_lat.min(d_lon)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResolveMethod {
-    Bbox,
-    NearestCountry,
-}
-
-#[derive(Debug, Clone)]
-pub struct Resolved {
-    pub name: String,
-    pub iso2: String,
-    pub iso3: String,
-    pub method: ResolveMethod,
-}
-
-/// Nearest candidate to (lat, lon) by metropolitan-center distance.
-fn nearest<'a>(lat: f64, lon: f64, cands: &[&'a CountryBox]) -> Option<(&'a CountryBox, f64)> {
-    cands
-        .iter()
-        .map(|c| (*c, haversine_km(lat, lon, c.metro[1], c.metro[0])))
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-}
-
-/// Resolve a point to a country. `None` = international waters (no polygon
-/// bbox hit and no metro center within [`NEAREST_KM`]).
-pub fn resolve(lat: f64, lon: f64) -> Option<Resolved> {
-    let lon = norm_lon(lon);
-
-    // (country, best edge distance across its containing polygons,
-    //  metro distance as a deterministic secondary key)
-    let mut best: Option<(&CountryBox, f64, f64)> = None;
-    for c in boxes() {
-        let mut edge = f64::INFINITY;
-        for b in &c.bboxes {
-            if in_bbox(lat, lon, b) {
-                edge = edge.min(edge_distance(lat, lon, b));
-            }
-        }
-        if edge.is_finite() {
-            let metro_d = haversine_km(lat, lon, c.metro[1], c.metro[0]);
-            let take = match &best {
-                Some((_, be, bm)) => (edge, metro_d) < (*be, *bm),
-                None => true,
-            };
-            if take {
-                best = Some((c, edge, metro_d));
-            }
-        }
-    }
-    if let Some((c, _, _)) = best {
-        return Some(Resolved {
-            name: c.name.clone(),
-            iso2: c.iso2.clone(),
-            iso3: c.iso3.clone(),
-            method: ResolveMethod::Bbox,
-        });
-    }
-    match nearest(lat, lon, &boxes().iter().collect::<Vec<_>>()) {
-        Some((c, d)) if d <= NEAREST_KM => Some(Resolved {
-            name: c.name.clone(),
-            iso2: c.iso2.clone(),
-            iso3: c.iso3.clone(),
-            method: ResolveMethod::NearestCountry,
-        }),
-        _ => None,
-    }
-}
 
 /// Canonicalize a country name for cross-dataset matching. The feed datasets
 /// use common names while the bbox table uses Natural Earth names; only the
@@ -280,10 +130,49 @@ pub struct NuclearItem {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FlightItem {
+    pub hex: String,
+    pub callsign: Option<String>,
+    pub registration: Option<String>,
+    pub aircraft_type: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude_m: Option<f64>,
+    pub speed_knots: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QuakeItem {
+    pub id: String,
+    pub magnitude: Option<f64>,
+    pub place: Option<String>,
+    pub time: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub depth_km: Option<f64>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CameraItem {
+    pub id: String,
+    pub name: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub category: String,
+    pub image_url: String,
+    pub page_url: String,
+    pub location: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct InspectFeeds {
     pub news: FeedSection<NewsItem>,
     pub conflicts: FeedSection<ConflictItem>,
     pub nuclear: FeedSection<NuclearItem>,
+    pub flights: FeedSection<FlightItem>,
+    pub quakes: FeedSection<QuakeItem>,
+    pub cameras: FeedSection<CameraItem>,
 }
 
 impl InspectFeeds {
@@ -292,6 +181,9 @@ impl InspectFeeds {
             news: FeedSection::empty(),
             conflicts: FeedSection::empty(),
             nuclear: FeedSection::empty(),
+            flights: FeedSection::empty(),
+            quakes: FeedSection::empty(),
+            cameras: FeedSection::empty(),
         }
     }
 }
@@ -403,16 +295,144 @@ fn nuclear_section(name: &str) -> FeedSection<NuclearItem> {
     )
 }
 
+/// Keep the flights whose reported position falls inside the country's
+/// polygon bboxes. Pure: unit-testable without network or cache.
+fn flights_items(resp: feeds::flights::FlightsResponse, iso3: &str) -> Vec<FlightItem> {
+    resp.flights
+        .into_iter()
+        .filter_map(|f| {
+            let (lat, lon) = (f.latitude?, f.longitude?);
+            if point_in_country_bboxes(lat, lon, iso3) {
+                Some(FlightItem {
+                    hex: f.hex,
+                    callsign: f.callsign,
+                    registration: f.registration,
+                    aircraft_type: f.aircraft_type,
+                    latitude: lat,
+                    longitude: lon,
+                    altitude_m: f.altitude_m,
+                    speed_knots: f.speed_knots,
+                })
+            } else {
+                None
+            }
+        })
+        .take(50)
+        .collect()
+}
+
+/// Aircraft over a country: `scope=all` (military-only would be a strange
+/// subset for a country panel), 500 upstream so small countries still get
+/// hits. Same `cached_bytes` TTL pattern as `/api/flights`; the
+/// `scope=all:limit=500` key is distinct from the endpoint's default key.
+async fn flights_section(state: &AppState, iso3: &str) -> FeedSection<FlightItem> {
+    let client = state.client.clone();
+    let config = state.config.clone();
+    let key = "flights:scope=all:limit=500";
+    let body = match cached_bytes(state, key, feeds::flights::TTL, || async move {
+        feeds::flights::fetch_with_config(&client, &config, "all", 500).await
+    })
+    .await
+    {
+        Ok((body, _)) => body,
+        Err(e) => return FeedSection::err(format!("{e:?}")),
+    };
+    let resp: feeds::flights::FlightsResponse = match serde_json::from_slice(&body) {
+        Ok(r) => r,
+        Err(e) => return FeedSection::err(format!("decode failed: {e}")),
+    };
+    FeedSection::ok(flights_items(resp, iso3))
+}
+
+/// Keep the quakes whose epicenter falls inside the country's polygon
+/// bboxes. Pure: unit-testable. The USGS feed is newest-first, so `take`
+/// preserves that order.
+fn quakes_items(resp: feeds::quakes::QuakesResponse, iso3: &str) -> Vec<QuakeItem> {
+    resp.quakes
+        .into_iter()
+        .filter_map(|q| {
+            let (lat, lon) = (q.latitude?, q.longitude?);
+            if point_in_country_bboxes(lat, lon, iso3) {
+                Some(QuakeItem {
+                    id: q.id,
+                    magnitude: q.magnitude,
+                    place: q.place,
+                    time: q.time,
+                    latitude: lat,
+                    longitude: lon,
+                    depth_km: q.depth_km,
+                    url: q.url,
+                })
+            } else {
+                None
+            }
+        })
+        .take(10)
+        .collect()
+}
+
+/// Earthquakes in a country: same cache key/TTL as `/api/quakes`.
+async fn quakes_section(state: &AppState, iso3: &str) -> FeedSection<QuakeItem> {
+    let client = state.client.clone();
+    let body = match cached_bytes(state, "quakes", feeds::quakes::TTL, || async move {
+        feeds::quakes::fetch(&client).await
+    })
+    .await
+    {
+        Ok((body, _)) => body,
+        Err(e) => return FeedSection::err(format!("{e:?}")),
+    };
+    let resp: feeds::quakes::QuakesResponse = match serde_json::from_slice(&body) {
+        Ok(r) => r,
+        Err(e) => return FeedSection::err(format!("decode failed: {e}")),
+    };
+    FeedSection::ok(quakes_items(resp, iso3))
+}
+
+/// Keep the cameras whose coordinates fall inside the country's polygon
+/// bboxes. Pure: unit-testable. (The registry carries concrete lat/lon, so
+/// no city→country guessing is needed.)
+fn cameras_items(cams: Vec<feeds::cameras::Camera>, iso3: &str) -> Vec<CameraItem> {
+    cams.into_iter()
+        .filter(|c| point_in_country_bboxes(c.lat, c.lon, iso3))
+        .map(|c| CameraItem {
+            id: c.id,
+            name: c.name,
+            lat: c.lat,
+            lon: c.lon,
+            category: c.category,
+            image_url: c.image_url,
+            page_url: c.page_url,
+            location: c.location,
+        })
+        .collect()
+}
+
+/// Public cameras in a country: static embedded registry, filtered in
+/// memory (no cache, no upstream traffic).
+fn cameras_section(iso3: &str) -> FeedSection<CameraItem> {
+    match feeds::cameras::load_registry() {
+        Ok(cams) => FeedSection::ok(cameras_items(cams, iso3)),
+        Err(e) => FeedSection::err(e),
+    }
+}
+
 async fn inspect_feeds(state: &AppState, country: &CountryRef) -> InspectFeeds {
-    // News and conflicts hit the network on cache miss; run them together.
-    let (news, conflicts) = tokio::join!(
+    // Network sections run together on cache miss; the static sections are
+    // computed inline (cheap).
+    let (news, conflicts, flights, quakes) = tokio::join!(
         news_section(state, &country.name),
-        conflicts_section(state, &country.name)
+        conflicts_section(state, &country.name),
+        flights_section(state, &country.iso3),
+        quakes_section(state, &country.iso3),
     );
     InspectFeeds {
         news,
         conflicts,
         nuclear: nuclear_section(&country.name),
+        flights,
+        quakes,
+        cameras: cameras_section(&country.iso3),
     }
 }
 
@@ -438,7 +458,7 @@ pub async fn inspect(
         ));
     }
 
-    let (country, resolution, resolution_note, osint) = match resolve(lat, lon) {
+    let (country, resolution, resolution_note, osint) = match resolve_country(lat, lon) {
         Some(r) => {
             let (resolution, note) = match r.method {
                 ResolveMethod::Bbox => (
@@ -503,74 +523,110 @@ mod tests {
     use super::*;
 
     #[test]
-    fn paris_resolves_to_france() {
-        let r = resolve(48.85, 2.35).expect("paris resolves");
-        assert_eq!(r.iso3, "FRA");
-        assert_eq!(r.method, ResolveMethod::Bbox);
-    }
-
-    #[test]
-    fn tokyo_resolves_to_japan() {
-        let r = resolve(35.68, 139.69).expect("tokyo resolves");
-        assert_eq!(r.iso3, "JPN");
-    }
-
-    #[test]
-    fn sydney_resolves_to_australia() {
-        let r = resolve(-33.87, 151.21).expect("sydney resolves");
-        assert_eq!(r.iso3, "AUS");
-    }
-
-    #[test]
-    fn new_york_resolves_to_usa() {
-        let r = resolve(40.71, -74.0).expect("nyc resolves");
-        assert_eq!(r.iso3, "USA");
-    }
-
-    #[test]
-    fn mid_south_atlantic_is_international_waters() {
-        // (-45, -30): South Atlantic, in no polygon bbox, >500 km from any
-        // metropolitan center.
-        assert!(resolve(-45.0, -30.0).is_none());
-    }
-
-    #[test]
-    fn hawaii_resolves_to_usa_via_island_polygon() {
-        let r = resolve(19.6, -155.5).expect("hawaii resolves");
-        assert_eq!(r.iso3, "USA");
-        assert_eq!(r.method, ResolveMethod::Bbox);
-    }
-
-    #[test]
-    fn moscow_resolves_to_russia() {
-        let r = resolve(55.75, 37.62).expect("moscow resolves");
-        assert_eq!(r.iso3, "RUS");
-    }
-
-    #[test]
-    fn english_channel_resolves_to_france() {
-        // (49.7, -2.0): in the Channel, inside metropolitan France's polygon
-        // bbox — and several inflated neighbours' — deepest-inside wins.
-        let r = resolve(49.7, -2.0).expect("channel resolves");
-        assert_eq!(r.iso3, "FRA");
-        assert_eq!(r.method, ResolveMethod::Bbox);
-    }
-
-    #[test]
-    fn lon_wraps_around_antimeridian() {
-        // Same point expressed at +190 == -170 (Bering Sea): the wrap must
-        // not break resolution — either neighbour is a defensible answer.
-        let r = resolve(65.0, 190.0).expect("wrapped lon resolves");
-        assert!(r.iso3 == "RUS" || r.iso3 == "USA", "got {}", r.iso3);
-        assert_eq!(r.method, ResolveMethod::Bbox);
-    }
-
-    #[test]
     fn name_canonicalization_covers_verified_divergences() {
         assert!(names_match("United States of America", "United States"));
         assert!(names_match("Czechia", "Czech Republic"));
         assert!(names_match("United Arab Emirates", "UAE"));
         assert!(names_match("Japan", "Japan"));
         assert!(!names_match("Japan", "China"));
+    }
+
+    fn flight_at(hex: &str, lat: Option<f64>, lon: Option<f64>) -> feeds::flights::Flight {
+        feeds::flights::Flight {
+            hex: hex.to_string(),
+            callsign: None,
+            registration: None,
+            aircraft_type: None,
+            latitude: lat,
+            longitude: lon,
+            altitude_m: None,
+            on_ground: false,
+            speed_knots: None,
+            track_deg: None,
+            emergency: None,
+            seen_pos_s: None,
+        }
+    }
+
+    #[test]
+    fn flights_filter_keeps_only_in_country_aircraft() {
+        let resp = feeds::flights::FlightsResponse {
+            scope: "all".to_string(),
+            count: 4,
+            total_upstream: 4,
+            generated_at: "t".to_string(),
+            flights: vec![
+                flight_at("a1", Some(35.7), Some(139.7)), // Tokyo -> JPN
+                flight_at("a2", Some(48.9), Some(2.3)),   // Paris -> FRA
+                flight_at("a3", None, None),              // no position
+                flight_at("a4", Some(0.0), Some(-150.0)), // mid-Pacific
+            ],
+        };
+        let items = flights_items(resp, "JPN");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].hex, "a1");
+        assert!((items[0].latitude - 35.7).abs() < 1e-9);
+    }
+
+    fn quake_at(id: &str, lat: Option<f64>, lon: Option<f64>) -> feeds::quakes::Quake {
+        feeds::quakes::Quake {
+            id: id.to_string(),
+            magnitude: Some(5.0),
+            magnitude_type: None,
+            place: None,
+            time: "t".to_string(),
+            updated: "t".to_string(),
+            url: None,
+            latitude: lat,
+            longitude: lon,
+            depth_km: None,
+            tsunami: false,
+            status: None,
+        }
+    }
+
+    #[test]
+    fn quakes_filter_keeps_only_in_country_epicenters() {
+        let resp = feeds::quakes::QuakesResponse {
+            count: 3,
+            generated_at: "t".to_string(),
+            quakes: vec![
+                quake_at("q1", Some(35.7), Some(139.7)), // Tokyo -> JPN
+                quake_at("q2", Some(40.7), Some(-74.0)), // NYC -> USA
+                quake_at("q3", None, None),              // no geometry
+            ],
+        };
+        let items = quakes_items(resp, "JPN");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].id, "q1");
+    }
+
+    #[test]
+    fn cameras_filter_keeps_only_in_country_cameras() {
+        let cams = vec![
+            feeds::cameras::Camera {
+                id: "c1".to_string(),
+                name: "Shibuya".to_string(),
+                lat: 35.66,
+                lon: 139.70,
+                category: "traffic".to_string(),
+                image_url: "u".to_string(),
+                page_url: "p".to_string(),
+                location: "Tokyo".to_string(),
+            },
+            feeds::cameras::Camera {
+                id: "c2".to_string(),
+                name: "Times Sq".to_string(),
+                lat: 40.76,
+                lon: -73.99,
+                category: "traffic".to_string(),
+                image_url: "u".to_string(),
+                page_url: "p".to_string(),
+                location: "New York".to_string(),
+            },
+        ];
+        let items = cameras_items(cams, "JPN");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].id, "c1");
     }
 }

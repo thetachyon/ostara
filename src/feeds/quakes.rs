@@ -58,7 +58,7 @@ struct Feed {
 }
 
 /// Normalized earthquake record served by `/api/quakes`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Quake {
     pub id: String,
     pub magnitude: Option<f64>,
@@ -74,7 +74,7 @@ pub struct Quake {
     pub status: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct QuakesResponse {
     pub count: usize,
     pub generated_at: String,

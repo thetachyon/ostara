@@ -79,7 +79,13 @@
       `<li>${link(e.url, e.title)}<br/><span class="m">${esc(e.date || "")}</span></li>`);
     const nuclear = feedSection("Nuclear sites", f.nuclear || { ok: true, count: 0, items: [] }, (n) =>
       `<li>${esc(n.name)}<br/><span class="m">${esc(n.status || "")} · ${n.lat.toFixed(2)}, ${n.lon.toFixed(2)}</span></li>`);
-    body.innerHTML = note + osint + news + conflicts + nuclear;
+    const flights = feedSection("Aircraft", f.flights || { ok: true, count: 0, items: [] }, (a) =>
+      `<li>${esc(a.callsign || a.hex)}${a.aircraft_type ? " · " + esc(a.aircraft_type) : ""}<br/><span class="m">${a.altitude_m != null ? Math.round(a.altitude_m) + " m" : "alt n/a"}${a.speed_knots != null ? " · " + Math.round(a.speed_knots) + " kt" : ""} · ${a.latitude.toFixed(2)}, ${a.longitude.toFixed(2)}</span></li>`);
+    const quakes = feedSection("Earthquakes", f.quakes || { ok: true, count: 0, items: [] }, (q) =>
+      `<li>${q.magnitude != null ? "M" + q.magnitude.toFixed(1) : "M?"} — ${esc(q.place || q.id)}<br/><span class="m">${esc((q.time || "").slice(0, 10))} · ${q.latitude.toFixed(2)}, ${q.longitude.toFixed(2)}</span></li>`);
+    const cameras = feedSection("Cameras", f.cameras || { ok: true, count: 0, items: [] }, (c) =>
+      `<li>${link(c.page_url, c.name)}<br/><span class="m">${esc(c.category || "")}${c.location ? " · " + esc(c.location) : ""}</span></li>`);
+    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
   }

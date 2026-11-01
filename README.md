@@ -381,15 +381,24 @@ containing polygon bbox it sits deepest inside; a point in no bbox resolves
 to the nearest metropolitan center within 500 km, otherwise
 `country: null` with an "international waters" note. No polygon data ships —
 borders are coarse by design and the response names its resolution method
-(`bbox` | `nearest-country` | `international-waters`). Feed sections reuse
-the normal endpoints' TTL cache paths: `news` (GDELT `sourcecountry:`
-query), `conflicts` (GDACS country name), `nuclear` (static registry).
-Cameras (`location` is city text), fires/quakes (no country field), flights
-(no country in the normalized struct), and the rest carry no country field
-and are excluded. Missing/invalid coords → 400. In the UI, left-clicking
-empty map area opens the Country panel (top resources per category with a
-full-pack shortcut into the Countries drawer, plus news/alerts/nuclear
-sections); marker popups and right-click dossier are unchanged.
+(`bbox` | `nearest-country` | `international-waters`). The resolver lives
+in `src/geo.rs` (`resolve_country`, `country_polygon_bboxes`,
+`point_in_country_bboxes`) so feeds can test membership against one
+country's boxes. Feed sections reuse the normal endpoints' TTL cache paths:
+`news` (GDELT `sourcecountry:` query), `conflicts` (GDACS country name),
+`nuclear` (static registry), `flights` (aircraft lat/lon in the country's
+boxes, `scope=all:limit=500`, capped at 50), `quakes` (epicenter lat/lon,
+newest 10), `cameras` (registry lat/lon). Deliberately excluded and
+documented in `src/country_inspect.rs`: `markets` (CoinGecko crypto is
+global — no country attribution exists, and any instrument→country mapping
+would be guesswork) and `cyber`/`threatfox` (IOCs are IPs/domains/hashes;
+country resolution needs a GeoIP database we don't ship, and an embedded
+prefix table would be too coarse and dangerous for intel use — no
+reverse-DNS guessing). Missing/invalid coords → 400. In the UI,
+left-clicking empty map area opens the Country panel (top resources per
+category with a full-pack shortcut into the Countries drawer, plus
+news/alerts/nuclear/aircraft/earthquakes/cameras sections); marker popups
+and right-click dossier are unchanged.
 
 ### Web UI — MapLibre globe
 

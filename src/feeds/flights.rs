@@ -66,7 +66,7 @@ struct AdsbResponse {
 }
 
 /// Normalized aircraft record served by `/api/flights`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Flight {
     pub hex: String,
     pub callsign: Option<String>,
@@ -84,7 +84,7 @@ pub struct Flight {
     pub seen_pos_s: Option<f64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FlightsResponse {
     pub scope: String,
     pub count: usize,
