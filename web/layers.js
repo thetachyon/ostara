@@ -146,10 +146,10 @@ window.OST = window.OST || {};
     {
       id: "cyber", label: "Cyber IOCs",
       url: () => "/api/cyber/threats",
-      items: (j) => j.iocs || j.threats || [],
+      items: (j) => j.indicators || [],
       itemHTML: (t) =>
-        `<div class="feed-item"><div class="t" style="font-family:var(--mono);font-size:11px">${esc(t.ioc || "")}</div>` +
-        `<div class="m">${esc(t.ioc_type || "")} · ${esc(t.threat_type || t.malware || "")} · conf ${t.confidence_level != null ? t.confidence_level : "?"}</div></div>`,
+        `<div class="feed-item"><div class="t" style="font-family:var(--mono);font-size:11px">${esc(t.value || "")}</div>` +
+        `<div class="m">${esc(t.kind || "")} · ${esc(t.threat_type || "")} · ${esc(t.first_seen || "")}</div></div>`,
     },
     {
       id: "threatfox", label: "ThreatFox",

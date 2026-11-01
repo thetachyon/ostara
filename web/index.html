@@ -48,9 +48,14 @@
 </aside>
 
 <aside id="feeddrawer" class="panel right wide hidden">
-  <div class="panel-head"><h2 id="feeddrawer-title">Feeds</h2><button class="x" data-close="feeddrawer" title="Close (ESC)">×</button></div>
-  <div id="feed-tabs" class="tabs"></div>
-  <div id="feed-body"></div>
+  <div class="panel-head"><h2 id="feeddrawer-title">Feeds <span class="v1tag">all categories</span></h2><button class="x" data-close="feeddrawer" title="Close (ESC)">×</button></div>
+  <div id="feed-split">
+    <div id="feed-nav"></div>
+    <div id="feed-main">
+      <div id="feed-cathead"></div>
+      <div id="feed-body"></div>
+    </div>
+  </div>
 </aside>
 
 <aside id="recon" class="panel right wide hidden">
@@ -124,6 +129,7 @@
 <script src="/recon.js"></script>
 <script src="/country.js"></script>
 <script src="/inspect.js"></script>
+<script src="/feeds.js"></script>
 <script src="/graph.js"></script>
 <script src="/app.js"></script>
 </body>

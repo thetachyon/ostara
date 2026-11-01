@@ -245,53 +245,15 @@ window.OST = window.OST || {};
       `${total.toLocaleString()} plotted · ${OST.MAP_LAYERS.filter((l) => layerState[l.id].visible).length}/${OST.MAP_LAYERS.length} layers`;
   }
 
-  /* ---------------- feed drawer ---------------- */
+  /* ---------------- feed drawer (structured browser, see feeds.js) ---------------- */
 
-  let feedTab = null;
+  let feedCat = "flights";
+  // Back-compat for the layer-rail "Data feeds" shortcuts (old LIST_FEEDS ids).
   OST.openFeedTab = function (id) {
-    feedTab = id || OST.LIST_FEEDS[0].id;
-    const tabs = document.getElementById("feed-tabs");
-    tabs.innerHTML = OST.LIST_FEEDS.map((f) =>
-      `<button data-ftab="${f.id}" class="${f.id === feedTab ? "on" : ""}">${esc(f.label)}</button>`).join("");
-    renderFeedBody();
+    const map = { news: "news", markets: "markets", conflicts: "conflicts", cyber: "cyber", threatfox: "threatfox", telegram: "telegram", spacewx: "helio", satellites: "satellites" };
+    feedCat = map[id] || "flights";
+    OST.openFeedCat(feedCat);
   };
-
-  function renderFeedBody() {
-    const F = OST.LIST_FEEDS.find((f) => f.id === feedTab);
-    const body = document.getElementById("feed-body");
-    if (!F) { body.innerHTML = `<div class="empty">unknown feed</div>`; return; }
-    const inputs = (F.inputs || []).map((i) =>
-      `<input data-fin="${i.name}" placeholder="${esc(i.placeholder)}" value="${esc(i.value || "")}" spellcheck="false" />`).join("");
-    body.innerHTML =
-      `<div class="feed-tools">${inputs}<button id="feed-go">Load</button></div><div id="feed-out"><div class="m">press Load</div></div>`;
-    const go = () => loadFeed(F);
-    document.getElementById("feed-go").onclick = go;
-    body.querySelectorAll("input").forEach((inp) =>
-      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }));
-    if (!F.inputs) go(); // auto-load feeds that need no input
-  }
-
-  async function loadFeed(F) {
-    const out = document.getElementById("feed-out");
-    const params = {};
-    document.querySelectorAll("#feed-body [data-fin]").forEach((i) => { params[i.dataset.fin] = i.value.trim(); });
-    if (F.validate) {
-      const err = F.validate(params);
-      if (err) { out.innerHTML = `<div class="errbox">${esc(err)}</div>`; return; }
-    }
-    out.innerHTML = `<div class="m">loading…</div>`;
-    try {
-      const { data } = await OST.fetchJSON(F.url(params), { timeout: 30000 });
-      if (F.custom) { F.custom(data, out); return; }
-      const items = F.items(data);
-      let html = "";
-      if (F.note) { const n = F.note(data); if (n) html += `<div class="m" style="margin-bottom:6px">${esc(n)}</div>`; }
-      html += `<div class="m" style="margin-bottom:6px">${items.length} result${items.length === 1 ? "" : "s"}` +
-        (data.generated_at ? ` · ${esc(data.generated_at)}` : "") + `</div>`;
-      html += items.length ? items.slice(0, 100).map(F.itemHTML).join("") : `<div class="empty">no results</div>`;
-      out.innerHTML = html;
-    } catch (e) { OST.showFetchError(out, e, F.label); }
-  }
 
   /* ---------------- intel stream ---------------- */
 
@@ -435,7 +397,7 @@ window.OST = window.OST || {};
         const act = b.dataset.act;
         if (act === "layers") document.getElementById("layers").classList.toggle("hidden");
         else if (act === "intel") openPanel("intel");
-        else if (act === "feeds") { openPanel("feeddrawer"); OST.openFeedTab(feedTab); }
+        else if (act === "feeds") { openPanel("feeddrawer"); OST.openFeedCat(feedCat); }
         else if (act === "recon") openPanel("recon");
         else if (act === "country") openPanel("cosp");
         else if (act === "graph") openPanel("graphp");
@@ -489,7 +451,7 @@ window.OST = window.OST || {};
     OST.initRecon();
     OST.initGraph();
     OST.initCountry();
-    OST.openFeedTab(OST.LIST_FEEDS[0].id);
+    OST.initFeeds();
     initKeys();
     // default: layers + intel visible
     document.getElementById("feeddrawer").classList.add("hidden");

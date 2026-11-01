@@ -417,6 +417,17 @@ binary serves it directly). Map-first UX modeled on OSIRIS:
   transparency, IP/ASN, CVE, gated port scan with inline responsible-use
   notice), entity-graph explorer (search → expandable tree, v1), region
   dossier (right-click the map → `/api/dossier` composite).
+- "Feeds" button: dedicated Feeds panel — a structured browser for all 16 feed
+  categories (flights, vessels, fires, quakes, weather, satellites, overhead
+  N2YO, news, cameras, markets, conflicts, cyber IOCs, ThreatFox, Telegram,
+  space weather, nuclear). Category navigator with live counts and per-feed
+  health dots from `/api/health/feeds`; tables for structured feeds, cards
+  for news/messages, key-value for single-point feeds; per-category filters
+  (flight scope, camera category, nuclear country, ThreatFox malware/days,
+  news/telegram search, lat/lon for weather/overhead); manual refresh plus
+  5-minute auto-refresh of the open category; "show on map" toggles that flip
+  the corresponding layer-rail layer. Keyed feeds with no key configured show
+  their informative degraded state; vessels shows its no-AIS-adapter state.
 - "Countries" button: Country OSINT directory drawer — searchable country
   list with coverage badges and filters; each pack renders grouped clickable
   resources with free/paid badges, plus a global-resources view.
