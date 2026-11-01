@@ -40,6 +40,7 @@ window.OST = window.OST || {};
   OST.FEED_CATS = [
     {
       id: "flights", label: "Flights", health: "flights", map: "flights",
+      group: "country",
       inputs: [
         { name: "scope", type: "select", options: ["mil", "all"], value: "mil" },
         { name: "limit", placeholder: "limit", value: "100" },
@@ -62,6 +63,7 @@ window.OST = window.OST || {};
     },
     {
       id: "vessels", label: "Vessels", health: "vessels", map: "vessels",
+      group: "global",
       note: "no AIS REST adapter — 503 by design until AIS_API_KEY is wired",
       url: () => "/api/vessels",
       render(j, el) {
@@ -71,6 +73,7 @@ window.OST = window.OST || {};
     },
     {
       id: "fires", label: "Fires", health: "fires", map: "fires",
+      group: "global",
       note: "NASA FIRMS — 503 until FIRMS_API_KEY is set",
       url: () => "/api/fires",
       render(j, el) {
@@ -87,6 +90,7 @@ window.OST = window.OST || {};
     },
     {
       id: "quakes", label: "Quakes", health: "quakes", map: "quakes",
+      group: "country",
       url: () => "/api/quakes",
       render(j, el) {
         const rows = (j.quakes || []).slice(0, ROW_CAP).map((q) => [
@@ -103,6 +107,7 @@ window.OST = window.OST || {};
     },
     {
       id: "weather", label: "Weather", health: "weather",
+      group: "global",
       inputs: [
         { name: "lat", placeholder: "latitude", value: "40.71", required: true },
         { name: "lon", placeholder: "longitude", value: "-74.00", required: true },
@@ -127,6 +132,7 @@ window.OST = window.OST || {};
     },
     {
       id: "satellites", label: "Satellites", health: "satellites",
+      group: "global",
       inputs: [{ name: "limit", placeholder: "limit", value: "50" }],
       url: (p) => `/api/satellites?limit=${encodeURIComponent(p.limit || "50")}`,
       render(j, el) {
@@ -143,6 +149,7 @@ window.OST = window.OST || {};
     },
     {
       id: "n2yo", label: "Overhead (N2YO)", health: "n2yo",
+      group: "global",
       inputs: [
         { name: "lat", placeholder: "latitude (default 0)" },
         { name: "lon", placeholder: "longitude (default 0)" },
@@ -163,6 +170,7 @@ window.OST = window.OST || {};
     },
     {
       id: "news", label: "News", health: "news",
+      group: "country",
       inputs: [{ name: "q", placeholder: "search news… (required)", required: true }],
       validate: (p) => (p.q && p.q.trim() ? null : "enter a search query"),
       url: (p) => `/api/news?q=${encodeURIComponent(p.q || "")}&max_records=25`,
@@ -178,6 +186,7 @@ window.OST = window.OST || {};
     },
     {
       id: "cameras", label: "Cameras", health: "cameras", map: "cameras",
+      group: "country",
       staticNote: "embedded registry — 48 curated public cameras",
       inputs: [
         { name: "category", type: "select", options: ["all", "traffic", "weather", "park"], value: "all" },
@@ -201,7 +210,9 @@ window.OST = window.OST || {};
       },
     },
     {
-      id: "markets", label: "Markets", health: "markets",
+      id: "markets", label: "Markets (CoinGecko)", health: "markets",
+      group: "global",
+      note: "global crypto data \u2014 no country attribution (listed under Global for this reason)",
       url: () => "/api/markets",
       render(j, el) {
         const rows = (j.markets || []).slice(0, ROW_CAP).map((m) => {
@@ -221,6 +232,7 @@ window.OST = window.OST || {};
     },
     {
       id: "conflicts", label: "Conflicts", health: "conflicts",
+      group: "country",
       url: () => "/api/conflicts",
       render(j, el) {
         const items = j.events || j.conflicts || [];
@@ -236,6 +248,7 @@ window.OST = window.OST || {};
     },
     {
       id: "cyber", label: "Cyber IOCs", health: "cyber",
+      group: "global",
       note: "URLhaus + ThreatFox merged — 503 until THREATFOX_API_KEY is set",
       url: () => "/api/cyber/threats",
       render(j, el) {
@@ -252,6 +265,7 @@ window.OST = window.OST || {};
     },
     {
       id: "threatfox", label: "ThreatFox", health: "threatfox",
+      group: "global",
       note: "abuse.ch — 503 until THREATFOX_API_KEY is set",
       inputs: [
         { name: "malware", placeholder: "malware family (optional)" },
@@ -274,6 +288,7 @@ window.OST = window.OST || {};
     },
     {
       id: "telegram", label: "Telegram", health: "telegram",
+      group: "global",
       note: "503 until TELEGRAM_API_ID + TELEGRAM_API_HASH are set",
       inputs: [{ name: "channel", placeholder: "channel name (no @)", required: true }],
       validate: (p) => (p.channel && p.channel.trim() ? null : "enter a channel name"),
@@ -291,6 +306,7 @@ window.OST = window.OST || {};
     },
     {
       id: "helio", label: "Space Wx", health: "helio",
+      group: "global",
       url: () => "/api/space-weather",
       render(j, el) {
         el.innerHTML = kv([
@@ -304,6 +320,7 @@ window.OST = window.OST || {};
     },
     {
       id: "nuclear", label: "Nuclear", health: "nuclear", map: "nuclear",
+      group: "country",
       staticNote: "embedded registry — 189 stations",
       inputs: [{ name: "country", placeholder: "country filter (optional)" }],
       url: (p) => "/api/nuclear" + (p.country ? `?country=${encodeURIComponent(p.country)}` : ""),
@@ -340,12 +357,20 @@ window.OST = window.OST || {};
 
   /* ---------------- navigator ---------------- */
 
+  const FEED_GROUPS = [
+    { id: "country", title: "Country-specific", hint: "resolvable per country in the click-a-country inspector" },
+    { id: "global", title: "Global", hint: "no country attribution" },
+  ];
+
   function buildNav() {
     const nav = document.getElementById("feed-nav");
-    nav.innerHTML = OST.FEED_CATS.map((c) =>
-      `<button class="co-row" data-fcat="${c.id}">` +
-      `<span class="co-name">${healthDot(c)} ${esc(c.label)}</span>` +
-      `<span class="co-meta"><span class="n" id="fc-n-${c.id}">…</span></span></button>`
+    nav.innerHTML = FEED_GROUPS.map((g) =>
+      `<div class="feed-nav-group"><div class="feed-nav-head" title="${esc(g.hint)}">${esc(g.title)}</div>` +
+      OST.FEED_CATS.filter((c) => (c.group || "global") === g.id).map((c) =>
+        `<button class="co-row" data-fcat="${c.id}">` +
+        `<span class="co-name">${healthDot(c)} ${esc(c.label)}</span>` +
+        `<span class="co-meta"><span class="n" id="fc-n-${c.id}">…</span></span></button>`
+      ).join("") + `</div>`
     ).join("");
     nav.onclick = (e) => {
       const b = e.target.closest("[data-fcat]");
