@@ -3,7 +3,6 @@
 
 use std::{net::SocketAddr, time::Duration};
 
-use axum::{Router, routing::get};
 use ostara::{cache::TtlCache, routes};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
@@ -29,15 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cache: Arc::new(TtlCache::new()),
     };
 
-    let app = Router::new()
-        .route("/healthz", get(routes::healthz))
-        .route("/api/flights", get(routes::flights))
-        .route("/api/quakes", get(routes::quakes))
-        .route("/api/weather", get(routes::weather))
-        .route("/api/satellites", get(routes::satellites))
-        .route("/api/news", get(routes::news))
-        .route("/api/stats", get(routes::stats))
-        .with_state(state);
+    let app = routes::app(state);
 
     // Mirrors OSIRIS's own OSIRIS_PORT convention; default 3000.
     let port: u16 = std::env::var("OSIRIS_PORT")

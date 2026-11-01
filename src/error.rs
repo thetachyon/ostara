@@ -33,6 +33,14 @@ impl ApiError {
             detail: detail.into(),
         }
     }
+
+    pub fn internal(error: impl Into<String>, detail: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            error: error.into(),
+            detail: detail.into(),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {

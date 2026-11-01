@@ -8,13 +8,20 @@
 //! `{"error", "detail"}` and never takes down other feeds. `/api/stats`
 //! goes further — it degrades per-feed instead of failing the request.
 
-use std::{collections::HashMap, future::Future, pin::Pin, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    future::Future,
+    pin::Pin,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use axum::{
-    Json,
+    Json, Router,
     extract::{Query, State},
     http::{HeaderName, StatusCode, header},
     response::{IntoResponse, Response},
+    routing::get,
 };
 use serde::{Deserialize, Serialize};
 
@@ -228,6 +235,71 @@ pub async fn news(
 }
 
 // ---------------------------------------------------------------------------
+// /api/cameras — public cameras from the embedded registry.
+//
+// The registry is compile-time data (data/cameras.json): no upstream fetch,
+// no cache — filtering 48 entries is microseconds. `image_url` values are
+// live snapshots served by the camera operators themselves; we link, we
+// never proxy or store frames.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct CamerasQuery {
+    /// Bounding box "minlon,minlat,maxlon,maxlat", e.g. "-125,32,-114,42".
+    pub bbox: Option<String>,
+    /// Category filter, case-insensitive (traffic, weather, park).
+    pub category: Option<String>,
+    /// Max cameras returned. Default 50, clamped at 200.
+    pub limit: Option<usize>,
+}
+
+fn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), ApiError> {
+    let bad = || {
+        ApiError::bad_request(
+            "invalid bbox",
+            "bbox must be \"minlon,minlat,maxlon,maxlat\", e.g. ?bbox=-125,32,-114,42",
+        )
+    };
+    let parts: Vec<f64> = s
+        .split(',')
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .map_err(|_| bad())?;
+    if parts.len() != 4 {
+        return Err(bad());
+    }
+    let (minlon, minlat, maxlon, maxlat) = (parts[0], parts[1], parts[2], parts[3]);
+    if !(-180.0..=180.0).contains(&minlon)
+        || !(-180.0..=180.0).contains(&maxlon)
+        || !(-90.0..=90.0).contains(&minlat)
+        || !(-90.0..=90.0).contains(&maxlat)
+        || minlon > maxlon
+        || minlat > maxlat
+    {
+        return Err(bad());
+    }
+    Ok((minlon, minlat, maxlon, maxlat))
+}
+
+pub async fn cameras(Query(q): Query<CamerasQuery>) -> Result<impl IntoResponse, ApiError> {
+    let limit = q.limit.unwrap_or(50).clamp(1, 200);
+    let bbox = match &q.bbox {
+        Some(b) => Some(parse_bbox(b)?),
+        None => None,
+    };
+    // A corrupt embedded registry is a deploy-time bug: surface it as 500
+    // with the validation detail rather than serving an empty list.
+    let registry = feeds::cameras::load_registry()
+        .map_err(|detail| ApiError::internal("camera registry invalid", detail))?;
+    let filtered = feeds::cameras::filter_cameras(&registry, bbox, q.category.as_deref(), limit);
+    Ok(Json(feeds::cameras::CamerasResponse {
+        count: filtered.len(),
+        generated_at: now_iso8601(),
+        cameras: filtered,
+    }))
+}
+
+// ---------------------------------------------------------------------------
 // /api/stats — lightweight aggregate counters, the cheap polling endpoint.
 // ---------------------------------------------------------------------------
 
@@ -402,7 +474,27 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
 
     let mut feeds_map = HashMap::new();
     let mut degraded = false;
-    for (name, stat) in [flights, quakes, satellites, news, weather] {
+    // Cameras need no upstream fetch: the registry is embedded. Count is
+    // the registry length; a corrupt registry reports ok=false honestly.
+    let cameras_stat = match feeds::cameras::load_registry() {
+        Ok(cams) => (
+            "cameras".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(cams.len()),
+                error: None,
+            },
+        ),
+        Err(detail) => (
+            "cameras".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(format!("registry invalid: {detail}")),
+            },
+        ),
+    };
+    for (name, stat) in [flights, quakes, satellites, news, weather, cameras_stat] {
         if !stat.ok {
             degraded = true;
         }
@@ -414,4 +506,237 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         degraded,
         feeds: feeds_map,
     })
+}
+
+// ---------------------------------------------------------------------------
+// /api/health/feeds — live upstream health probes.
+//
+// One entry per input source: status, latency, and a human-readable detail.
+// A UI status page renders directly from this shape. One dead feed never
+// fails the endpoint — each feed reports its own status.
+// ---------------------------------------------------------------------------
+
+/// Per-feed health classification:
+/// - `ok`: upstream returned 2xx with a parseable body within the slow threshold.
+/// - `degraded`: upstream reachable but slow, returned non-2xx, or returned a
+///   body we could not parse.
+/// - `down`: connection failure, DNS failure, or probe timeout.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FeedHealth {
+    Ok,
+    Degraded,
+    Down,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FeedHealthReport {
+    pub status: FeedHealth,
+    pub latency_ms: u64,
+    pub detail: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FeedsHealthResponse {
+    pub generated_at: String,
+    pub feeds: HashMap<String, FeedHealthReport>,
+}
+
+/// Hard per-probe budget: the endpoint stays fast even when an upstream
+/// hangs. Never served from cache — this is a liveness probe, not data.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(4);
+/// Above this latency a successful fetch is reported as degraded (slow).
+const SLOW_THRESHOLD_MS: u64 = 3000;
+
+async fn run_probe<F, Fut>(
+    client: reqwest::Client,
+    name: &'static str,
+    probe: F,
+) -> (String, FeedHealthReport)
+where
+    F: FnOnce(reqwest::Client) -> Fut,
+    Fut: Future<Output = Result<String, FeedError>>,
+{
+    let start = Instant::now();
+    let outcome = tokio::time::timeout(PROBE_TIMEOUT, probe(client)).await;
+    let latency_ms = start.elapsed().as_millis() as u64;
+    let (status, detail) = match outcome {
+        Err(_) => (
+            FeedHealth::Down,
+            format!("probe timed out after {}s", PROBE_TIMEOUT.as_secs()),
+        ),
+        Ok(Ok(detail)) => {
+            if latency_ms > SLOW_THRESHOLD_MS {
+                (
+                    FeedHealth::Degraded,
+                    format!("slow upstream ({latency_ms}ms): {detail}"),
+                )
+            } else {
+                (FeedHealth::Ok, detail)
+            }
+        }
+        Ok(Err(e)) => {
+            // FeedError details are feed-attributed strings from feeds/mod.rs:
+            // "request failed: ..." -> transport failure (timeout/DNS/connect)
+            // "upstream status ..."  -> reachable, but the upstream errored
+            // anything else           -> reachable, but the body was unusable
+            if e.detail.starts_with("request failed") {
+                (FeedHealth::Down, e.detail)
+            } else {
+                (FeedHealth::Degraded, e.detail)
+            }
+        }
+    };
+    (
+        name.to_string(),
+        FeedHealthReport {
+            status,
+            latency_ms,
+            detail,
+        },
+    )
+}
+
+/// Cameras health: the registry must parse (else Down — the only feed
+/// whose "upstream" is us), plus a live spot-check of up to 5 camera image
+/// URLs, 4s each. Degraded if >40% of spot-checks fail.
+async fn cameras_probe(client: &reqwest::Client) -> (String, FeedHealthReport) {
+    let start = Instant::now();
+    let cams = match feeds::cameras::load_registry() {
+        Ok(c) => c,
+        Err(e) => {
+            return (
+                "cameras".to_string(),
+                FeedHealthReport {
+                    status: FeedHealth::Down,
+                    latency_ms: start.elapsed().as_millis() as u64,
+                    detail: format!("registry broken: {e}"),
+                },
+            );
+        }
+    };
+    // Rotating 5-minute window over the registry: deterministic (no rand
+    // dependency), and every camera gets spot-checked over time.
+    let n = cams.len();
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0) as usize;
+    let sample: Vec<&feeds::cameras::Camera> = (0..5.min(n))
+        .map(|i| &cams[(now_secs / 300 + i) % n.max(1)])
+        .collect();
+    let mut handles = Vec::with_capacity(sample.len());
+    for cam in sample {
+        let c = client.clone();
+        let url = cam.image_url.clone();
+        handles.push(tokio::spawn(async move {
+            let outcome = tokio::time::timeout(Duration::from_secs(4), c.get(&url).send()).await;
+            match outcome {
+                Err(_) | Ok(Err(_)) => false,
+                Ok(Ok(resp)) => {
+                    let ok_status = resp.status().is_success();
+                    let is_image = resp
+                        .headers()
+                        .get("content-type")
+                        .and_then(|v| v.to_str().ok())
+                        .is_some_and(|ct| ct.starts_with("image/"));
+                    // Body deliberately not consumed: headers answer liveness.
+                    ok_status && is_image
+                }
+            }
+        }));
+    }
+    let mut failed = 0;
+    for h in handles {
+        if !h.await.unwrap_or(false) {
+            failed += 1;
+        }
+    }
+    let total = 5.min(n);
+    let latency_ms = start.elapsed().as_millis() as u64;
+    let (status, detail) = if total > 0 && failed * 100 / total > 40 {
+        (
+            FeedHealth::Degraded,
+            format!("{failed}/{total} camera spot-checks failed"),
+        )
+    } else {
+        (
+            FeedHealth::Ok,
+            format!(
+                "registry ok ({} entries); {}/{} spot-checks reachable",
+                n,
+                total - failed,
+                total
+            ),
+        )
+    };
+    (
+        "cameras".to_string(),
+        FeedHealthReport {
+            status,
+            latency_ms,
+            detail,
+        },
+    )
+}
+
+/// Probe every upstream concurrently with a small, cheap request.
+pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
+    let (flights, quakes, weather, satellites, news, cameras) = tokio::join!(
+        run_probe(state.client.clone(), "flights", |c| async move {
+            feeds::flights::fetch(&c, "mil", 1)
+                .await
+                .map(|r| format!("{} aircraft (scope=mil, limit=1)", r.count))
+        }),
+        run_probe(state.client.clone(), "quakes", |c| async move {
+            feeds::quakes::fetch(&c)
+                .await
+                .map(|r| format!("{} quakes (M4.5+ day feed)", r.count))
+        }),
+        run_probe(state.client.clone(), "weather", |c| async move {
+            feeds::weather::fetch(&c, 0.0, 0.0)
+                .await
+                .map(|r| format!("probe point 0,0 ok (temp_c={:?})", r.temperature_c))
+        }),
+        run_probe(state.client.clone(), "satellites", |c| async move {
+            feeds::satellites::fetch(&c, 1)
+                .await
+                .map(|r| format!("{} objects (stations group, limit=1)", r.count))
+        }),
+        run_probe(state.client.clone(), "news", |c| async move {
+            feeds::news::fetch(&c, "test", 1)
+                .await
+                .map(|r| format!("{} articles (q=test, n=1)", r.count))
+        }),
+        cameras_probe(&state.client),
+    );
+
+    let mut feeds_map = HashMap::new();
+    for (name, report) in [flights, quakes, weather, satellites, news, cameras] {
+        feeds_map.insert(name, report);
+    }
+
+    Json(FeedsHealthResponse {
+        generated_at: now_iso8601(),
+        feeds: feeds_map,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Canonical router: every route in one place so `main.rs` and the
+// integration tests build the exact same app.
+// ---------------------------------------------------------------------------
+
+pub fn app(state: AppState) -> Router {
+    Router::new()
+        .route("/healthz", get(healthz))
+        .route("/api/flights", get(flights))
+        .route("/api/quakes", get(quakes))
+        .route("/api/weather", get(weather))
+        .route("/api/satellites", get(satellites))
+        .route("/api/news", get(news))
+        .route("/api/cameras", get(cameras))
+        .route("/api/stats", get(stats))
+        .route("/api/health/feeds", get(feeds_health))
+        .with_state(state)
 }

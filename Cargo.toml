@@ -24,6 +24,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 criterion = "0.5"
+tower = { version = "0.5.3", features = ["util"] }
 
 [[bench]]
 name = "parse_bench"

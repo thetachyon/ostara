@@ -9,6 +9,7 @@
 //!   without networking)
 //! - a `*Response` struct that is the exact JSON shape served.
 
+pub mod cameras;
 pub mod flights;
 pub mod news;
 pub mod quakes;

@@ -187,6 +187,39 @@ curl 'http://localhost:3000/api/news?q=earthquake&max_records=5'
 }
 ```
 
+### `GET /api/cameras` — public cameras (embedded registry)
+
+Serves the curated camera registry from `data/cameras.json` (embedded at
+compile time). No upstream fetch at request time: `image_url` values are
+live snapshots served by the camera operators themselves — we link, never
+proxy or store frames. Optional filters:
+
+```sh
+curl 'http://localhost:3000/api/cameras?category=traffic&limit=5'
+curl 'http://localhost:3000/api/cameras?bbox=-125,32,-114,42'   # minlon,minlat,maxlon,maxlat
+```
+```json
+{
+  "count": 2,
+  "generated_at": "2026-11-01T17:10:00.000Z",
+  "cameras": [
+    {
+      "id": "caltrans-d4-1",
+      "name": "TV102 -- I-580 : West of SR-24",
+      "lat": 37.82539,
+      "lon": -122.27291,
+      "category": "traffic",
+      "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/...jpg",
+      "page_url": "https://cwwp2.dot.ca.gov/",
+      "location": "Oakland, CA"
+    }
+  ]
+}
+```
+
+`bbox` must be `minlon,minlat,maxlon,maxlat` (400 otherwise); `category`
+matches case-insensitively; `limit` defaults to 50, clamped at 200.
+
 ### `GET /api/stats` — aggregate counters (cheap polling endpoint)
 
 Fans out to every feed concurrently and reports per-feed counts. Degrades
@@ -210,6 +243,60 @@ curl http://localhost:3000/api/stats
 }
 ```
 
+### `GET /api/health/feeds` — live upstream health probes
+
+Probes each of the five input sources live (4s per-probe budget, all
+concurrent) and reports per-feed status. Never fails because one feed is
+down — each feed reports its own status. A UI status page renders directly
+from this shape.
+
+- `ok`: upstream returned 2xx with a parseable body within 3s.
+- `degraded`: upstream reachable but slow, returned non-2xx, or returned a
+  body we could not parse.
+- `down`: connection/DNS failure or probe timeout.
+
+```sh
+curl http://localhost:3000/api/health/feeds
+```
+```json
+{
+  "generated_at": "2026-11-01T17:00:00.000Z",
+  "feeds": {
+    "flights":    {"status": "ok", "latency_ms": 812, "detail": "312 aircraft (scope=mil, limit=1)"},
+    "quakes":     {"status": "ok", "latency_ms": 214, "detail": "15 quakes (M4.5+ day feed)"},
+    "weather":    {"status": "ok", "latency_ms": 188, "detail": "probe point 0,0 ok (temp_c=Some(21.4))"},
+    "satellites": {"status": "ok", "latency_ms": 640, "detail": "1 objects (stations group, limit=1)"},
+    "news":       {"status": "down", "latency_ms": 4001, "detail": "probe timed out after 4s"}
+  }
+}
+```
+
+## Public cameras
+
+`/api/cameras` serves a curated registry (`data/cameras.json`, 48 entries
+as of 2026-11-01) of **intentionally-public** cameras: state DOT traffic
+cams (Caltrans D4 Bay Area, Nebraska 511, Arizona 511, DriveBC), Finland
+road-weather cams (Fintraffic Digitraffic, CC BY 4.0), and NPS Grand Canyon
+park cams. Every `image_url` was verified live on 2026-11-01 (HTTP 200,
+`image/*` content-type, non-trivial size); 57 candidates were checked, 0
+failed verification, 9 were trimmed to keep geographic spread in the
+48-entry target.
+
+**The bar, and what we refuse:** every entry must be a camera its operator
+publishes for public viewing, served keyless over http(s). We deliberately
+exclude aggregators of unsecured *private* cameras (insecam-style sites):
+a camera being reachable is not the same as being public, and indexing
+people's driveways is not what this tool is for. Traffic, landmark,
+weather, port, and park cameras are in scope; anything ethically gray is
+out, no exceptions.
+
+**Contributing a camera:** open a PR adding an entry to
+`data/cameras.json` with `id` (unique, slug), `name`, `lat`/`lon`,
+`category`, `image_url` (direct image, not a JS-walled player page),
+`page_url` (the operator's page, for attribution), and `location`. The
+registry validation tests (`feeds::cameras::tests`) enforce the shape;
+verify the image URL live before submitting.
+
 ## Feed verification status
 
 | Feed | Upstream | Live from this env (2026-11-01) | Notes |
@@ -225,12 +312,35 @@ The parse/normalize paths for all five feeds are covered by unit tests on
 real upstream payloads, and the 502-with-detail behavior was exercised
 against the two stalled upstreams.
 
+## Tests
+
+Three suites, three jobs:
+
+| Suite | Location | What it proves | Network |
+|-------|----------|----------------|---------|
+| Unit | `src/` (`#[cfg(test)]`) | ingest + normalize is deterministic and correct, on real saved upstream payloads | none |
+| Integration | `tests/api_routes.rs` | every route serves the exact HTTP contract a UI renders: status codes, `application/json` content-type, JSON shapes. Feed routes assert 200 **or** 502-with-`{"error","detail"}` — the contract, not liveness | yes (asserts either outcome) |
+| Live | `tests/feeds_live.rs` | each input source is actually reachable and returns the expected shape, right now | yes (fails honestly on outage) |
+
+```sh
+cargo test            # everything: unit + integration + live (needs network)
+cargo test --lib      # unit only, no network
+cargo test --test api_routes   # contract tests only
+cargo test --test feeds_live   # liveness probes only
+```
+
+The live tests fail honestly with `LIVE-FAIL <feed> (<host>): <reason>`
+diagnostics when an upstream is unreachable — a failed probe is
+information, not a defect to hide. See the environment-quirk note at the
+top of `tests/feeds_live.rs` for this sandbox's observed egress behavior.
+
 ## Architecture
 
 ```
 src/
   main.rs        axum router, pooled reqwest client, TTL cache wiring
-  routes.rs      handlers: cache check → fetch+normalize → serialize once → serve bytes
+  routes.rs      handlers: cache check → fetch+normalize → serialize once → serve bytes;
+                 /api/health/feeds live probes; canonical `app()` router
   cache.rs       bounded RwLock<HashMap> TTL cache of pre-serialized bodies
   error.rs       ApiError (JSON 4xx/502) + FeedError (per-feed failure)
   time.rs        dependency-free epoch-millis → ISO 8601 (Hinnant's algorithm)
@@ -241,6 +351,12 @@ src/
     weather.rs   Open-Meteo: "YYYY-MM-DDTHH:MM" → full ISO 8601
     satellites.rs CelesTrak TLE: 3-line sets → {name, norad_id, line1, line2}
     news.rs      GDELT: seendate "YYYYMMDDTHHMMSSZ" → ISO 8601
+    cameras.rs   public-camera registry (embedded JSON): bbox/category/limit filters
+data/
+  cameras.json 48 verified public cameras (traffic/weather/park), embedded via include_str!
+tests/
+  api_routes.rs  contract tests: status codes, content-type, UI JSON shapes
+  feeds_live.rs  liveness probes: one honest live test per input source
 benches/
   parse_bench.rs criterion benches on real saved payloads (no networking)
   fixtures/      real upstream responses captured 2026-11-01

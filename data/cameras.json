@@ -1,0 +1,482 @@
+[
+ {
+  "id": "ne511-512",
+  "name": "S of Cortland (South)",
+  "lat": 40.46516,
+  "lon": -96.73381768,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-001077037-04.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "3 miles south of the Cortland area"
+ },
+ {
+  "id": "ne511-546",
+  "name": "Arikaree River W of Haigler (East)",
+  "lat": 40.02875573,
+  "lon": -101.9674,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-007034005-01.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "1 mile west of the Haigler area"
+ },
+ {
+  "id": "ne511-577",
+  "name": "E of Gretna (North)",
+  "lat": 41.14729859,
+  "lon": -96.13937616,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-002370519-00.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "near Papillion"
+ },
+ {
+  "id": "ne511-609",
+  "name": "Construction Trailer 2 (Various)",
+  "lat": 40.82026733,
+  "lon": -96.89205237,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-opstrailer2.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "2 miles west of the Emerald area"
+ },
+ {
+  "id": "ne511-642",
+  "name": "Palmyra (East)",
+  "lat": 40.71140847,
+  "lon": -96.4076982,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-001002475-01.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "near Palmyra"
+ },
+ {
+  "id": "ne511-676",
+  "name": "Paxton Exit (East)",
+  "lat": 41.11085999,
+  "lon": -101.356781,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-006080145-01.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "near Paxton"
+ },
+ {
+  "id": "ne511-709",
+  "name": "Blair High Road (Various)",
+  "lat": 41.3218486,
+  "lon": -96.06910795,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-00268000700-00.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "in Omaha"
+ },
+ {
+  "id": "ne511-739",
+  "name": "Gordon (North)",
+  "lat": 42.25514211,
+  "lon": -102.22509,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-005027182-03.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "38 miles south of the Gordon area"
+ },
+ {
+  "id": "ne511-771",
+  "name": "La Platte East (Various)",
+  "lat": 41.07351281,
+  "lon": -95.88746578,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-002034387-00.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "1 mile east of the La Platte area"
+ },
+ {
+  "id": "ne511-806",
+  "name": "North Platte Exit 177 (North)",
+  "lat": 41.11121771,
+  "lon": -100.764,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-006080177-03.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "in North Platte"
+ },
+ {
+  "id": "ne511-470",
+  "name": "N of Center at Shirley (Various Views)",
+  "lat": 41.24140377,
+  "lon": -96.08571816,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-002680001-00.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "in Omaha"
+ },
+ {
+  "id": "ne511-501",
+  "name": "I-680 at 72nd St (Various)",
+  "lat": 41.3413195,
+  "lon": -96.02360039,
+  "category": "traffic",
+  "image_url": "https://dot511.nebraska.gov/images/vid-00268096800-00.jpg",
+  "page_url": "https://511.nebraska.gov",
+  "location": "in Omaha"
+ },
+ {
+  "id": "drivebc-939",
+  "name": "Elkford - S",
+  "lat": 50.021677,
+  "lon": -114.916704,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/939.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 43 at Fording River Road in Elkford, looking south."
+ },
+ {
+  "id": "drivebc-713",
+  "name": "Salish Sea Drive - W",
+  "lat": 49.033066,
+  "lon": -123.089042,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/713.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 17 at Salish Sea Drive (48th Street), looking west."
+ },
+ {
+  "id": "drivebc-430",
+  "name": "Ladysmith",
+  "lat": 48.968398,
+  "lon": -123.790583,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/430.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 at South Davis Road, south of Ladysmith, looking south."
+ },
+ {
+  "id": "drivebc-1169",
+  "name": "Meziadin Junction - S",
+  "lat": 56.100701,
+  "lon": -129.307419,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/1169.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 37 and Highway 37A at Meziadin Junction, looking south."
+ },
+ {
+  "id": "drivebc-188",
+  "name": "Shelter Bay - Lineup",
+  "lat": 50.635375,
+  "lon": -117.928682,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/188.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 23 near the Upper Arrow Lake ferry landing at Shelter Bay, looking north"
+ },
+ {
+  "id": "drivebc-629",
+  "name": "Evans Road - S",
+  "lat": 49.143556,
+  "lon": -121.97779,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/629.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 at Evans Road overpass near Chilliwack, looking south."
+ },
+ {
+  "id": "drivebc-1124",
+  "name": "Hwy 1 at 216 Street - E",
+  "lat": 49.1519772,
+  "lon": -122.6240581,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/1124.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 at 216 Street overpass, looking east."
+ },
+ {
+  "id": "drivebc-919",
+  "name": "Herrling Island Overpass - W",
+  "lat": 49.256912,
+  "lon": -121.679211,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/919.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 westbound at Herrling Island overpass, looking west."
+ },
+ {
+  "id": "drivebc-910",
+  "name": "Okotoks - N",
+  "lat": 48.53235,
+  "lon": -123.560143,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/910.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 at Okotoks Road, looking north."
+ },
+ {
+  "id": "drivebc-368",
+  "name": "Big Bar",
+  "lat": 51.14532,
+  "lon": -121.501611,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/368.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 97 about 8 km north of Clinton just before Big Bar rest area, looking no"
+ },
+ {
+  "id": "drivebc-1104",
+  "name": "Gladwin - E",
+  "lat": 50.24784,
+  "lon": -121.49904,
+  "category": "traffic",
+  "image_url": "https://www.drivebc.ca/images/1104.jpg",
+  "page_url": "https://www.drivebc.ca",
+  "location": "Highway 1 about 6 km east of Lytton Airport, looking east."
+ },
+ {
+  "id": "fintraffic-C01503",
+  "name": "kt51_Inkoo",
+  "lat": 60.05374,
+  "lon": 23.99616,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0150301.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C01695",
+  "name": "st101_Espoo_Otasolmu",
+  "lat": 60.17734,
+  "lon": 24.827451,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0169500.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C03524",
+  "name": "vt15_Kotka_Kotkansaari",
+  "lat": 60.463908,
+  "lon": 26.921338,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0352401.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C04526",
+  "name": "vt4_Heinola_Vahravuori",
+  "lat": 61.193142,
+  "lon": 26.002133,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0452601.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C08505",
+  "name": "kt73_Lieksa_Vieki",
+  "lat": 63.476113,
+  "lon": 29.623547,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0850501.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C09535",
+  "name": "vt4_Joutsa_Leivonm\u00e4ki",
+  "lat": 61.900881,
+  "lon": 26.112286,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C0953501.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C12537",
+  "name": "vt4_Liminka_Haaransilta",
+  "lat": 64.816183,
+  "lon": 25.487118,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C1253701.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C14503",
+  "name": "kt82_Joutsij\u00e4rvi_Kemij\u00e4rvi",
+  "lat": 66.687524,
+  "lon": 27.988906,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C1450301.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "fintraffic-C16543",
+  "name": "vt1_Lohja_Karnainen_l\u00e4nsi",
+  "lat": 60.312821,
+  "lon": 24.000167,
+  "category": "weather",
+  "image_url": "https://weathercam.digitraffic.fi/C1654300.jpg",
+  "page_url": "https://www.digitraffic.fi/en/road-traffic/",
+  "location": "Finland"
+ },
+ {
+  "id": "nps-grca-yavapai",
+  "name": "Yavapai Point \u2014 Looking NW",
+  "lat": 36.0619,
+  "lon": -112.1077,
+  "category": "park",
+  "image_url": "https://www.nps.gov/featurecontent/ard/webcams/images/grcalarge.jpg",
+  "page_url": "https://www.nps.gov/grca/learn/photosmultimedia/webcams.htm",
+  "location": "Grand Canyon, AZ"
+ },
+ {
+  "id": "nps-grca-entrance",
+  "name": "South Entrance Station",
+  "lat": 35.9989,
+  "lon": -112.1239,
+  "category": "park",
+  "image_url": "https://www.nps.gov/webcams-grca/camera.jpg",
+  "page_url": "https://www.nps.gov/grca/learn/photosmultimedia/webcams.htm",
+  "location": "Grand Canyon, AZ"
+ },
+ {
+  "id": "nps-grca-kolb",
+  "name": "View from Kolb Studio",
+  "lat": 36.0614,
+  "lon": -112.1097,
+  "category": "park",
+  "image_url": "https://cdn.pixelcaster.com/public.pixelcaster.com/snapshots/grandcanyon-2/latest.jpg",
+  "page_url": "https://www.nps.gov/grca/learn/photosmultimedia/webcams.htm",
+  "location": "Grand Canyon, AZ"
+ },
+ {
+  "id": "nps-grca-brightangel",
+  "name": "Bright Angel Trailhead View",
+  "lat": 36.0614,
+  "lon": -112.1087,
+  "category": "park",
+  "image_url": "https://cdn.pixelcaster.com/public.pixelcaster.com/snapshots/grandcanyon-1/latest.jpg",
+  "page_url": "https://www.nps.gov/grca/learn/photosmultimedia/webcams.htm",
+  "location": "Grand Canyon, AZ"
+ },
+ {
+  "id": "az511-25-15",
+  "name": "Flagstaff, Arizona \u2014 I-40",
+  "lat": 35.1983,
+  "lon": -111.6513,
+  "category": "traffic",
+  "image_url": "https://az511.com/map/Cctv/25--15",
+  "page_url": "https://az511.com",
+  "location": "Arizona"
+ },
+ {
+  "id": "az511-702",
+  "name": "State Route 64 (Mile 213.9)",
+  "lat": 35.9,
+  "lon": -112.1,
+  "category": "traffic",
+  "image_url": "https://az511.com/map/Cctv/702",
+  "page_url": "https://az511.com",
+  "location": "Arizona"
+ },
+ {
+  "id": "az511-1351",
+  "name": "Jacob Lake, Arizona",
+  "lat": 36.7184,
+  "lon": -112.2167,
+  "category": "traffic",
+  "image_url": "https://az511.com/map/Cctv/1351",
+  "page_url": "https://az511.com",
+  "location": "Arizona"
+ },
+ {
+  "id": "caltrans-d4-1",
+  "name": "TV102 -- I-580 : West of SR-24",
+  "lat": 37.82539,
+  "lon": -122.27291,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tv102i580westofsr24/tv102i580westofsr24.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Oakland, CA"
+ },
+ {
+  "id": "caltrans-d4-99",
+  "name": "TV120 -- I-80 : EBMUD",
+  "lat": 37.82542,
+  "lon": -122.30357,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tv120i80ebmud/tv120i80ebmud.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Oakland, CA"
+ },
+ {
+  "id": "caltrans-d4-196",
+  "name": "TVC19 -- US-101 : Just North of I-680 / I-280",
+  "lat": 37.341639,
+  "lon": -121.853424,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tvc19us101justnorthofi680i280/tvc19us101justnorthofi680i280.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "San Jose, CA"
+ },
+ {
+  "id": "caltrans-d4-287",
+  "name": "T256W -- I-80 : Buchanan Street West View",
+  "lat": 37.887206,
+  "lon": -122.308154,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/t256wi80buchananstreetwestview/t256wi80buchananstreetwestview.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Berkeley, CA"
+ },
+ {
+  "id": "caltrans-d4-378",
+  "name": "TV722 -- I-880 : Just North Of 7th Street",
+  "lat": 37.813717,
+  "lon": -122.301827,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tv722i880justnorthof7thstreet/tv722i880justnorthof7thstreet.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Oakland, CA"
+ },
+ {
+  "id": "caltrans-d4-481",
+  "name": "TVA87 -- I-880 : 23RD AV",
+  "lat": 37.77983,
+  "lon": -122.23779,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tva87i88023rdav/tva87i88023rdav.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Oakland, CA"
+ },
+ {
+  "id": "caltrans-d4-573",
+  "name": "TVC63 -- US-101 : AT COCHRANE RD IC",
+  "lat": 37.15291,
+  "lon": -121.65256,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tvc63us101atcochranerdic/tvc63us101atcochranerdic.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Morgan Hill, CA"
+ },
+ {
+  "id": "caltrans-d4-666",
+  "name": "TV852 -- SR-4 : AT EOF LOVERIDGE RD",
+  "lat": 38.01109,
+  "lon": -121.86546,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tv852sr4ateofloveridgerd/tv852sr4ateofloveridgerd.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "Pittsburg, CA"
+ },
+ {
+  "id": "caltrans-d4-757",
+  "name": "TV452 -- SR-92 : AT JWO DE ANZA BL",
+  "lat": 37.5221,
+  "lon": -122.3324,
+  "category": "traffic",
+  "image_url": "https://cwwp2.dot.ca.gov/data/d4/cctv/image/tv452sr92atjwodeanzabl/tv452sr92atjwodeanzabl.jpg",
+  "page_url": "https://cwwp2.dot.ca.gov/",
+  "location": "San Mateo, CA"
+ }
+]
