@@ -34,7 +34,7 @@ window.OST = window.OST || {};
     {
       id: "vessels", label: "Vessels", color: "#7c9aff",
       url: "/api/vessels",
-      note: "no keyless AIS REST source — 503 by design until AIS_API_KEY is wired",
+      note: "AISStream live AIS (websocket) — 503 until AIS_API_KEY is set",
       toFeatures: (j) => (j.vessels || [])
         .filter((v) => v.latitude != null && v.longitude != null)
         .map((v) => ({

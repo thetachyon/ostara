@@ -36,6 +36,7 @@ fn test_state() -> routes::AppState {
         cache: Arc::new(TtlCache::new()),
         // Deterministic: no keys, so keyed feeds take their degraded paths.
         config: Arc::new(Config::test_default()),
+        vessels: ostara::feeds::vessels::VesselStream::new(None),
     }
 }
 

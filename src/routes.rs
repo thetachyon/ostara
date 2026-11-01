@@ -34,12 +34,14 @@ use crate::{
     time::now_iso8601,
 };
 
-/// Shared server state: one pooled HTTP client, one TTL cache, one config.
+/// Shared server state: one pooled HTTP client, one TTL cache, one config,
+/// and the vessel AIS stream handle (disabled when AIS_API_KEY is unset).
 #[derive(Clone)]
 pub struct AppState {
     pub client: reqwest::Client,
     pub cache: Arc<TtlCache>,
     pub config: SharedConfig,
+    pub vessels: feeds::vessels::VesselStream,
 }
 
 /// Fetch the normalized response (or reuse the cached bytes), serialize once,
@@ -263,7 +265,7 @@ pub struct CamerasQuery {
     pub limit: Option<usize>,
 }
 
-fn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), ApiError> {
+pub(crate) fn parse_bbox(s: &str) -> Result<(f64, f64, f64, f64), ApiError> {
     let bad = || {
         ApiError::bad_request(
             "invalid bbox",
@@ -694,19 +696,27 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             },
         ),
     };
-    // Vessels: no REST AIS adapter exists in Phase 1 (AISStream is
-    // websocket-only) — disabled by design, honestly reported.
-    let vessels_stat = (
-        "vessels".to_string(),
-        FeedStat {
-            ok: false,
-            count: None,
-            error: Some(
-                "disabled by design in Phase 1: no keyed REST AIS adapter (see /api/vessels)"
-                    .to_string(),
-            ),
-        },
-    );
+    // Vessels: live AISStream snapshot when AIS_API_KEY is set; disabled
+    // by design otherwise (honestly reported, never fetched).
+    let vessels_stat = if state.vessels.is_enabled() {
+        (
+            "vessels".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(state.vessels.len()),
+                error: None,
+            },
+        )
+    } else {
+        (
+            "vessels".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some("disabled: AIS_API_KEY unset".to_string()),
+            },
+        )
+    };
     for (name, stat) in [
         flights,
         quakes,
@@ -969,8 +979,11 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
             move |c| async move { feeds::n2yo::probe_detail(&c, &config).await }
         }),
         run_probe(state.client.clone(), "vessels", {
-            let config = config.clone();
-            move |c| async move { feeds::vessels::probe_detail(&c, &config).await }
+            let vessels = state.vessels.clone();
+            move |_c| {
+                let v = vessels.clone();
+                async move { feeds::vessels::probe_detail(&v) }
+            }
         }),
         run_probe(state.client.clone(), "cyber", {
             let config = config.clone();

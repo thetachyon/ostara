@@ -15,7 +15,9 @@
 //! - `flights` — aircraft lat/lon tested against the country's polygon
 //!   bboxes ([`crate::geo::point_in_country_bboxes`]);
 //! - `quakes` — epicenter lat/lon, same bbox test;
-//! - `cameras` — registry lat/lon, same bbox test.
+//! - `cameras` — registry lat/lon, same bbox test;
+//! - `vessels` — AISStream snapshot lat/lon, same bbox test (disabled
+//!   stream → honest error section, mirroring `/api/vessels`).
 //!
 //! Deliberately excluded:
 //! - `markets` — CoinGecko crypto top-coins. Crypto assets are inherently
@@ -25,9 +27,8 @@
 //!   resolution would need a GeoIP database, which we do not ship; a small
 //!   embedded prefix table would be far too coarse and actively dangerous
 //!   for intel use, and reverse-DNS is not geolocation. Left out, not faked.
-//! - `fires` (lat/lon only, no country semantics needed), `vessels`
-//!   (disabled), `telegram`/`helio`/`satellites`/`n2yo`/`weather` (no
-//!   country field).
+//! - `fires` (lat/lon only, no country semantics needed),
+//!   `telegram`/`helio`/`satellites`/`n2yo`/`weather` (no country field).
 
 use axum::{
     Json, Router,
@@ -166,6 +167,16 @@ pub struct CameraItem {
 }
 
 #[derive(Debug, Serialize)]
+pub struct VesselItem {
+    pub mmsi: u64,
+    pub name: Option<String>,
+    pub vessel_type: Option<String>,
+    pub speed_knots: Option<f64>,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Serialize)]
 pub struct WhatsappChannelItem {
     pub name: String,
     pub invite_url: String,
@@ -183,6 +194,7 @@ pub struct InspectFeeds {
     pub quakes: FeedSection<QuakeItem>,
     pub cameras: FeedSection<CameraItem>,
     pub whatsapp_channels: FeedSection<WhatsappChannelItem>,
+    pub vessels: FeedSection<VesselItem>,
 }
 
 impl InspectFeeds {
@@ -195,6 +207,7 @@ impl InspectFeeds {
             quakes: FeedSection::empty(),
             cameras: FeedSection::empty(),
             whatsapp_channels: FeedSection::empty(),
+            vessels: FeedSection::empty(),
         }
     }
 }
@@ -442,6 +455,33 @@ fn cameras_items(cams: Vec<feeds::cameras::Camera>, iso3: &str) -> Vec<CameraIte
         .collect()
 }
 
+/// Vessels in a country's waters: the AISStream snapshot is live-pushed in
+/// memory, so no cache or upstream fetch is needed — filter and cap here.
+/// Pure over the snapshot slice: unit-testable.
+fn vessels_items(vessels: &[feeds::vessels::Vessel], iso3: &str) -> Vec<VesselItem> {
+    vessels
+        .iter()
+        .filter(|v| point_in_country_bboxes(v.latitude, v.longitude, iso3))
+        .take(10)
+        .map(|v| VesselItem {
+            mmsi: v.mmsi,
+            name: v.name.clone(),
+            vessel_type: v.vessel_type.clone(),
+            speed_knots: v.speed_knots,
+            latitude: v.latitude,
+            longitude: v.longitude,
+        })
+        .collect()
+}
+
+/// Vessel section: disabled stream → honest error (mirrors /api/vessels).
+fn vessels_section(state: &AppState, iso3: &str) -> FeedSection<VesselItem> {
+    if !state.vessels.is_enabled() {
+        return FeedSection::err("vessels feed disabled: AIS_API_KEY unset".to_string());
+    }
+    FeedSection::ok(vessels_items(&state.vessels.snapshot(), iso3))
+}
+
 /// Public cameras in a country: static embedded registry, filtered in
 /// memory (no cache, no upstream traffic).
 fn cameras_section(iso3: &str) -> FeedSection<CameraItem> {
@@ -468,6 +508,7 @@ async fn inspect_feeds(state: &AppState, country: &CountryRef) -> InspectFeeds {
         quakes,
         cameras: cameras_section(&country.iso3),
         whatsapp_channels: whatsapp_section(&country.iso2, &country.iso3),
+        vessels: vessels_section(state, &country.iso3),
     }
 }
 
@@ -663,5 +704,43 @@ mod tests {
         let items = cameras_items(cams, "JPN");
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].id, "c1");
+    }
+
+    fn vessel_at(mmsi: u64, lat: f64, lon: f64) -> feeds::vessels::Vessel {
+        feeds::vessels::Vessel {
+            mmsi,
+            name: Some(format!("SHIP-{mmsi}")),
+            vessel_type: Some("Cargo".to_string()),
+            latitude: lat,
+            longitude: lon,
+            speed_knots: Some(10.0),
+            cog_deg: None,
+            heading_deg: None,
+            timestamp: "2026-11-01T00:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn vessels_filter_keeps_only_in_country_vessels() {
+        // Tokyo Bay vessel vs. New York Harbor vessel.
+        let vs = vec![vessel_at(111, 35.62, 139.75), vessel_at(222, 40.68, -74.02)];
+        let items = vessels_items(&vs, "JPN");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].mmsi, 111);
+        assert_eq!(items[0].name.as_deref(), Some("SHIP-111"));
+    }
+
+    #[test]
+    fn vessels_section_honest_error_when_disabled() {
+        let stream = feeds::vessels::VesselStream::new(None);
+        let state = crate::routes::AppState {
+            client: reqwest::Client::new(),
+            cache: std::sync::Arc::new(crate::cache::TtlCache::new()),
+            config: std::sync::Arc::new(crate::config::Config::test_default()),
+            vessels: stream,
+        };
+        let sec = vessels_section(&state, "JPN");
+        assert!(!sec.ok);
+        assert!(sec.error.unwrap().contains("AIS_API_KEY unset"));
     }
 }

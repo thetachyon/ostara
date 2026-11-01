@@ -32,6 +32,7 @@ fn test_state() -> routes::AppState {
         cache: Arc::new(TtlCache::new()),
         // Deterministic: no keys, so keyed feeds take their degraded paths.
         config: Arc::new(Config::test_default()),
+        vessels: ostara::feeds::vessels::VesselStream::new(None),
     }
 }
 
@@ -753,4 +754,49 @@ async fn country_inspect_includes_whatsapp_section() {
         "expected WhatsApp channels for India, got: {}",
         body_preview(&g)
     );
+}
+
+/// /api/vessels with an enabled (but empty-snapshot) stream: 200 with the
+/// documented shape, no network involved.
+#[tokio::test]
+async fn vessels_enabled_empty_snapshot_200() {
+    let state = routes::AppState {
+        client: reqwest::Client::new(),
+        cache: Arc::new(TtlCache::new()),
+        config: Arc::new(Config::test_default()),
+        vessels: ostara::feeds::vessels::VesselStream::enabled_for_test(),
+    };
+    let app = routes::app(state);
+    let req = Request::builder()
+        .uri("/api/vessels?limit=10")
+        .body(Body::empty())
+        .expect("request builds");
+    let resp = app.oneshot(req).await.expect("oneshot serves");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let raw = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .expect("body reads");
+    let body: serde_json::Value = serde_json::from_slice(&raw).expect("json");
+    assert_eq!(body["count"], 0);
+    assert_eq!(body["source"], "aisstream");
+    assert!(body["vessels"].as_array().unwrap().is_empty());
+}
+
+/// /api/vessels rejects a malformed bbox with 400 (enabled stream, so the
+/// disabled-503 path does not mask validation).
+#[tokio::test]
+async fn vessels_invalid_bbox_400() {
+    let state = routes::AppState {
+        client: reqwest::Client::new(),
+        cache: Arc::new(TtlCache::new()),
+        config: Arc::new(Config::test_default()),
+        vessels: ostara::feeds::vessels::VesselStream::enabled_for_test(),
+    };
+    let app = routes::app(state);
+    let req = Request::builder()
+        .uri("/api/vessels?bbox=not-a-bbox")
+        .body(Body::empty())
+        .expect("request builds");
+    let resp = app.oneshot(req).await.expect("oneshot serves");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

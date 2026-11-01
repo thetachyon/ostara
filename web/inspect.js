@@ -87,7 +87,9 @@
       `<li>${link(c.page_url, c.name)}<br/><span class="m">${esc(c.category || "")}${c.location ? " · " + esc(c.location) : ""}</span></li>`);
     const whatsapp = feedSection("WhatsApp channels", f.whatsapp_channels || { ok: true, count: 0, items: [] }, (w) =>
       `<li>${link(w.invite_url, w.name)}${w.verified ? " ✓" : ""}<br/><span class="m">${esc(w.category || "")}${w.language ? " · " + esc(w.language) : ""} · directory, not live messages</span></li>`);
-    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras + whatsapp;
+    const vessels = feedSection("Vessels", f.vessels || { ok: true, count: 0, items: [] }, (v) =>
+      `<li>${esc(v.name || v.mmsi)}${v.vessel_type ? " · " + esc(v.vessel_type) : ""}<br/><span class="m">mmsi ${esc(String(v.mmsi))}${v.speed_knots != null ? " · " + Math.round(v.speed_knots) + " kt" : ""} · ${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}</span></li>`);
+    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
   }

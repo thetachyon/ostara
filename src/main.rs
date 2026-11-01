@@ -3,7 +3,7 @@
 
 use std::{net::SocketAddr, time::Duration};
 
-use ostara::{cache::TtlCache, config::Config, routes};
+use ostara::{cache::TtlCache, config::Config, feeds, routes};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
@@ -31,6 +31,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client,
         cache: Arc::new(TtlCache::new()),
         config: config.clone(),
+        // Spawns the AISStream background consumer when AIS_API_KEY is set;
+        // otherwise a disabled handle that answers 503.
+        vessels: feeds::vessels::VesselStream::new(config.ais_api_key.clone()),
     };
 
     let app = routes::app(state);

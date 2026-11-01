@@ -32,10 +32,12 @@ fn test_client() -> reqwest::Client {
 }
 
 fn state_with(config: Config) -> routes::AppState {
+    let config = Arc::new(config);
     routes::AppState {
         client: test_client(),
         cache: Arc::new(TtlCache::new()),
-        config: Arc::new(config),
+        vessels: ostara::feeds::vessels::VesselStream::new(config.ais_api_key.clone()),
+        config,
     }
 }
 

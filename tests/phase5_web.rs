@@ -20,6 +20,7 @@ fn app() -> Router {
             .unwrap(),
         cache: Arc::new(ostara::cache::TtlCache::new()),
         config: Arc::new(Config::test_default()),
+        vessels: ostara::feeds::vessels::VesselStream::new(None),
     };
     routes::app(state)
 }

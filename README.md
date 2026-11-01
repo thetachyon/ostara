@@ -286,7 +286,7 @@ feed is proven by a test (`tests/phase1_keyed.rs`).
 | `GET /api/fires` | NASA FIRMS (VIIRS active fires) | `FIRMS_API_KEY` | 503 |
 | `GET /api/flights` | OpenSky (preferred) / adsb.lol | `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` | adsb.lol fallback |
 | `GET /api/satellites/catalog?lat=&lon=` | N2YO `above` API | `N2YO_API_KEY` | CelesTrak fallback |
-| `GET /api/vessels` | (no REST adapter yet) | `AIS_API_KEY` | 503 (documented) |
+| `GET /api/vessels` | AISStream (websocket, live snapshot) | `AIS_API_KEY` (free signup) | 503 when unset; `?bbox=` / `?limit=` |
 | `GET /api/cyber/threats` | URLhaus + ThreatFox | `THREATFOX_API_KEY` (both abuse.ch APIs 401 keyless) | 503 when unset |
 | `GET /api/threatfox` | ThreatFox `get_iocs` | `THREATFOX_API_KEY` (no keyless tier — HTTP 401) | 503 when unset |
 | `GET /api/telegram?channel=` | `t.me/s` public previews | — | keyless; 400 bad/allowlist-blocked channel, 503 upstream failure |
@@ -427,7 +427,7 @@ binary serves it directly). Map-first UX modeled on OSIRIS:
   news/telegram search, lat/lon for weather/overhead); manual refresh plus
   5-minute auto-refresh of the open category; "show on map" toggles that flip
   the corresponding layer-rail layer. Keyed feeds with no key configured show
-  their informative degraded state; vessels shows its no-AIS-adapter state.
+  their informative degraded state.
 - "Countries" button: Country OSINT directory drawer — searchable country
   list with coverage badges and filters; each pack renders grouped clickable
   resources with free/paid badges, plus a global-resources view.
@@ -478,7 +478,7 @@ verify the image URL live before submitting.
 | fires | NASA FIRMS (VIIRS) | ⚠️ UNVERIFIED (no key) | Requires `FIRMS_API_KEY`; 503-with-detail when unset (tested). Parser verified against saved FIRMS CSV. Note: the VIIRS_SNPP_NRT stream retires 2026-11-02 — switch `SOURCE` to `VIIRS_NOAA20_NRT` if it starts erroring. |
 | flights (auth) | OpenSky OAuth2 | ⚠️ UNVERIFIED (no creds) | Preferred over adsb.lol when `OPENSKY_CLIENT_ID`/`SECRET` set; token + normalize logic fixture-verified (`benches/fixtures/opensky.json`). |
 | satellites catalog | N2YO `above` API | ⚠️ UNVERIFIED (no key) | `N2YO_API_KEY` unset → keyless CelesTrak fallback (tested); parser fixture-verified. |
-| vessels | — | ⚠️ UNVERIFIED (no adapter) | AISStream evaluated: websocket-only, no REST. 503-with-detail by design; MarineTraffic/VesselFinder/AISHub documented as alternatives. |
+| vessels | AISStream websocket | ⚠️ UNVERIFIED (no key) | Free `AIS_API_KEY` at aisstream.io; server keeps one global subscription and serves the rolling per-MMSI snapshot (`?bbox=`, `?limit=`). 503-with-detail when unset (tested). Parser fixture-verified against documented envelope shapes; `ShipStaticData` field names unverified. Best-effort sampling: provider drops messages for slow consumers. |
 | cyber | URLhaus + ThreatFox | ⚠️ UNVERIFIED (sandbox) | Both abuse.ch APIs require Auth-Key (`THREATFOX_API_KEY`; HTTP 401 keyless verified live 2026-11-01). Parsers fixture-verified against the documented response shape. |
 | threatfox | ThreatFox `get_iocs` | ⚠️ UNVERIFIED (no key) | Requires `THREATFOX_API_KEY`; 503-with-detail when unset (tested). Keyless → HTTP 401 verified live. Fixture is doc-derived (no live data response obtainable without a key). |
 | telegram | `t.me/s` preview scrape | ✅ VERIFIED (parser) | Keyless; 20-msg fixture from live `t.me/s/telegram` page. MTProto plan dropped — no auth needed for public channels. Live reachability depends on network (Telegram may 429 datacenter IPs). |

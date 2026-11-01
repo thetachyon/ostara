@@ -63,12 +63,25 @@ window.OST = window.OST || {};
     },
     {
       id: "vessels", label: "Vessels", health: "vessels", map: "vessels",
-      group: "global",
-      note: "no AIS REST adapter — 503 by design until AIS_API_KEY is wired",
-      url: () => "/api/vessels",
+      group: "country",
+      note: "AISStream live AIS (websocket) — 503 until AIS_API_KEY is set",
+      inputs: [
+        { name: "limit", placeholder: "limit", value: "100" },
+      ],
+      url: (p) => `/api/vessels?limit=${encodeURIComponent(p.limit || "100")}`,
       render(j, el) {
-        el.innerHTML = `<div class="empty">no vessels — no AIS adapter configured</div>` + genLine(j);
-        this.count = 0;
+        const rows = (j.vessels || []).slice(0, ROW_CAP).map((v) => [
+          esc(v.name || String(v.mmsi || "?")),
+          esc(String(v.mmsi || "—")),
+          esc(v.vessel_type || "—"),
+          v.speed_knots != null ? Math.round(v.speed_knots) + " kt" : "—",
+          v.cog_deg != null ? Math.round(v.cog_deg) + "°" : "—",
+          `${Number(v.latitude).toFixed(2)}, ${Number(v.longitude).toFixed(2)}`,
+        ]);
+        el.innerHTML = table(["Name", "MMSI", "Type", "Spd", "Course", "Coords"], rows) +
+          `<div class="m" style="margin-top:6px">${(j.vessels || []).length} of ${j.count != null ? j.count : "?"} shown · live AIS snapshot (best-effort sampling)</div>` +
+          genLine(j);
+        this.count = (j.vessels || []).length;
       },
     },
     {
