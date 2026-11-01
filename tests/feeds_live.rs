@@ -189,3 +189,59 @@ async fn cameras_live_spot_check() {
         );
     }
 }
+
+#[tokio::test]
+async fn threatfox_live() {
+    // ThreatFox requires an Auth-Key (verified live 2026-11-01: keyless
+    // requests get HTTP 401). With a key in the environment this does a
+    // real get_iocs query; without one it asserts the upstream enforces
+    // auth — both outcomes are honest liveness information.
+    let client = live_client();
+    let upstream = "threatfox-api.abuse.ch";
+    match std::env::var("THREATFOX_API_KEY")
+        .ok()
+        .filter(|k| !k.trim().is_empty())
+    {
+        Some(key) => {
+            let r = probe("threatfox", upstream, || {
+                feeds::threatfox::fetch(&client, &key, 1)
+            })
+            .await;
+            assert_eq!(r.days, 1, "LIVE-FAIL threatfox: unexpected days echo");
+            assert!(
+                !r.iocs.is_empty(),
+                "LIVE-FAIL threatfox: 24h window returned zero IOCs"
+            );
+            for ioc in &r.iocs {
+                assert!(
+                    !ioc.ioc.is_empty(),
+                    "LIVE-FAIL threatfox: IOC with empty value"
+                );
+            }
+        }
+        None => {
+            // No key available: assert the documented auth requirement live.
+            let resp = tokio::time::timeout(
+                Duration::from_secs(6),
+                client
+                    .post("https://threatfox-api.abuse.ch/api/v1/")
+                    .json(&serde_json::json!({"query": "get_iocs", "days": 1}))
+                    .send(),
+            )
+            .await;
+            match resp {
+                Err(_) => panic!(
+                    "LIVE-FAIL threatfox ({upstream}): timed out after 6s on the keyless auth probe"
+                ),
+                Ok(Err(e)) => {
+                    panic!("LIVE-FAIL threatfox ({upstream}): keyless auth probe failed: {e}")
+                }
+                Ok(Ok(r)) => assert_eq!(
+                    r.status(),
+                    reqwest::StatusCode::UNAUTHORIZED,
+                    "LIVE-FAIL threatfox: keyless request did not get the documented HTTP 401"
+                ),
+            }
+        }
+    }
+}

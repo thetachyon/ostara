@@ -3,7 +3,7 @@
 
 use std::{net::SocketAddr, time::Duration};
 
-use ostara::{cache::TtlCache, routes};
+use ostara::{cache::TtlCache, config::Config, routes};
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
@@ -16,26 +16,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // One pooled client for all upstreams: connection reuse across feeds and
     // requests, with hard timeouts so a hung upstream can never stall us.
     let client = reqwest::Client::builder()
-        .user_agent("ostara/0.1 (OSINT API core replica; keyless feeds only)")
+        .user_agent("ostara/0.1 (OSINT API core)")
         .timeout(Duration::from_secs(12))
         .connect_timeout(Duration::from_secs(5))
         .pool_idle_timeout(Duration::from_secs(30))
         .pool_max_idle_per_host(16)
         .build()?;
 
+    // Every API key and knob comes from the environment (see .env.example).
+    // Keyed feeds degrade gracefully when their key is unset.
+    let config = Arc::new(Config::from_env());
+
     let state = routes::AppState {
         client,
         cache: Arc::new(TtlCache::new()),
+        config: config.clone(),
     };
 
     let app = routes::app(state);
 
-    // Mirrors OSIRIS's own OSIRIS_PORT convention; default 3000.
-    let port: u16 = std::env::var("OSIRIS_PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(3000);
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     tracing::info!("ostara listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;

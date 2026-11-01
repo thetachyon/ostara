@@ -16,7 +16,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use ostara::{cache::TtlCache, routes};
+use ostara::{cache::TtlCache, config::Config, routes};
 use tower::ServiceExt; // .oneshot()
 
 fn test_state() -> routes::AppState {
@@ -30,6 +30,8 @@ fn test_state() -> routes::AppState {
     routes::AppState {
         client,
         cache: Arc::new(TtlCache::new()),
+        // Deterministic: no keys, so keyed feeds take their degraded paths.
+        config: Arc::new(Config::test_default()),
     }
 }
 
@@ -402,4 +404,35 @@ async fn feeds_health_always_200_with_six_reports() {
             .is_some(),
         "feeds_health: missing 'generated_at'"
     );
+}
+
+#[tokio::test]
+async fn threatfox_unset_key_is_503_with_error_detail() {
+    // The default test state has no THREATFOX_API_KEY: the route must
+    // degrade by design, never panic.
+    let g = get("/api/threatfox").await;
+    assert_json(&g, "/api/threatfox");
+    assert_eq!(g.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert!(
+        g.body
+            .get("error")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("disabled"),
+        "/api/threatfox: 503 error must say disabled, got: {}",
+        body_preview(&g)
+    );
+    assert!(
+        g.body.get("detail").and_then(|v| v.as_str()).is_some(),
+        "/api/threatfox: 503 body must carry string 'detail', got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn threatfox_query_params_accepted_when_disabled() {
+    // Query validation happens after the key gate: with no key the answer
+    // is 503 regardless of params (no 400 leaks).
+    let g = get("/api/threatfox?days=3&limit=10&malware=emotet").await;
+    assert_eq!(g.status, StatusCode::SERVICE_UNAVAILABLE);
 }

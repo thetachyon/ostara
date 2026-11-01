@@ -9,7 +9,12 @@
 //! binary (`src/main.rs`) that wires up the axum server.
 
 pub mod cache;
+pub mod config;
+pub mod dossier;
 pub mod error;
 pub mod feeds;
+pub mod graph;
+pub mod intel;
+pub mod recon;
 pub mod routes;
 pub mod time;

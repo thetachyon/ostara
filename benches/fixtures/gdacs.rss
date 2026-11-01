@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:gdacs="http://www.gdacs.org" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#">
+  <channel>
+    <title>GDACS RSS information</title>
+    <link>http://www.gdacs.org/</link>
+    <pubDate>Sun, 01 Nov 2026 17:15:05 GMT</pubDate>
+    <item>
+      <title>Green earthquake (Magnitude 6M, Depth:10km) in Vanuatu 01/11/2026 11:47 UTC, 2 thousand in MMI IV.</title>
+      <description>On 11/1/2026 11:47:03 AM, an earthquake occurred in Vanuatu potentially affecting 2 thousand in MMI IV.</description>
+      <link>http://www.gdacs.org/report.aspx?eventtype=EQ&amp;eventid=1575068</link>
+      <pubDate>Sun, 01 Nov 2026 12:02:33 GMT</pubDate>
+      <gdacs:fromdate>Sun, 01 Nov 2026 11:47:03 GMT</gdacs:fromdate>
+      <gdacs:eventtype>EQ</gdacs:eventtype>
+      <gdacs:alertlevel>Green</gdacs:alertlevel>
+      <gdacs:eventid>1575068</gdacs:eventid>
+      <gdacs:country>Vanuatu</gdacs:country>
+      <geo:Point><geo:lat>-14.1689</geo:lat><geo:long>165.8242</geo:long></geo:Point>
+    </item>
+    <item>
+      <title>Orange tropical cyclone (TC YAGI, Wind:185km/h) in Philippines 01/11/2026 06:00 UTC, 1 million in Cat 1.</title>
+      <description>On 11/1/2026 06:00:00 AM, a tropical cyclone occurred in Philippines potentially affecting 1 million in Cat 1.</description>
+      <link>http://www.gdacs.org/report.aspx?eventtype=TC&amp;eventid=1009876</link>
+      <pubDate>Sun, 01 Nov 2026 06:30:00 GMT</pubDate>
+      <gdacs:fromdate>Sun, 01 Nov 2026 06:00:00 GMT</gdacs:fromdate>
+      <gdacs:eventtype>TC</gdacs:eventtype>
+      <gdacs:alertlevel>Orange</gdacs:alertlevel>
+      <gdacs:eventid>1009876</gdacs:eventid>
+      <gdacs:country>Philippines</gdacs:country>
+    </item>
+  </channel>
+</rss>

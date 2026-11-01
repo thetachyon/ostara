@@ -24,19 +24,22 @@ use axum::{
     routing::get,
 };
 use serde::{Deserialize, Serialize};
+use tower_http::services::ServeDir;
 
 use crate::{
     cache::TtlCache,
+    config::SharedConfig,
     error::{ApiError, FeedError},
     feeds,
     time::now_iso8601,
 };
 
-/// Shared server state: one pooled HTTP client, one TTL cache.
+/// Shared server state: one pooled HTTP client, one TTL cache, one config.
 #[derive(Clone)]
 pub struct AppState {
     pub client: reqwest::Client,
     pub cache: Arc<TtlCache>,
+    pub config: SharedConfig,
 }
 
 /// Fetch the normalized response (or reuse the cached bytes), serialize once,
@@ -114,8 +117,12 @@ pub async fn flights(
     let limit = q.limit.unwrap_or(250).clamp(1, 1000);
     let key = format!("flights:scope={scope}:limit={limit}");
     let client = state.client.clone();
+    // Phase 1 (keyed feeds): pass config through so OpenSky is preferred
+    // when OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET are set; otherwise the
+    // keyless adsb.lol path is used unchanged.
+    let config = state.config.clone();
     let (body, hit) = cached_bytes(&state, &key, feeds::flights::TTL, || async move {
-        feeds::flights::fetch(&client, &scope, limit).await
+        feeds::flights::fetch_with_config(&client, &config, &scope, limit).await
     })
     .await?;
     Ok(json_bytes(body, hit))
@@ -417,10 +424,46 @@ async fn weather_probe(state: &AppState) -> (String, FeedStat) {
     }
 }
 
+/// Helio serves point values (no count); /api/stats reports availability,
+/// like weather_probe.
+async fn helio_probe(state: &AppState) -> (String, FeedStat) {
+    match feeds::helio::fetch(&state.client).await {
+        Ok(_) => (
+            "helio".to_string(),
+            FeedStat {
+                ok: true,
+                count: None,
+                error: None,
+            },
+        ),
+        Err(e) => (
+            "helio".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(e.detail),
+            },
+        ),
+    }
+}
+
 pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
     // Concurrent fan-out: all feeds resolve in parallel, so /api/stats
     // latency ~= the slowest feed, not the sum.
-    let (flights, quakes, satellites, news, weather) = tokio::join!(
+    let (
+        flights,
+        quakes,
+        satellites,
+        news,
+        weather,
+        fires,
+        n2yo,
+        cyber,
+        threatfox,
+        markets,
+        conflicts,
+        helio,
+    ) = tokio::join!(
         feed_count(
             &state,
             "flights",
@@ -470,6 +513,116 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             }) as BoxFut<_>
         ),
         weather_probe(&state),
+        // Phase 1 keyed feeds. Disabled-by-design feeds report ok=false
+        // with an explicit detail rather than attempting a fetch.
+        feed_count(&state, "fires", "fires".to_string(), feeds::fires::TTL, {
+            let config = state.config.clone();
+            move |c| {
+                Box::pin(async move {
+                    let key = match &config.firms_api_key {
+                        Some(k) => k.clone(),
+                        None => {
+                            return Err(FeedError::new(
+                                feeds::fires::FEED,
+                                "disabled: FIRMS_API_KEY unset",
+                            ));
+                        }
+                    };
+                    let r = feeds::fires::fetch(&c, &key).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::fires::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        }),
+        feed_count(
+            &state,
+            "n2yo",
+            "n2yo:lat=0:lon=0".to_string(),
+            feeds::n2yo::TTL,
+            {
+                let config = state.config.clone();
+                move |c| {
+                    Box::pin(async move {
+                        let r = feeds::n2yo::fetch(&c, &config, 0.0, 0.0).await?;
+                        serde_json::to_value(&r).map_err(|e| {
+                            FeedError::new(feeds::n2yo::FEED, format!("serialize failed: {e}"))
+                        })
+                    }) as BoxFut<_>
+                }
+            }
+        ),
+        feed_count(&state, "cyber", "cyber".to_string(), feeds::cyber::TTL, {
+            let config = state.config.clone();
+            move |c| {
+                Box::pin(async move {
+                    let key = match &config.threatfox_api_key {
+                        Some(k) => k.clone(),
+                        None => {
+                            return Err(FeedError::new(
+                                feeds::cyber::FEED,
+                                "disabled: THREATFOX_API_KEY unset",
+                            ));
+                        }
+                    };
+                    let r = feeds::cyber::fetch(&c, &key).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::cyber::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        }),
+        feed_count(
+            &state,
+            "threatfox",
+            "threatfox:days=1".to_string(),
+            feeds::threatfox::TTL,
+            {
+                let config = state.config.clone();
+                move |c| {
+                    Box::pin(async move {
+                        let key = match &config.threatfox_api_key {
+                            Some(k) => k.clone(),
+                            None => {
+                                return Err(FeedError::new(
+                                    feeds::threatfox::FEED,
+                                    "disabled: THREATFOX_API_KEY unset",
+                                ));
+                            }
+                        };
+                        let r = feeds::threatfox::fetch(&c, &key, 1).await?;
+                        serde_json::to_value(&r).map_err(|e| {
+                            FeedError::new(feeds::threatfox::FEED, format!("serialize failed: {e}"))
+                        })
+                    }) as BoxFut<_>
+                }
+            }
+        ),
+        feed_count(
+            &state,
+            "markets",
+            "markets".to_string(),
+            feeds::markets::TTL,
+            |c| Box::pin(async move {
+                let r = feeds::markets::fetch(&c).await?;
+                serde_json::to_value(&r).map_err(|e| {
+                    FeedError::new(feeds::markets::FEED, format!("serialize failed: {e}"))
+                })
+            }) as BoxFut<_>
+        ),
+        feed_count(
+            &state,
+            "conflicts",
+            "conflicts".to_string(),
+            feeds::conflicts::TTL,
+            |c| Box::pin(async move {
+                let r = feeds::conflicts::fetch(&c).await?;
+                serde_json::to_value(&r).map_err(|e| {
+                    FeedError::new(feeds::conflicts::FEED, format!("serialize failed: {e}"))
+                })
+            }) as BoxFut<_>
+        ),
+        helio_probe(&state),
     );
 
     let mut feeds_map = HashMap::new();
@@ -494,7 +647,78 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             },
         ),
     };
-    for (name, stat) in [flights, quakes, satellites, news, weather, cameras_stat] {
+    // Nuclear facilities: static embedded registry, counted like cameras.
+    let nuclear_stat = match feeds::nuclear::load_registry() {
+        Ok(facilities) => (
+            "nuclear".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(facilities.len()),
+                error: None,
+            },
+        ),
+        Err(detail) => (
+            "nuclear".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(format!("registry invalid: {detail}")),
+            },
+        ),
+    };
+    // Vessels: no REST AIS adapter exists in Phase 1 (AISStream is
+    // websocket-only) — disabled by design, honestly reported.
+    let vessels_stat = (
+        "vessels".to_string(),
+        FeedStat {
+            ok: false,
+            count: None,
+            error: Some(
+                "disabled by design in Phase 1: no keyed REST AIS adapter (see /api/vessels)"
+                    .to_string(),
+            ),
+        },
+    );
+    // Telegram: needs API credentials AND an MTProto session (deferred).
+    let telegram_stat = match (
+        &state.config.telegram_api_id,
+        &state.config.telegram_api_hash,
+    ) {
+        (Some(_), Some(_)) => (
+            "telegram".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some("deferred: MTProto authorized session not implemented".to_string()),
+            },
+        ),
+        _ => (
+            "telegram".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some("disabled: TELEGRAM_API_ID/HASH unset".to_string()),
+            },
+        ),
+    };
+    for (name, stat) in [
+        flights,
+        quakes,
+        satellites,
+        news,
+        weather,
+        cameras_stat,
+        fires,
+        n2yo,
+        cyber,
+        threatfox,
+        markets,
+        conflicts,
+        helio,
+        nuclear_stat,
+        vessels_stat,
+        telegram_stat,
+    ] {
         if !stat.ok {
             degraded = true;
         }
@@ -681,8 +905,29 @@ async fn cameras_probe(client: &reqwest::Client) -> (String, FeedHealthReport) {
 }
 
 /// Probe every upstream concurrently with a small, cheap request.
+/// Keyed feeds report their disabled-by-design state honestly via their
+/// `probe_detail` (classified `degraded` with a "disabled" detail, never
+/// `down` — nothing is broken, the key is simply unset).
 pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
-    let (flights, quakes, weather, satellites, news, cameras) = tokio::join!(
+    let config = state.config.clone();
+    let (
+        flights,
+        quakes,
+        weather,
+        satellites,
+        news,
+        cameras,
+        fires,
+        n2yo,
+        vessels,
+        cyber,
+        threatfox,
+        telegram,
+        markets,
+        nuclear,
+        conflicts,
+        helio,
+    ) = tokio::join!(
         run_probe(state.client.clone(), "flights", |c| async move {
             feeds::flights::fetch(&c, "mil", 1)
                 .await
@@ -709,10 +954,53 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
                 .map(|r| format!("{} articles (q=test, n=1)", r.count))
         }),
         cameras_probe(&state.client),
+        run_probe(state.client.clone(), "fires", {
+            let config = config.clone();
+            move |c| async move { feeds::fires::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "n2yo", {
+            let config = config.clone();
+            move |c| async move { feeds::n2yo::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "vessels", {
+            let config = config.clone();
+            move |c| async move { feeds::vessels::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "cyber", {
+            let config = config.clone();
+            move |c| async move { feeds::cyber::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "threatfox", {
+            let config = config.clone();
+            move |c| async move { feeds::threatfox::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "telegram", {
+            let config = config.clone();
+            move |c| async move { feeds::telegram::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "markets", {
+            let config = config.clone();
+            move |c| async move { feeds::markets::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "nuclear", {
+            let config = config.clone();
+            move |c| async move { feeds::nuclear::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "conflicts", {
+            let config = config.clone();
+            move |c| async move { feeds::conflicts::probe_detail(&c, &config).await }
+        }),
+        run_probe(state.client.clone(), "helio", {
+            let config = config.clone();
+            move |c| async move { feeds::helio::probe_detail(&c, &config).await }
+        }),
     );
 
     let mut feeds_map = HashMap::new();
-    for (name, report) in [flights, quakes, weather, satellites, news, cameras] {
+    for (name, report) in [
+        flights, quakes, weather, satellites, news, cameras, fires, n2yo, vessels, cyber,
+        threatfox, telegram, markets, nuclear, conflicts, helio,
+    ] {
         feeds_map.insert(name, report);
     }
 
@@ -738,5 +1026,16 @@ pub fn app(state: AppState) -> Router {
         .route("/api/cameras", get(cameras))
         .route("/api/stats", get(stats))
         .route("/api/health/feeds", get(feeds_health))
+        // Phase 1 (keyed feeds) and Phase 2 (RECON) register their own
+        // routers; merged here so `app()` stays the single canonical router
+        // that main.rs and the integration tests share.
+        .merge(feeds::routes())
+        .merge(crate::recon::routes())
+        .merge(crate::dossier::routes())
+        .merge(crate::graph::routes())
+        .merge(crate::intel::routes())
+        // Phase 5: MapLibre web UI. Explicit API routes above take
+        // precedence; anything unmatched falls through to the static bundle.
+        .fallback_service(ServeDir::new("web"))
         .with_state(state)
 }

@@ -245,10 +245,11 @@ curl http://localhost:3000/api/stats
 
 ### `GET /api/health/feeds` — live upstream health probes
 
-Probes each of the five input sources live (4s per-probe budget, all
+Probes each of the fifteen input sources live (4s per-probe budget, all
 concurrent) and reports per-feed status. Never fails because one feed is
-down — each feed reports its own status. A UI status page renders directly
-from this shape.
+down — each feed reports its own status. Keyed feeds whose key is unset
+report `degraded` with an explicit "disabled" detail (nothing is broken).
+A UI status page renders directly from this shape.
 
 - `ok`: upstream returned 2xx with a parseable body within 3s.
 - `degraded`: upstream reachable but slow, returned non-2xx, or returned a
@@ -270,6 +271,98 @@ curl http://localhost:3000/api/health/feeds
   }
 }
 ```
+
+### Keyed feeds — graceful degradation
+
+The scope change that dropped the "no keys" philosophy: API keys are
+configured via env vars (see `.env.example`; loaded with `dotenvy`).
+Every keyed feed degrades gracefully when its key is unset — it falls back
+to a keyless alternative or returns 503 with `{"error","detail"}`. It never
+panics and never breaks other feeds. The unset-key behavior of every keyed
+feed is proven by a test (`tests/phase1_keyed.rs`).
+
+| Endpoint | Upstream | Key | Unset behavior |
+|----------|----------|-----|----------------|
+| `GET /api/fires` | NASA FIRMS (VIIRS active fires) | `FIRMS_API_KEY` | 503 |
+| `GET /api/flights` | OpenSky (preferred) / adsb.lol | `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` | adsb.lol fallback |
+| `GET /api/satellites/catalog?lat=&lon=` | N2YO `above` API | `N2YO_API_KEY` | CelesTrak fallback |
+| `GET /api/vessels` | (no REST adapter yet) | `AIS_API_KEY` | 503 (documented) |
+| `GET /api/cyber/threats` | URLhaus + ThreatFox | `THREATFOX_API_KEY` (both abuse.ch APIs 401 keyless) | 503 when unset |
+| `GET /api/threatfox` | ThreatFox `get_iocs` | `THREATFOX_API_KEY` (no keyless tier — HTTP 401) | 503 when unset |
+| `GET /api/telegram?channel=` | public Telegram channels | `TELEGRAM_API_ID` + `TELEGRAM_API_HASH` | 503 (documented) |
+| `GET /api/markets` | CoinGecko | — | keyless |
+| `GET /api/nuclear?country=` | embedded registry (189 stations) | — | static |
+| `GET /api/conflicts` | GDACS RSS | — | keyless; `note` field states scope |
+| `GET /api/space-weather` | NOAA SWPC | — | keyless |
+
+### `GET /api/threatfox?days=&limit=&malware=` — ThreatFox malware IOCs
+
+Dedicated ThreatFox feed (abuse.ch threat-intel platform). Requires
+`THREATFOX_API_KEY` — a free Auth-Key from https://auth.abuse.ch sent as
+the `Auth-Key` header. Verified live 2026-11-01: the Community API rejects
+keyless requests with HTTP 401 `{"error": "Unauthorized"}`; there is no
+keyless tier. Unset key → 503 with `{"error","detail"}` by design.
+
+| Param     | Default | Constraints                          |
+|-----------|---------|--------------------------------------|
+| `days`    | `1`     | clamped 1–7 (upstream window)        |
+| `limit`   | `100`   | clamped 1–1000                       |
+| `malware` | —       | optional case-insensitive filter on malware family |
+
+Each IOC: `ioc`, `ioc_type` (`ip:port`/`domain`/`url`/`md5`/`sha256`),
+`threat_type`, `malware`, `malware_printable`, `confidence_level`,
+`first_seen`, `last_seen`, `reporter`, `reference`. TTL 15 min.
+
+```sh
+curl 'http://localhost:3000/api/threatfox?days=1&malware=emotet'
+```
+
+The merged `/api/cyber/threats` feed serves URLhaus IOCs keyless and adds
+the ThreatFox half automatically when the key is set; its IOCs also flow
+into the entity graph's domain/ip/cve extraction.
+
+### `GET /api/recon/*` — passive reconnaissance toolkit
+
+Five passive tools are always on; the TCP port scanner is gated.
+
+| Endpoint | Tool |
+|----------|------|
+| `GET /api/recon/dns?domain=` | DNS A/AAAA/MX/TXT/NS (explicit resolvers, no system stub) |
+| `GET /api/recon/whois?domain=` | WHOIS with IANA referral following |
+| `GET /api/recon/ct?domain=` | Certificate transparency (crt.sh) |
+| `GET /api/recon/ip?ip=` | IP/ASN enrichment (ip-api.com → ipinfo.io) |
+| `GET /api/recon/cve?id=CVE-…` | CVE lookup (NVD API v2) |
+| `POST /api/recon/scan` | TCP connect scan — **gated by `RECON_ENABLED=true`** (default false → 503). Responsible use: only scan targets you own or are authorized to test; concurrency/timeout/port caps enforced. |
+
+### `GET /api/dossier?lat=&lon=&radius_km=` — region dossier
+
+One composite JSON aggregating every geo-capable feed (flights, quakes,
+fires, nuclear, cameras) within `radius_km` of the point (haversine;
+default radius 100 km, clamped 1–5000). Conflicts are included as
+non-geocoded context. Per-feed failures degrade only that section; the
+dossier never 502s. Cached 300 s on rounded coordinates.
+
+### `GET /api/graph?entity=` and `GET /api/graph/expand` — entity graph
+
+Basic-parity entity graph, rebuilt per request from feed snapshots (no
+persistence — full fusion is the future differentiator). Entity kinds:
+aircraft, callsign, norad_id, name, facility, country, domain, ip, cve,
+threat_type. Co-occurrence edges within a single feed item only.
+Unknown entity → 404 with `{"error","detail"}`.
+
+### `GET /api/intel/stream` — SSE intel digest
+
+Server-sent events: a `hello` event, then a `digest` event every 15 s with
+feed counts plus auto-extracted highlights (M6+ quakes, emergency-squawk
+aircraft). Never errors — a failing feed contributes nothing.
+
+### Web UI — MapLibre globe
+
+`GET /` serves the static bundle from `web/` (MapLibre GL JS globe via
+CDN, dark map-first UI): five toggleable layers (aircraft, earthquakes,
+wildfires, nuclear facilities, public cameras), click popups, and a live
+ticker fed by the SSE intel stream. API routes take precedence; anything
+unmatched falls through to the static files.
 
 ## Public cameras
 
@@ -306,6 +399,22 @@ verify the image URL live before submitting.
 | satellites | CelesTrak TLE | ✅ VERIFIED (HTTP 200) | |
 | flights | adsb.lol v2 | ⚠️ UNVERIFIED | Reachable via curl, but this environment's egress proxy stalls reqwest's TLS connections to this host (consistent 5s connect timeouts; USGS/Open-Meteo/CelesTrak work through the same client, so this is environmental, not a code bug). Parser verified against a real saved payload (`benches/fixtures/adsb_mil.json`, 111 aircraft). |
 | news | GDELT DOC 2.1 | ⚠️ UNVERIFIED | Same environmental proxy stall as adsb.lol (curl succeeds; reqwest stalls). Parser verified against a real saved payload (`benches/fixtures/gdelt.json`). |
+| markets | CoinGecko | ✅ VERIFIED (HTTP 200) | Top-25 markets; fixture-verified parser. |
+| helio | NOAA SWPC | ✅ VERIFIED (HTTP 200) | GOES X-ray flux + planetary Kp; fixture-verified parser. |
+| fires | NASA FIRMS (VIIRS) | ⚠️ UNVERIFIED (no key) | Requires `FIRMS_API_KEY`; 503-with-detail when unset (tested). Parser verified against saved FIRMS CSV. Note: the VIIRS_SNPP_NRT stream retires 2026-11-02 — switch `SOURCE` to `VIIRS_NOAA20_NRT` if it starts erroring. |
+| flights (auth) | OpenSky OAuth2 | ⚠️ UNVERIFIED (no creds) | Preferred over adsb.lol when `OPENSKY_CLIENT_ID`/`SECRET` set; token + normalize logic fixture-verified (`benches/fixtures/opensky.json`). |
+| satellites catalog | N2YO `above` API | ⚠️ UNVERIFIED (no key) | `N2YO_API_KEY` unset → keyless CelesTrak fallback (tested); parser fixture-verified. |
+| vessels | — | ⚠️ UNVERIFIED (no adapter) | AISStream evaluated: websocket-only, no REST. 503-with-detail by design; MarineTraffic/VesselFinder/AISHub documented as alternatives. |
+| cyber | URLhaus + ThreatFox | ⚠️ UNVERIFIED (sandbox) | Both abuse.ch APIs require Auth-Key (`THREATFOX_API_KEY`; HTTP 401 keyless verified live 2026-11-01). Parsers fixture-verified against the documented response shape. |
+| threatfox | ThreatFox `get_iocs` | ⚠️ UNVERIFIED (no key) | Requires `THREATFOX_API_KEY`; 503-with-detail when unset (tested). Keyless → HTTP 401 verified live. Fixture is doc-derived (no live data response obtainable without a key). |
+| telegram | MTProto | ⚠️ UNVERIFIED (no creds) | 503-with-detail when `TELEGRAM_API_ID`/`HASH` unset (tested); authorized session deferred. |
+| nuclear | static registry | ✅ (embedded, 189 stations) | 12 coordinate spot-checks; reactor_type omitted (source lacks it). |
+| conflicts | GDACS RSS | ⚠️ PARTIAL | Feed is live and parseable (curl-verified 200/252 records), but reqwest stalls in this sandbox like adsb.lol/GDELT; parser fixture-verified. `note` field states scope honestly: natural disasters, not armed conflict (ACLED is the keyed alternative). |
+| recon: ip/asn | ip-api.com → ipinfo.io | ✅ VERIFIED (ip-api path) | Keyed ipinfo path UNVERIFIED (no token). |
+| recon: cve | NVD API v2 | ✅ VERIFIED | Known CVE returns data; unknown CVE → 404. |
+| recon: dns/whois | hickory / TCP/43 | ⚠️ UNVERIFIED (sandbox) | Sandbox blocks raw TCP/53 and WHOIS port 43 (EPERM/RST) — honest 502s; deterministic + fixture tests green. |
+| recon: ct | crt.sh | ⚠️ PARTIAL | Parser verified against 81 real rows; upstream intermittently 502s through the sandbox proxy. |
+| recon: scan | in-process connect scan | ✅ (deterministic) | Gated by `RECON_ENABLED` (default false → 503 with responsible-use detail); localhost open/closed-port test green. |
 
 UNVERIFIED means "not observed live from this sandbox" — not "broken".
 The parse/normalize paths for all five feeds are covered by unit tests on
@@ -314,13 +423,16 @@ against the two stalled upstreams.
 
 ## Tests
 
-Three suites, three jobs:
+Six suites, each with one job:
 
 | Suite | Location | What it proves | Network |
 |-------|----------|----------------|---------|
 | Unit | `src/` (`#[cfg(test)]`) | ingest + normalize is deterministic and correct, on real saved upstream payloads | none |
 | Integration | `tests/api_routes.rs` | every route serves the exact HTTP contract a UI renders: status codes, `application/json` content-type, JSON shapes. Feed routes assert 200 **or** 502-with-`{"error","detail"}` — the contract, not liveness | yes (asserts either outcome) |
 | Live | `tests/feeds_live.rs` | each input source is actually reachable and returns the expected shape, right now | yes (fails honestly on outage) |
+| Keyed feeds | `tests/phase1_keyed.rs` | unset-key degradation (503/fallback) + live contracts for markets/helio | partial |
+| RECON | `tests/phase2_recon.rs` | tool contracts; live probes fail honestly where the sandbox blocks raw TCP | partial |
+| Dossier / graph / web | `tests/phase3_dossier.rs`, `tests/phase4_graph.rs`, `tests/phase5_web.rs` | geo-filtering, graph traversal, static UI + SSE shape | partial |
 
 ```sh
 cargo test            # everything: unit + integration + live (needs network)

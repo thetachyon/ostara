@@ -1,0 +1,1703 @@
+[
+ {
+  "id": "akademik-lomonosov",
+  "name": "Akademik Lomonosov",
+  "lat": 69.7097,
+  "lon": 170.3061,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "almaraz",
+  "name": "Almaraz",
+  "lat": 39.80806,
+  "lon": -5.69694,
+  "country": "Spain",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "angra",
+  "name": "Angra",
+  "lat": -23.00833,
+  "lon": -44.47389,
+  "country": "Brazil",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ano",
+  "name": "ANO",
+  "lat": 35.31028,
+  "lon": -93.23139,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "asco",
+  "name": "Ascó",
+  "lat": 41.2,
+  "lon": 0.56944,
+  "country": "Spain",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "astravets",
+  "name": "Astravets",
+  "lat": 54.76194,
+  "lon": 26.12,
+  "country": "Belarus",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "atucha",
+  "name": "Atucha",
+  "lat": -33.9675,
+  "lon": -59.205,
+  "country": "Argentina",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "balakovo",
+  "name": "Balakovo",
+  "lat": 52.09111,
+  "lon": 47.95528,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "barakah",
+  "name": "Barakah",
+  "lat": 23.985,
+  "lon": 52.28361,
+  "country": "UAE",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "beaver-valley",
+  "name": "Beaver Valley",
+  "lat": 40.62333,
+  "lon": -80.43056,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "belleville",
+  "name": "Belleville",
+  "lat": 47.50972,
+  "lon": 2.875,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "beloyarsk",
+  "name": "Beloyarsk",
+  "lat": 56.84167,
+  "lon": 61.3225,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "beznau",
+  "name": "Beznau",
+  "lat": 47.55194,
+  "lon": 8.22778,
+  "country": "Switzerland",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "blayais",
+  "name": "Blayais",
+  "lat": 45.25583,
+  "lon": -0.69306,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bohunice",
+  "name": "Bohunice",
+  "lat": 48.49444,
+  "lon": 17.68194,
+  "country": "Slovakia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "borssele",
+  "name": "Borssele",
+  "lat": 51.43083,
+  "lon": 3.71833,
+  "country": "Netherlands",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "braidwood",
+  "name": "Braidwood",
+  "lat": 41.24361,
+  "lon": -88.22917,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "browns-ferry",
+  "name": "Browns Ferry",
+  "lat": 34.70389,
+  "lon": -87.11861,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bruce",
+  "name": "Bruce",
+  "lat": 44.32528,
+  "lon": -81.59944,
+  "country": "Canada",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "brunswick",
+  "name": "Brunswick",
+  "lat": 33.95833,
+  "lon": -78.01028,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bugey",
+  "name": "Bugey",
+  "lat": 45.8,
+  "lon": 5.27083,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bushehr",
+  "name": "Bushehr",
+  "lat": 28.82972,
+  "lon": 50.88611,
+  "country": "Iran",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "byron",
+  "name": "Byron",
+  "lat": 42.07417,
+  "lon": -89.28194,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "callaway",
+  "name": "Callaway",
+  "lat": 38.76167,
+  "lon": -91.78,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "calvert-cliffs",
+  "name": "Calvert Cliffs",
+  "lat": 38.43194,
+  "lon": -76.44222,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "catawba",
+  "name": "Catawba",
+  "lat": 35.05167,
+  "lon": -81.07,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "cattenom",
+  "name": "Cattenom",
+  "lat": 49.41583,
+  "lon": 6.21806,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "cernavoda",
+  "name": "Cernavodă",
+  "lat": 44.32222,
+  "lon": 28.05722,
+  "country": "Romania",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "changjiang",
+  "name": "Changjiang",
+  "lat": 19.46028,
+  "lon": 108.9,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "chashma",
+  "name": "Chashma",
+  "lat": 32.39028,
+  "lon": 71.4625,
+  "country": "Pakistan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "chinon",
+  "name": "Chinon",
+  "lat": 47.23056,
+  "lon": 0.17056,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "chooz",
+  "name": "Chooz",
+  "lat": 50.09,
+  "lon": 4.78944,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "civaux",
+  "name": "Civaux",
+  "lat": 46.45667,
+  "lon": 0.65278,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "clinton",
+  "name": "Clinton",
+  "lat": 40.17222,
+  "lon": -88.835,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "cofrentes",
+  "name": "Cofrentes",
+  "lat": 39.21667,
+  "lon": -1.05,
+  "country": "Spain",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "columbia",
+  "name": "Columbia",
+  "lat": 46.47111,
+  "lon": -119.33389,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "comanche-peak",
+  "name": "Comanche Peak",
+  "lat": 32.29833,
+  "lon": -97.785,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "cooper",
+  "name": "Cooper",
+  "lat": 40.36194,
+  "lon": -95.64139,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "cruas",
+  "name": "Cruas",
+  "lat": 44.63306,
+  "lon": 4.75667,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "dampierre",
+  "name": "Dampierre",
+  "lat": 47.73306,
+  "lon": 2.51667,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "darlington",
+  "name": "Darlington",
+  "lat": 43.87278,
+  "lon": -78.71972,
+  "country": "Canada",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "davis-besse",
+  "name": "Davis-Besse",
+  "lat": 41.59667,
+  "lon": -83.08639,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "daya-bay",
+  "name": "Daya Bay",
+  "lat": 22.59778,
+  "lon": 114.54361,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "diablo-canyon",
+  "name": "Diablo Canyon",
+  "lat": 35.21083,
+  "lon": -120.85611,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "doel",
+  "name": "Doel",
+  "lat": 51.32472,
+  "lon": 4.25861,
+  "country": "Belgium",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "donald-c-cook",
+  "name": "Donald C. Cook",
+  "lat": 41.97528,
+  "lon": -86.56583,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "dresden",
+  "name": "Dresden",
+  "lat": 41.38972,
+  "lon": -88.26806,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "dukovany",
+  "name": "Dukovany",
+  "lat": 49.085,
+  "lon": 16.14889,
+  "country": "Czech Republic",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "edwin-i-hatch",
+  "name": "Edwin I. Hatch",
+  "lat": 31.93417,
+  "lon": -82.34389,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "embalse",
+  "name": "Embalse",
+  "lat": -32.232,
+  "lon": -64.443,
+  "country": "Argentina",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "fermi",
+  "name": "Fermi",
+  "lat": 41.96278,
+  "lon": -83.2575,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "fangchenggang",
+  "name": "Fangchenggang",
+  "lat": 21.66667,
+  "lon": 108.56306,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "fangjiashan",
+  "name": "Fangjiashan",
+  "lat": 30.44139,
+  "lon": 120.94167,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "flamanville",
+  "name": "Flamanville",
+  "lat": 49.53639,
+  "lon": -1.88167,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "forsmark",
+  "name": "Forsmark",
+  "lat": 60.40333,
+  "lon": 18.16667,
+  "country": "Sweden",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "fuqing",
+  "name": "Fuqing",
+  "lat": 25.44417,
+  "lon": 119.44611,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "genkai",
+  "name": "Genkai",
+  "lat": 33.51556,
+  "lon": 129.83722,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ginna",
+  "name": "Ginna",
+  "lat": 43.27778,
+  "lon": -77.31,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "gosgen",
+  "name": "Gösgen",
+  "lat": 47.36583,
+  "lon": 7.96667,
+  "country": "Switzerland",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "golfech",
+  "name": "Golfech",
+  "lat": 44.10667,
+  "lon": 0.84528,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "grand-gulf",
+  "name": "Grand Gulf",
+  "lat": 32.00667,
+  "lon": -91.04833,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "gravelines",
+  "name": "Gravelines",
+  "lat": 51.01528,
+  "lon": 2.13611,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "haiyang",
+  "name": "Haiyang",
+  "lat": 36.70917,
+  "lon": 121.38167,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hamaoka",
+  "name": "Hamaoka",
+  "lat": 34.62361,
+  "lon": 138.1425,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hanbit",
+  "name": "Hanbit",
+  "lat": 35.415,
+  "lon": 126.42389,
+  "country": "South Korea",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hanul",
+  "name": "Hanul",
+  "lat": 37.09278,
+  "lon": 129.38361,
+  "country": "South Korea",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hartlepool",
+  "name": "Hartlepool",
+  "lat": 54.635,
+  "lon": -1.18083,
+  "country": "United Kingdom",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "h-b-robinson",
+  "name": "H. B. Robinson",
+  "lat": 34.40278,
+  "lon": -80.15833,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "heysham",
+  "name": "Heysham",
+  "lat": 54.02889,
+  "lon": -2.91611,
+  "country": "United Kingdom",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "higashidori",
+  "name": "Higashidōri",
+  "lat": 41.18806,
+  "lon": 141.39028,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hongyanhe",
+  "name": "Hongyanhe",
+  "lat": 39.79778,
+  "lon": 121.47194,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hope-creek",
+  "name": "Hope Creek",
+  "lat": 39.46778,
+  "lon": -75.53806,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ikata",
+  "name": "Ikata",
+  "lat": 33.49083,
+  "lon": 132.31139,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "james-a-fitzpatrick",
+  "name": "James A. FitzPatrick",
+  "lat": 43.5233,
+  "lon": -76.3983,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "joseph-m-farley",
+  "name": "Joseph M. Farley",
+  "lat": 31.22306,
+  "lon": -85.11167,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kalinin",
+  "name": "Kalinin",
+  "lat": 57.90556,
+  "lon": 35.06028,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kaiga",
+  "name": "Kaiga",
+  "lat": 14.86528,
+  "lon": 74.43944,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kakrapar",
+  "name": "Kakrapar",
+  "lat": 21.23861,
+  "lon": 73.35,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "karachi",
+  "name": "Karachi",
+  "lat": 24.84717,
+  "lon": 66.78825,
+  "country": "Pakistan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kashiwazaki-kariwa",
+  "name": "Kashiwazaki-Kariwa",
+  "lat": 37.42917,
+  "lon": 138.59528,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "khmelnytskyi",
+  "name": "Khmelnytskyi",
+  "lat": 50.30139,
+  "lon": 26.64972,
+  "country": "Ukraine",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "koeberg",
+  "name": "Koeberg",
+  "lat": -33.67639,
+  "lon": 18.43194,
+  "country": "South Africa",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kola",
+  "name": "Kola",
+  "lat": 67.46667,
+  "lon": 32.46667,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kori",
+  "name": "Kori",
+  "lat": 35.31694,
+  "lon": 129.3,
+  "country": "South Korea",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kozloduy",
+  "name": "Kozloduy",
+  "lat": 43.74611,
+  "lon": 23.77056,
+  "country": "Bulgaria",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "krsko",
+  "name": "Krško",
+  "lat": 45.93833,
+  "lon": 15.51556,
+  "country": "Slovenia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kudankulam",
+  "name": "Kudankulam",
+  "lat": 8.16833,
+  "lon": 77.7125,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kursk",
+  "name": "Kursk",
+  "lat": 51.675,
+  "lon": 35.60556,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "laguna-verde",
+  "name": "Laguna Verde",
+  "lat": 19.72083,
+  "lon": -96.40639,
+  "country": "Mexico",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "lasalle",
+  "name": "LaSalle",
+  "lat": 41.24556,
+  "lon": -88.66917,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "leibstadt",
+  "name": "Leibstadt",
+  "lat": 47.60306,
+  "lon": 8.18472,
+  "country": "Switzerland",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "leningrad",
+  "name": "Leningrad",
+  "lat": 59.84722,
+  "lon": 29.04361,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "leningrad-ii",
+  "name": "Leningrad II",
+  "lat": 59.83056,
+  "lon": 29.05722,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "limerick",
+  "name": "Limerick",
+  "lat": 40.22667,
+  "lon": -75.58722,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ling-ao",
+  "name": "Ling Ao",
+  "lat": 22.60472,
+  "lon": 114.55139,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "loviisa",
+  "name": "Loviisa",
+  "lat": 60.37222,
+  "lon": 26.34722,
+  "country": "Finland",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "mcguire",
+  "name": "McGuire",
+  "lat": 35.4325,
+  "lon": -80.94833,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "madras",
+  "name": "Madras",
+  "lat": 12.5575,
+  "lon": 80.175,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "metsamor",
+  "name": "Metsamor",
+  "lat": 40.18083,
+  "lon": 44.14889,
+  "country": "Armenia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "mihama",
+  "name": "Mihama",
+  "lat": 35.70333,
+  "lon": 135.96333,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "millstone",
+  "name": "Millstone",
+  "lat": 41.31194,
+  "lon": -72.16861,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "monticello",
+  "name": "Monticello",
+  "lat": 45.33361,
+  "lon": -93.84917,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "mochovce",
+  "name": "Mochovce",
+  "lat": 48.26389,
+  "lon": 18.45694,
+  "country": "Slovakia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "narora",
+  "name": "Narora",
+  "lat": 28.15806,
+  "lon": 78.40944,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "nine-mile-point",
+  "name": "Nine Mile Point",
+  "lat": 43.52083,
+  "lon": -76.40694,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ningde",
+  "name": "Ningde",
+  "lat": 27.04611,
+  "lon": 120.28833,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "nogent",
+  "name": "Nogent",
+  "lat": 48.51528,
+  "lon": 3.51778,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "north-anna",
+  "name": "North Anna",
+  "lat": 38.06056,
+  "lon": -77.78944,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "novovoronezh-i",
+  "name": "Novovoronezh I",
+  "lat": 51.275,
+  "lon": 39.2,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "novovoronezh-ii",
+  "name": "Novovoronezh II",
+  "lat": 59.83056,
+  "lon": 29.05722,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "oconee",
+  "name": "Oconee",
+  "lat": 34.79389,
+  "lon": -82.89806,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "oi",
+  "name": "Ōi",
+  "lat": 35.54056,
+  "lon": 135.65194,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "olkiluoto",
+  "name": "Olkiluoto",
+  "lat": 61.23694,
+  "lon": 21.44083,
+  "country": "Finland",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "onagawa",
+  "name": "Onagawa",
+  "lat": 38.40111,
+  "lon": 141.49972,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "oskarshamn",
+  "name": "Oskarshamn",
+  "lat": 57.41556,
+  "lon": 16.67111,
+  "country": "Sweden",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "paks",
+  "name": "Paks",
+  "lat": 46.5725,
+  "lon": 18.85417,
+  "country": "Hungary",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "palo-verde",
+  "name": "Palo Verde",
+  "lat": 33.38917,
+  "lon": -112.865,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "paluel",
+  "name": "Paluel",
+  "lat": 49.85806,
+  "lon": 0.63556,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "penly",
+  "name": "Penly",
+  "lat": 49.97667,
+  "lon": 1.21194,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "peach-bottom",
+  "name": "Peach Bottom",
+  "lat": 39.75833,
+  "lon": -76.26806,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "perry",
+  "name": "Perry",
+  "lat": 41.80083,
+  "lon": -81.14333,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "pickering",
+  "name": "Pickering",
+  "lat": 43.81167,
+  "lon": -79.06583,
+  "country": "Canada",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "point-beach",
+  "name": "Point Beach",
+  "lat": 44.28111,
+  "lon": -87.53667,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "point-lepreau",
+  "name": "Point Lepreau",
+  "lat": 45.06889,
+  "lon": -66.45472,
+  "country": "Canada",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "prairie-island",
+  "name": "Prairie Island",
+  "lat": 44.62167,
+  "lon": -92.63306,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "qinshan",
+  "name": "Qinshan",
+  "lat": 30.43556,
+  "lon": 120.95639,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "quad-cities",
+  "name": "Quad Cities",
+  "lat": 41.72639,
+  "lon": -90.31,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "rajasthan",
+  "name": "Rajasthan",
+  "lat": 24.87222,
+  "lon": 75.61389,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "ringhals",
+  "name": "Ringhals",
+  "lat": 57.25972,
+  "lon": 12.11083,
+  "country": "Sweden",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "river-bend",
+  "name": "River Bend",
+  "lat": 30.7567,
+  "lon": -91.333,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "rivne",
+  "name": "Rivne",
+  "lat": 51.32778,
+  "lon": 25.89167,
+  "country": "Ukraine",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "rostov",
+  "name": "Rostov",
+  "lat": 47.59944,
+  "lon": 42.37194,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "saint-alban",
+  "name": "Saint-Alban",
+  "lat": 45.40444,
+  "lon": 4.75444,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "saint-laurent",
+  "name": "Saint-Laurent",
+  "lat": 47.72,
+  "lon": 1.5775,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "saint-lucie",
+  "name": "Saint Lucie",
+  "lat": 27.34861,
+  "lon": -80.24639,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "salem",
+  "name": "Salem",
+  "lat": 39.46278,
+  "lon": -75.53556,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "sanmen",
+  "name": "Sanmen",
+  "lat": 29.10111,
+  "lon": 121.63972,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "seabrook",
+  "name": "Seabrook",
+  "lat": 42.89889,
+  "lon": -70.85083,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "sendai",
+  "name": "Sendai",
+  "lat": 31.83361,
+  "lon": 130.18972,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "sequoyah",
+  "name": "Sequoyah",
+  "lat": 35.22639,
+  "lon": -85.09167,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "shearon-harris",
+  "name": "Shearon Harris",
+  "lat": 35.6333,
+  "lon": -78.955,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "shidao-bay",
+  "name": "Shidao Bay",
+  "lat": 36.9722,
+  "lon": 122.5289,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "shika",
+  "name": "Shika",
+  "lat": 37.06111,
+  "lon": 136.72639,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "shimane",
+  "name": "Shimane",
+  "lat": 35.53833,
+  "lon": 132.99917,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "sizewell-b",
+  "name": "Sizewell-B",
+  "lat": 52.21333,
+  "lon": 1.61861,
+  "country": "United Kingdom",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "smolensk",
+  "name": "Smolensk",
+  "lat": 54.16917,
+  "lon": 33.24667,
+  "country": "Russia",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "south-texas",
+  "name": "South Texas",
+  "lat": 28.79556,
+  "lon": -96.04889,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "south-ukraine",
+  "name": "South Ukraine",
+  "lat": 47.81667,
+  "lon": 31.21667,
+  "country": "Ukraine",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "surry",
+  "name": "Surry",
+  "lat": 37.16556,
+  "lon": -76.69778,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "susquehanna",
+  "name": "Susquehanna",
+  "lat": 41.08889,
+  "lon": -76.14889,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "taishan",
+  "name": "Taishan",
+  "lat": 21.90944,
+  "lon": 112.97917,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "takahama",
+  "name": "Takahama",
+  "lat": 35.52222,
+  "lon": 135.50472,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tarapur",
+  "name": "Tarapur",
+  "lat": 19.82778,
+  "lon": 72.66111,
+  "country": "India",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "temelin",
+  "name": "Temelín",
+  "lat": 49.18,
+  "lon": 14.37611,
+  "country": "Czech Republic",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tianwan",
+  "name": "Tianwan",
+  "lat": 34.68694,
+  "lon": 119.45972,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tihange",
+  "name": "Tihange",
+  "lat": 50.53472,
+  "lon": 5.2725,
+  "country": "Belgium",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tokai",
+  "name": "Tokai",
+  "lat": 36.46639,
+  "lon": 140.60667,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tomari",
+  "name": "Tomari",
+  "lat": 43.03611,
+  "lon": 140.5125,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "torness",
+  "name": "Torness",
+  "lat": 55.96806,
+  "lon": -2.40917,
+  "country": "United Kingdom",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tricastin",
+  "name": "Tricastin",
+  "lat": 44.32972,
+  "lon": 4.73222,
+  "country": "France",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "trillo",
+  "name": "Trillo",
+  "lat": 40.70111,
+  "lon": -2.62194,
+  "country": "Spain",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "tsuruga",
+  "name": "Tsuruga",
+  "lat": 35.67278,
+  "lon": 136.07722,
+  "country": "Japan",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "turkey-point",
+  "name": "Turkey Point",
+  "lat": 25.43417,
+  "lon": -80.33056,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "vandellos",
+  "name": "Vandellòs",
+  "lat": 40.95139,
+  "lon": 0.86667,
+  "country": "Spain",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "virgil-c-summer",
+  "name": "Virgil C. Summer",
+  "lat": 34.29861,
+  "lon": -81.31472,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "vogtle",
+  "name": "Vogtle",
+  "lat": 33.14306,
+  "lon": -81.76583,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "waterford",
+  "name": "Waterford",
+  "lat": 29.99528,
+  "lon": -90.47111,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "watts-bar",
+  "name": "Watts Bar",
+  "lat": 35.60278,
+  "lon": -84.78944,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "wolf-creek",
+  "name": "Wolf Creek",
+  "lat": 38.23889,
+  "lon": -95.68889,
+  "country": "United States",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "wolseong",
+  "name": "Wolseong",
+  "lat": 35.71111,
+  "lon": 129.475,
+  "country": "South Korea",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "yangjiang",
+  "name": "Yangjiang",
+  "lat": 21.70972,
+  "lon": 112.26056,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "zaporizhzhia",
+  "name": "Zaporizhzhia",
+  "lat": 47.51222,
+  "lon": 34.58583,
+  "country": "Ukraine",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "zhangzhou",
+  "name": "Zhangzhou",
+  "lat": 23.8292,
+  "lon": 117.4917,
+  "country": "China",
+  "status": "operational",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "akkuyu",
+  "name": "Akkuyu",
+  "lat": 36.14444,
+  "lon": 33.54111,
+  "country": "Turkey",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bailong",
+  "name": "Bailong",
+  "lat": 21.54528,
+  "lon": 108.29389,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "bushehr-2",
+  "name": "Bushehr",
+  "lat": 28.8289,
+  "lon": 50.8872,
+  "country": "Iran",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "el-dabaa",
+  "name": "El Dabaa",
+  "lat": 31.0442,
+  "lon": 28.4978,
+  "country": "Egypt",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "hinkley-point-c",
+  "name": "Hinkley Point C",
+  "lat": 51.20611,
+  "lon": -3.14389,
+  "country": "United Kingdom",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "jinqimen",
+  "name": "Jinqimen",
+  "lat": 29.0564,
+  "lon": 121.9448,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "kemmerer",
+  "name": "Kemmerer",
+  "lat": 41.70583,
+  "lon": -110.56056,
+  "country": "United States",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "lianjiang",
+  "name": "Lianjiang",
+  "lat": 21.55417,
+  "lon": 109.80694,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "linglong",
+  "name": "Linglong",
+  "lat": 19.46075,
+  "lon": 108.89992,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "lufeng",
+  "name": "Lufeng",
+  "lat": 22.75,
+  "lon": 115.8,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "oma",
+  "name": "Ōma",
+  "lat": 41.50972,
+  "lon": 140.91028,
+  "country": "Japan",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "rooppur",
+  "name": "Rooppur",
+  "lat": 24.06667,
+  "lon": 89.04722,
+  "country": "Bangladesh",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "sanao",
+  "name": "San’ao",
+  "lat": 27.2014,
+  "lon": 120.5157,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "taipingling",
+  "name": "Taipingling",
+  "lat": 22.69444,
+  "lon": 114.98333,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "xiapu",
+  "name": "Xiapu",
+  "lat": 26.80361,
+  "lon": 120.155,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ },
+ {
+  "id": "xudabao",
+  "name": "Xudabao",
+  "lat": 40.3514,
+  "lon": 120.5465,
+  "country": "China",
+  "status": "under_construction",
+  "source": "IAEA PRIS via Wikipedia 'List of nuclear power stations' (page crawled 2026-10-05; dataset compiled 2026-11-01)"
+ }
+]

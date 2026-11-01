@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OSTARA — open-source intelligence globe</title>
+<link href="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="/style.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@5.7.0/dist/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+
+<header id="hud">
+  <div class="brand">OSTARA <span>osint globe</span></div>
+  <div id="ticker" class="ticker">connecting to intel stream…</div>
+  <div id="clock" class="clock"></div>
+</header>
+
+<aside id="layers">
+  <h2>Layers</h2>
+  <div id="layer-list"></div>
+  <p class="hint">Data: ostara API · refresh 5 min</p>
+</aside>
+
+<div id="legend">
+  <span><i class="dot" style="background:#ff9f43"></i>aircraft</span>
+  <span><i class="dot" style="background:#ff5252"></i>earthquake</span>
+  <span><i class="dot" style="background:#ff3d00"></i>fire</span>
+  <span><i class="dot" style="background:#ffd600"></i>nuclear</span>
+  <span><i class="dot" style="background:#40c4ff"></i>camera</span>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
