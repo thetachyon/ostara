@@ -166,6 +166,15 @@ pub struct CameraItem {
 }
 
 #[derive(Debug, Serialize)]
+pub struct WhatsappChannelItem {
+    pub name: String,
+    pub invite_url: String,
+    pub category: String,
+    pub language: String,
+    pub verified: bool,
+}
+
+#[derive(Debug, Serialize)]
 pub struct InspectFeeds {
     pub news: FeedSection<NewsItem>,
     pub conflicts: FeedSection<ConflictItem>,
@@ -173,6 +182,7 @@ pub struct InspectFeeds {
     pub flights: FeedSection<FlightItem>,
     pub quakes: FeedSection<QuakeItem>,
     pub cameras: FeedSection<CameraItem>,
+    pub whatsapp_channels: FeedSection<WhatsappChannelItem>,
 }
 
 impl InspectFeeds {
@@ -184,6 +194,7 @@ impl InspectFeeds {
             flights: FeedSection::empty(),
             quakes: FeedSection::empty(),
             cameras: FeedSection::empty(),
+            whatsapp_channels: FeedSection::empty(),
         }
     }
 }
@@ -290,6 +301,29 @@ fn nuclear_section(name: &str) -> FeedSection<NuclearItem> {
                 lat: f.lat,
                 lon: f.lon,
                 status: f.status,
+            })
+            .collect(),
+    )
+}
+
+/// WhatsApp channels for a country: static curated directory, filtered in
+/// memory (no cache, no upstream traffic). Directory of invite links only —
+/// not message content (WhatsApp exposes no public read API).
+fn whatsapp_section(iso2: &str, iso3: &str) -> FeedSection<WhatsappChannelItem> {
+    FeedSection::ok(
+        crate::whatsapp_channels::all_channels()
+            .into_iter()
+            .filter(|c| {
+                (!c.iso2.is_empty() && c.iso2.eq_ignore_ascii_case(iso2))
+                    || (!c.iso3.is_empty() && c.iso3.eq_ignore_ascii_case(iso3))
+            })
+            .take(10)
+            .map(|c| WhatsappChannelItem {
+                name: c.name,
+                invite_url: c.invite_url,
+                category: c.category,
+                language: c.language,
+                verified: c.verified,
             })
             .collect(),
     )
@@ -433,6 +467,7 @@ async fn inspect_feeds(state: &AppState, country: &CountryRef) -> InspectFeeds {
         flights,
         quakes,
         cameras: cameras_section(&country.iso3),
+        whatsapp_channels: whatsapp_section(&country.iso2, &country.iso3),
     }
 }
 

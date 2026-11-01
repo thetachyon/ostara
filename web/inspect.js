@@ -85,7 +85,9 @@
       `<li>${q.magnitude != null ? "M" + q.magnitude.toFixed(1) : "M?"} — ${esc(q.place || q.id)}<br/><span class="m">${esc((q.time || "").slice(0, 10))} · ${q.latitude.toFixed(2)}, ${q.longitude.toFixed(2)}</span></li>`);
     const cameras = feedSection("Cameras", f.cameras || { ok: true, count: 0, items: [] }, (c) =>
       `<li>${link(c.page_url, c.name)}<br/><span class="m">${esc(c.category || "")}${c.location ? " · " + esc(c.location) : ""}</span></li>`);
-    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras;
+    const whatsapp = feedSection("WhatsApp channels", f.whatsapp_channels || { ok: true, count: 0, items: [] }, (w) =>
+      `<li>${link(w.invite_url, w.name)}${w.verified ? " ✓" : ""}<br/><span class="m">${esc(w.category || "")}${w.language ? " · " + esc(w.language) : ""} · directory, not live messages</span></li>`);
+    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras + whatsapp;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
   }

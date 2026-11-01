@@ -173,8 +173,11 @@ pub fn resolve_country(lat: f64, lon: f64) -> Option<Resolved> {
         }
         if edge.is_finite() {
             let metro_d = haversine_km(lat, lon, c.metro[1], c.metro[0]);
+            // Deepest-inside wins: the LARGEST edge distance (a point deep in
+            // India beats a point grazing the edge of China's huge bbox).
+            // Metro distance breaks exact ties deterministically.
             let take = match &best {
-                Some((_, be, bm)) => (edge, metro_d) < (*be, *bm),
+                Some((_, be, bm)) => (edge > *be) || (edge == *be && metro_d < *bm),
                 None => true,
             };
             if take {
@@ -257,6 +260,18 @@ mod tests {
         let r = resolve_country(49.7, -2.0).expect("channel resolves");
         assert_eq!(r.iso3, "FRA");
         assert_eq!(r.method, ResolveMethod::Bbox);
+    }
+
+    #[test]
+    fn delhi_resolves_to_india_not_china() {
+        // Regression: China's huge bbox [73.6,20.2,134.8,53.6] overlaps
+        // northern India; deepest-inside (largest edge distance) must win,
+        // not the country whose bbox edge the point grazes.
+        for (lat, lon) in [(28.6, 77.2), (21.0, 78.0)] {
+            let r = resolve_country(lat, lon).expect("india resolves");
+            assert_eq!(r.iso3, "IND", "at ({lat}, {lon})");
+            assert_eq!(r.method, ResolveMethod::Bbox);
+        }
     }
 
     #[test]

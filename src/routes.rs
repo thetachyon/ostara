@@ -1040,6 +1040,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::dossier::routes())
         .merge(crate::country_osint::routes())
         .merge(crate::country_inspect::routes())
+        .merge(crate::whatsapp_channels::routes())
         .merge(crate::graph::routes())
         .merge(crate::intel::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take

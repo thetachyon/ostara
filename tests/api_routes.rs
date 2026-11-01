@@ -687,10 +687,7 @@ async fn whatsapp_channels_full_list_has_entries_and_note() {
         "directory_note must disclaim liveness, got: {note}"
     );
     for c in channels {
-        let url = c
-            .get("invite_url")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let url = c.get("invite_url").and_then(|v| v.as_str()).unwrap_or("");
         assert!(
             url.starts_with("https://whatsapp.com/channel/"),
             "bad invite URL: {url}"
@@ -702,11 +699,7 @@ async fn whatsapp_channels_full_list_has_entries_and_note() {
 async fn whatsapp_channels_country_filter() {
     let g = get("/api/whatsapp-channels?country=IN").await;
     assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
-    let channels = g
-        .body
-        .get("channels")
-        .and_then(|v| v.as_array())
-        .unwrap();
+    let channels = g.body.get("channels").and_then(|v| v.as_array()).unwrap();
     assert!(!channels.is_empty(), "expected India channels");
     for c in channels {
         assert_eq!(
@@ -731,24 +724,18 @@ async fn whatsapp_channels_country_filter() {
 async fn whatsapp_channels_category_filter() {
     let g = get("/api/whatsapp-channels?category=news").await;
     assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
-    let channels = g
-        .body
-        .get("channels")
-        .and_then(|v| v.as_array())
-        .unwrap();
+    let channels = g.body.get("channels").and_then(|v| v.as_array()).unwrap();
     assert!(!channels.is_empty(), "expected news channels");
     for c in channels {
-        assert_eq!(
-            c.get("category").and_then(|v| v.as_str()),
-            Some("news")
-        );
+        assert_eq!(c.get("category").and_then(|v| v.as_str()), Some("news"));
     }
 }
 
 #[tokio::test]
 async fn country_inspect_includes_whatsapp_section() {
-    // New Delhi: the inspector must carry the whatsapp_channels section.
-    let g = get("/api/country/inspect?lat=28.6&lon=77.2").await;
+    // Central India (Nagpur area): the inspector must carry the
+    // whatsapp_channels section with India's entries.
+    let g = get("/api/country/inspect?lat=21.0&lon=78.0").await;
     assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
     let feeds = g.body.get("feeds").expect("feeds object");
     let wa = feeds
