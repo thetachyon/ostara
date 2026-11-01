@@ -364,11 +364,19 @@ binary serves it directly). Map-first UX modeled on OSIRIS:
 
 - Full-viewport globe, floating HUD (brand, live UTC clock, SSE intel ticker),
   bottom status bar (per-feed health dots from `/api/health/feeds`, API latency).
-- Left rail: 6 toggleable map layers (aircraft, vessels, wildfires,
-  earthquakes, nuclear facilities, public cameras) with per-layer counts,
-  manual refresh, and 5-minute auto-refresh; plus 8 data feeds (news, markets,
-  conflicts, cyber IOCs, ThreatFox, Telegram, space weather, satellites) that
-  open as list overlays. Click any point for a detail popup.
+- Left rail: 7 toggleable map layers (aircraft, vessels, wildfires,
+  earthquakes, nuclear facilities, public cameras, **paintable countries**)
+  with per-layer counts, manual refresh, and 5-minute auto-refresh; plus 8 data
+  feeds (news, markets, conflicts, cyber IOCs, ThreatFox, Telegram,
+  space weather, satellites) that open as list overlays. Click any point for a
+  detail popup.
+- **Countries layer** (`/data/countries.geo.json`, 258 features, 896 KB —
+  Natural Earth via `datasets/geo-countries`, public domain; see
+  `web/data/PROVENANCE.md`): hover highlights, click shows name + ISO codes,
+  paint mode (color picker in the layer row) paints countries via
+  MapLibre feature-state — click again with the same color to erase.
+  Painting persists in localStorage across reloads, theme swaps and layer
+  toggles; ✕ clears all.
 - Right side: SSE intel-feed panel, RECON toolkit drawer (DNS, WHOIS, cert
   transparency, IP/ASN, CVE, gated port scan with inline responsible-use
   notice), entity-graph explorer (search → expandable tree, v1), region

@@ -85,6 +85,7 @@ window.OST = window.OST || {};
     if (!map) return;
     const c = map.getCenter();
     const on = OST.MAP_LAYERS.filter((l) => layerState[l.id] && layerState[l.id].visible).map((l) => l.id);
+    if (layerState.countries && layerState.countries.visible) on.push("countries");
     location.hash = `#c=${c.lat.toFixed(3)},${c.lng.toFixed(3)},${map.getZoom().toFixed(2)}&l=${on.join(",")}`;
   }
 
@@ -141,6 +142,8 @@ window.OST = window.OST || {};
   }
 
   function ensureLayers() {
+    // Countries first so feed markers render above the polygons.
+    if (OST.ensureCountries) OST.ensureCountries(map, !!(layerState.countries && layerState.countries.visible));
     for (const L of OST.MAP_LAYERS) {
       if (map.getSource(L.id)) continue;
       map.addSource(L.id, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -164,7 +167,7 @@ window.OST = window.OST || {};
 
   function buildLayerPanel() {
     const h = readHash();
-    const onIds = h.l ? h.l.split(",") : OST.MAP_LAYERS.map((l) => l.id);
+    const onIds = h.l ? h.l.split(",") : [...OST.MAP_LAYERS.map((l) => l.id), "countries"];
     const list = document.getElementById("map-layer-list");
     list.innerHTML = "";
     for (const L of OST.MAP_LAYERS) {
@@ -179,9 +182,45 @@ window.OST = window.OST || {};
         `<button class="ref" data-refresh="${L.id}" title="refresh now" style="background:none;border:none;color:var(--dim)">⟳</button>`;
       list.appendChild(row);
     }
+    // Paintable countries layer (static GeoJSON, web/data/countries.geo.json).
+    layerState.countries = { visible: onIds.includes("countries"), count: null };
+    const crow = document.createElement("div");
+    crow.className = "layercol"; crow.id = "row-countries";
+    crow.innerHTML =
+      `<label class="layer" title="Paintable country boundaries — hover to highlight, click for info">` +
+      `<input type="checkbox" data-layer="countries" ${layerState.countries.visible ? "checked" : ""} />` +
+      `<i class="dot" style="background:#8ecae6"></i><span>Countries</span>` +
+      `<span class="n" id="n-countries">…</span></label>` +
+      `<div class="paintbar">` +
+      `<input type="color" id="paint-color" value="#ffd166" title="paint color" />` +
+      `<button id="paint-mode" class="pbtn" title="paint mode: click a country to paint it; click again with the same color to erase">🖌</button>` +
+      `<button id="paint-clear" class="pbtn" title="clear all painted countries">✕</button>` +
+      `</div>`;
+    list.appendChild(crow);
+    document.getElementById("paint-mode").addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const on = OST.togglePaintMode();
+      ev.currentTarget.classList.toggle("on", on);
+      OST.toast(on
+        ? "paint mode on — click a country to paint it (same color again erases)"
+        : "paint mode off", "");
+    });
+    document.getElementById("paint-color").addEventListener("input", (ev) => OST.setPaintColor(ev.target.value));
+    document.getElementById("paint-clear").addEventListener("click", (ev) => {
+      ev.preventDefault();
+      OST.clearCountryPaint(map);
+      OST.toast("painting cleared", "");
+    });
     list.addEventListener("change", (e) => {
       const id = e.target.dataset && e.target.dataset.layer;
-      if (!id || !map.getLayer(id)) return;
+      if (!id) return;
+      if (id === "countries") {
+        layerState.countries.visible = e.target.checked;
+        OST.setCountriesVisible(map, e.target.checked);
+        writeHash();
+        return;
+      }
+      if (!map.getLayer(id)) return;
       layerState[id].visible = e.target.checked;
       map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
       writeHash();
@@ -238,8 +277,10 @@ window.OST = window.OST || {};
 
   function updateCounts() {
     const total = OST.MAP_LAYERS.reduce((a, L) => a + ((layerState[L.id] && layerState[L.id].count) || 0), 0);
+    const onCount = OST.MAP_LAYERS.filter((l) => layerState[l.id].visible).length +
+      (layerState.countries && layerState.countries.visible ? 1 : 0);
     document.getElementById("layer-counts").textContent =
-      `${total.toLocaleString()} plotted · ${OST.MAP_LAYERS.filter((l) => layerState[l.id].visible).length}/${OST.MAP_LAYERS.length} layers`;
+      `${total.toLocaleString()} plotted · ${onCount}/${OST.MAP_LAYERS.length + 1} layers`;
   }
 
   /* ---------------- feed drawer ---------------- */
