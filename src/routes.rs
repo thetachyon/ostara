@@ -466,6 +466,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         markets,
         conflicts,
         helio,
+        telegram,
     ) = tokio::join!(
         feed_count(
             &state,
@@ -625,6 +626,30 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
                 })
             }) as BoxFut<_>
         ),
+        feed_count(
+            &state,
+            "telegram",
+            "telegram:stats".to_string(),
+            feeds::telegram::TTL,
+            {
+                let config = state.config.clone();
+                move |c| {
+                    Box::pin(async move {
+                        // Keyless: probe the first allowlisted channel, else
+                        // Telegram's own announcement channel.
+                        let channel = config
+                            .telegram_channels
+                            .first()
+                            .cloned()
+                            .unwrap_or_else(|| "telegram".to_string());
+                        let r = feeds::telegram::fetch(&c, &channel).await?;
+                        serde_json::to_value(&r).map_err(|e| {
+                            FeedError::new(feeds::telegram::FEED, format!("serialize failed: {e}"))
+                        })
+                    }) as BoxFut<_>
+                }
+            }
+        ),
         helio_probe(&state),
     );
 
@@ -682,28 +707,6 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             ),
         },
     );
-    // Telegram: needs API credentials AND an MTProto session (deferred).
-    let telegram_stat = match (
-        &state.config.telegram_api_id,
-        &state.config.telegram_api_hash,
-    ) {
-        (Some(_), Some(_)) => (
-            "telegram".to_string(),
-            FeedStat {
-                ok: false,
-                count: None,
-                error: Some("deferred: MTProto authorized session not implemented".to_string()),
-            },
-        ),
-        _ => (
-            "telegram".to_string(),
-            FeedStat {
-                ok: false,
-                count: None,
-                error: Some("disabled: TELEGRAM_API_ID/HASH unset".to_string()),
-            },
-        ),
-    };
     for (name, stat) in [
         flights,
         quakes,
@@ -720,7 +723,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         helio,
         nuclear_stat,
         vessels_stat,
-        telegram_stat,
+        telegram,
     ] {
         if !stat.ok {
             degraded = true;

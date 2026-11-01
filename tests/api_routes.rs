@@ -605,3 +605,165 @@ async fn country_inspect_bad_coords_are_400() {
         );
     }
 }
+
+#[tokio::test]
+async fn telegram_missing_channel_is_400() {
+    // Empty allowlist in test config: no ?channel= -> 400, no network touched.
+    let g = get("/api/telegram").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(
+        g.body.get("error").and_then(|v| v.as_str()).is_some(),
+        "400 body must carry 'error', got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn telegram_invalid_channel_name_is_400() {
+    for uri in [
+        "/api/telegram?channel=ab",          // too short
+        "/api/telegram?channel=no%20spaces", // illegal chars
+        "/api/telegram?channel=../x",        // path traversal attempt
+    ] {
+        let g = get(uri).await;
+        assert_eq!(
+            g.status,
+            StatusCode::BAD_REQUEST,
+            "{uri} should be 400, got: {}",
+            body_preview(&g)
+        );
+    }
+}
+
+#[tokio::test]
+async fn telegram_at_prefix_accepted_shape() {
+    // Contract only: @-stripping happens before validation; a valid name
+    // proceeds to fetch (which may 503 in sandbox — not asserted here).
+    let g = get("/api/telegram?channel=%40telegram").await;
+    assert!(
+        g.status == StatusCode::OK || g.status == StatusCode::SERVICE_UNAVAILABLE,
+        "expected 200 or honest 503, got: {}",
+        body_preview(&g)
+    );
+    if g.status == StatusCode::OK {
+        assert_eq!(
+            g.body.get("channel").and_then(|v| v.as_str()),
+            Some("telegram")
+        );
+        assert!(g.body.get("messages").and_then(|v| v.as_array()).is_some());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp channels directory (static curated data, NOT a live feed)
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn whatsapp_channels_full_list_has_entries_and_note() {
+    let g = get("/api/whatsapp-channels").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let channels = g
+        .body
+        .get("channels")
+        .and_then(|v| v.as_array())
+        .expect("channels array");
+    assert!(
+        channels.len() >= 10,
+        "expected 10+ curated channels, got {}",
+        channels.len()
+    );
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(channels.len() as u64)
+    );
+    // Honest labeling: every response carries the directory disclaimer.
+    let note = g
+        .body
+        .get("directory_note")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        note.contains("not live"),
+        "directory_note must disclaim liveness, got: {note}"
+    );
+    for c in channels {
+        let url = c
+            .get("invite_url")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(
+            url.starts_with("https://whatsapp.com/channel/"),
+            "bad invite URL: {url}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn whatsapp_channels_country_filter() {
+    let g = get("/api/whatsapp-channels?country=IN").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let channels = g
+        .body
+        .get("channels")
+        .and_then(|v| v.as_array())
+        .unwrap();
+    assert!(!channels.is_empty(), "expected India channels");
+    for c in channels {
+        assert_eq!(
+            c.get("iso2").and_then(|v| v.as_str()),
+            Some("IN"),
+            "country filter leaked: {}",
+            body_preview(&g)
+        );
+    }
+    // Unknown country => 200 with an empty list (not an error).
+    let g2 = get("/api/whatsapp-channels?country=Narnia").await;
+    assert_eq!(g2.status, StatusCode::OK);
+    assert_eq!(
+        g2.body.get("count").and_then(|v| v.as_u64()),
+        Some(0),
+        "got: {}",
+        body_preview(&g2)
+    );
+}
+
+#[tokio::test]
+async fn whatsapp_channels_category_filter() {
+    let g = get("/api/whatsapp-channels?category=news").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let channels = g
+        .body
+        .get("channels")
+        .and_then(|v| v.as_array())
+        .unwrap();
+    assert!(!channels.is_empty(), "expected news channels");
+    for c in channels {
+        assert_eq!(
+            c.get("category").and_then(|v| v.as_str()),
+            Some("news")
+        );
+    }
+}
+
+#[tokio::test]
+async fn country_inspect_includes_whatsapp_section() {
+    // New Delhi: the inspector must carry the whatsapp_channels section.
+    let g = get("/api/country/inspect?lat=28.6&lon=77.2").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let feeds = g.body.get("feeds").expect("feeds object");
+    let wa = feeds
+        .get("whatsapp_channels")
+        .expect("whatsapp_channels section");
+    assert_eq!(
+        wa.get("ok").and_then(|v| v.as_bool()),
+        Some(true),
+        "got: {}",
+        body_preview(&g)
+    );
+    let items = wa.get("items").and_then(|v| v.as_array()).unwrap();
+    assert!(
+        !items.is_empty(),
+        "expected WhatsApp channels for India, got: {}",
+        body_preview(&g)
+    );
+}

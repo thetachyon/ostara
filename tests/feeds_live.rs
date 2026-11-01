@@ -245,3 +245,47 @@ async fn threatfox_live() {
         }
     }
 }
+
+#[tokio::test]
+async fn telegram_live() {
+    // t.me/s previews are keyless. Telegram rate-limits aggressively and
+    // blocks some datacenter IPs outright; a blocked fetch that degrades
+    // into a structured FeedError (rather than a panic or empty success)
+    // is an honest, acceptable result here and is asserted as such.
+    let client = live_client();
+    let outcome = tokio::time::timeout(
+        Duration::from_secs(6),
+        feeds::telegram::fetch(&client, "telegram"),
+    )
+    .await;
+    match outcome {
+        Err(_) => panic!("LIVE-FAIL telegram (t.me): timed out after 6s"),
+        Ok(Err(e)) => {
+            // Graceful degradation path: the failure is a structured,
+            // diagnosable FeedError, never a panic or silent empty page.
+            assert!(
+                !e.detail.is_empty(),
+                "LIVE-FAIL telegram (t.me): empty error detail on blocked fetch"
+            );
+            eprintln!("telegram live: blocked in this environment ({})", e.detail);
+        }
+        Ok(Ok(r)) => {
+            assert_eq!(
+                r.channel, "telegram",
+                "LIVE-FAIL telegram: channel not echoed"
+            );
+            assert!(
+                !r.messages.is_empty(),
+                "LIVE-FAIL telegram: zero messages parsed"
+            );
+            for m in &r.messages {
+                assert!(m.message_id > 0, "LIVE-FAIL telegram: bad message_id");
+                assert!(
+                    m.url == format!("https://t.me/telegram/{}", m.message_id),
+                    "LIVE-FAIL telegram: bad canonical url {}",
+                    m.url
+                );
+            }
+        }
+    }
+}

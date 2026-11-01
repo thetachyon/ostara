@@ -83,10 +83,9 @@ pub struct Config {
     /// with HTTP 401.
     pub threatfox_api_key: Option<String>,
 
-    // -- Telegram OSINT layer ----------------------------------------------
-    pub telegram_api_id: Option<String>,
-    pub telegram_api_hash: Option<String>,
-    /// Comma-separated public channel names (no @); overrides curated default.
+    // -- Telegram OSINT layer (keyless: t.me/s previews) ---------------------
+    /// Comma-separated public channel names (no @); empty = any public
+    /// channel via ?channel=, validated against this list when non-empty.
     pub telegram_channels: Vec<String>,
 
     // -- RECON enrichment keys (optional; keyless fallbacks exist) -----------
@@ -124,8 +123,6 @@ impl Config {
             n2yo_api_key: env_opt("N2YO_API_KEY"),
             ais_api_key: env_opt("AIS_API_KEY"),
             threatfox_api_key: env_opt("THREATFOX_API_KEY"),
-            telegram_api_id: env_opt("TELEGRAM_API_ID"),
-            telegram_api_hash: env_opt("TELEGRAM_API_HASH"),
             telegram_channels: env_list("TELEGRAM_CHANNELS"),
             nvd_api_key: env_opt("NVD_API_KEY"),
             ipinfo_token: env_opt("IPINFO_TOKEN"),
@@ -153,8 +150,6 @@ impl Config {
             n2yo_api_key: None,
             ais_api_key: None,
             threatfox_api_key: None,
-            telegram_api_id: None,
-            telegram_api_hash: None,
             telegram_channels: Vec::new(),
             nvd_api_key: None,
             ipinfo_token: None,

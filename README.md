@@ -289,7 +289,7 @@ feed is proven by a test (`tests/phase1_keyed.rs`).
 | `GET /api/vessels` | (no REST adapter yet) | `AIS_API_KEY` | 503 (documented) |
 | `GET /api/cyber/threats` | URLhaus + ThreatFox | `THREATFOX_API_KEY` (both abuse.ch APIs 401 keyless) | 503 when unset |
 | `GET /api/threatfox` | ThreatFox `get_iocs` | `THREATFOX_API_KEY` (no keyless tier — HTTP 401) | 503 when unset |
-| `GET /api/telegram?channel=` | public Telegram channels | `TELEGRAM_API_ID` + `TELEGRAM_API_HASH` | 503 (documented) |
+| `GET /api/telegram?channel=` | `t.me/s` public previews | — | keyless; 400 bad/allowlist-blocked channel, 503 upstream failure |
 | `GET /api/markets` | CoinGecko | — | keyless |
 | `GET /api/nuclear?country=` | embedded registry (189 stations) | — | static |
 | `GET /api/conflicts` | GDACS RSS | — | keyless; `note` field states scope |
@@ -481,7 +481,7 @@ verify the image URL live before submitting.
 | vessels | — | ⚠️ UNVERIFIED (no adapter) | AISStream evaluated: websocket-only, no REST. 503-with-detail by design; MarineTraffic/VesselFinder/AISHub documented as alternatives. |
 | cyber | URLhaus + ThreatFox | ⚠️ UNVERIFIED (sandbox) | Both abuse.ch APIs require Auth-Key (`THREATFOX_API_KEY`; HTTP 401 keyless verified live 2026-11-01). Parsers fixture-verified against the documented response shape. |
 | threatfox | ThreatFox `get_iocs` | ⚠️ UNVERIFIED (no key) | Requires `THREATFOX_API_KEY`; 503-with-detail when unset (tested). Keyless → HTTP 401 verified live. Fixture is doc-derived (no live data response obtainable without a key). |
-| telegram | MTProto | ⚠️ UNVERIFIED (no creds) | 503-with-detail when `TELEGRAM_API_ID`/`HASH` unset (tested); authorized session deferred. |
+| telegram | `t.me/s` preview scrape | ✅ VERIFIED (parser) | Keyless; 20-msg fixture from live `t.me/s/telegram` page. MTProto plan dropped — no auth needed for public channels. Live reachability depends on network (Telegram may 429 datacenter IPs). |
 | nuclear | static registry | ✅ (embedded, 189 stations) | 12 coordinate spot-checks; reactor_type omitted (source lacks it). |
 | conflicts | GDACS RSS | ⚠️ PARTIAL | Feed is live and parseable (curl-verified 200/252 records), but reqwest stalls in this sandbox like adsb.lol/GDELT; parser fixture-verified. `note` field states scope honestly: natural disasters, not armed conflict (ACLED is the keyed alternative). |
 | recon: ip/asn | ip-api.com → ipinfo.io | ✅ VERIFIED (ip-api path) | Keyed ipinfo path UNVERIFIED (no token). |

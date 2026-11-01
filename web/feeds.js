@@ -289,7 +289,7 @@ window.OST = window.OST || {};
     {
       id: "telegram", label: "Telegram", health: "telegram",
       group: "global",
-      note: "503 until TELEGRAM_API_ID + TELEGRAM_API_HASH are set",
+      note: "public channels only \u00b7 keyless \u00b7 no login",
       inputs: [{ name: "channel", placeholder: "channel name (no @)", required: true }],
       validate: (p) => (p.channel && p.channel.trim() ? null : "enter a channel name"),
       url: (p) => `/api/telegram?channel=${encodeURIComponent(p.channel || "")}`,
@@ -300,6 +300,25 @@ window.OST = window.OST || {};
             `<div class="feed-item"><div class="m">@${esc(m.channel || "")} · ${esc(m.date || "")} · 👁 ${m.views != null ? m.views : "?"}</div>` +
             `<div>${esc((m.text || "").slice(0, 280))}${(m.text || "").length > 280 ? "…" : ""}</div>` +
             (m.url ? `<div class="m"><a href="${esc(m.url)}" target="_blank" rel="noopener">open</a></div>` : "") + `</div>`
+          ).join("") + genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
+      id: "whatsapp", label: "WhatsApp", health: null,
+      group: "global",
+      note: "directory of public channel invite links \u2014 not live messages (WhatsApp has no public read API)",
+      inputs: [
+        { name: "country", placeholder: "country (name or ISO)", value: "" },
+        { name: "category", placeholder: "category", value: "" },
+      ],
+      url: (p) => `/api/whatsapp-channels?country=${encodeURIComponent(p.country || "")}&category=${encodeURIComponent(p.category || "")}`,
+      render(j, el) {
+        const items = j.channels || [];
+        el.innerHTML = `<div class="m" style="margin-bottom:6px">${items.length} channel${items.length === 1 ? "" : "s"}</div>` +
+          items.slice(0, ROW_CAP).map((c) =>
+            `<div class="feed-item"><div><a href="${esc(c.invite_url)}" target="_blank" rel="noopener">${esc(c.name)}</a>${c.verified ? " \u2713" : ""}</div>` +
+            `<div class="m">${esc(c.category || "")} \u00b7 ${esc(c.country || "")}${c.language ? " \u00b7 " + esc(c.language) : ""}</div></div>`
           ).join("") + genLine(j);
         this.count = items.length;
       },
