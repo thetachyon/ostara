@@ -8,7 +8,7 @@
 # Every secret is optional — feeds degrade gracefully without their keys.
 # See .env.example / DEPLOY.md for the full inventory.
 
-app = "ostara-api"
+app = "ostara"
 primary_region = "iad"
 
 [build]
