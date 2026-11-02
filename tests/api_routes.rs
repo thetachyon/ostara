@@ -878,3 +878,117 @@ async fn gnews_missing_q_is_400() {
 async fn gnews_contract() {
     assert_media_feed_contract("/api/gnews?q=test&limit=1", &["query", "items"]).await;
 }
+
+#[tokio::test]
+async fn unrest_missing_country_is_400() {
+    let g = get("/api/unrest").await;
+    assert_eq!(g.status, StatusCode::BAD_REQUEST);
+    assert!(g.body.get("error").and_then(|v| v.as_str()).is_some());
+}
+
+#[tokio::test]
+async fn unrest_unknown_country_is_404() {
+    let g = get("/api/unrest?country=XX").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND, "got: {}", body_preview(&g));
+}
+
+#[tokio::test]
+async fn unrest_shape_for_france() {
+    // Shape contract only: in the sandbox GDELT is unreachable, so
+    // components may legitimately be ok:false — the endpoint must still
+    // return 200 with the full transparent shape, never a 502.
+    let g = get("/api/unrest?country=FRA").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let b = &g.body;
+    for key in [
+        "country",
+        "score",
+        "level",
+        "partial",
+        "components",
+        "methodology",
+        "generated_at",
+        "disclaimer",
+    ] {
+        assert!(
+            b.get(key).is_some(),
+            "missing key {key}, got: {}",
+            body_preview(&g)
+        );
+    }
+    assert_eq!(
+        b.get("country")
+            .and_then(|c| c.get("iso3"))
+            .and_then(|v| v.as_str()),
+        Some("FRA")
+    );
+    let level = b.get("level").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["low", "elevated", "high", "severe"].contains(&level),
+        "bad level {level}"
+    );
+    let score = b.get("score").and_then(|v| v.as_f64()).unwrap_or(-1.0);
+    assert!(
+        (0.0..=100.0).contains(&score),
+        "score out of range: {score}"
+    );
+    let comps = b
+        .get("components")
+        .and_then(|v| v.as_array())
+        .expect("components array");
+    assert_eq!(comps.len(), 3, "three signal components");
+    for c in comps {
+        for key in [
+            "source",
+            "signal",
+            "ok",
+            "query",
+            "raw_value",
+            "baseline_value",
+            "normalized_0_1",
+            "weight",
+        ] {
+            assert!(c.get(key).is_some(), "component missing {key}: {c}");
+        }
+        // The honesty words must be present; prediction words must not.
+        let disclaimer = b.get("disclaimer").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(disclaimer.contains("NOT A FORECAST") || disclaimer.contains("not a forecast"));
+    }
+    let blob = serde_json::to_string(b).unwrap().to_lowercase();
+    // The disclaimer denies forecasting ("not a forecast") — strip it, then
+    // the remaining response must never claim to predict or forecast.
+    let disclaimer = b
+        .get("disclaimer")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let blob = blob.replacen(&disclaimer, "", 1);
+    assert!(
+        !blob.contains("prediction"),
+        "response must never say prediction"
+    );
+    assert!(
+        !blob.contains("forecast"),
+        "response must never say forecast"
+    );
+}
+
+#[tokio::test]
+async fn unrest_accepts_name_and_iso2() {
+    for q in ["/api/unrest?country=France", "/api/unrest?country=FR"] {
+        let g = get(q).await;
+        assert_eq!(
+            g.status,
+            StatusCode::OK,
+            "got: {} for {q}",
+            body_preview(&g)
+        );
+        assert_eq!(
+            g.body
+                .get("country")
+                .and_then(|c| c.get("iso3"))
+                .and_then(|v| v.as_str()),
+            Some("FRA")
+        );
+    }
+}

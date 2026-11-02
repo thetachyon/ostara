@@ -135,11 +135,31 @@ pub async fn fetch(
     query: &str,
     limit: u32,
 ) -> Result<BlueskyResponse, FeedError> {
+    fetch_window(client, query, limit, None, None).await
+}
+
+/// Windowed search: `since`/`until` are RFC-3339 timestamps bounding post
+/// creation time (honored by the AppView; verified live 2026-11-01).
+/// `None` leaves that side unbounded. Enables proper temporal baselines —
+/// e.g. a 7-day recent window vs the prior 83 days — for scoring.
+pub async fn fetch_window(
+    client: &reqwest::Client,
+    query: &str,
+    limit: u32,
+    since: Option<&str>,
+    until: Option<&str>,
+) -> Result<BlueskyResponse, FeedError> {
     let limit = limit.clamp(1, 100);
-    let url = format!(
+    let mut url = format!(
         "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={}&limit={limit}",
         url_encode(query)
     );
+    if let Some(s) = since {
+        url.push_str(&format!("&since={}", url_encode(s)));
+    }
+    if let Some(u) = until {
+        url.push_str(&format!("&until={}", url_encode(u)));
+    }
     let resp: SearchResponse = get_json(client, FEED, &url).await?;
     let posts: Vec<BlueskyPost> = resp.posts.into_iter().map(normalize).collect();
     Ok(BlueskyResponse {

@@ -1136,6 +1136,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::whatsapp_channels::routes())
         .merge(crate::graph::routes())
         .merge(crate::intel::routes())
+        .merge(crate::unrest::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take
         // precedence; anything unmatched falls through to the static bundle.
         .fallback_service(ServeDir::new("web"))

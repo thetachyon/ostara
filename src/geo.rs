@@ -68,6 +68,31 @@ fn by_iso3() -> &'static HashMap<&'static str, &'static CountryBox> {
     })
 }
 
+/// Country identity record for name/ISO lookups (no geometry).
+#[derive(Debug, Clone)]
+pub struct CountryIdentity {
+    pub name: String,
+    pub iso2: String,
+    pub iso3: String,
+}
+
+/// Look up a country by name, ISO-3166 alpha-2, or alpha-3
+/// (case-insensitive). Used by endpoints that take `?country=` without a
+/// map click — e.g. the unrest-signals score.
+pub fn find_country(q: &str) -> Option<CountryIdentity> {
+    let q = q.trim().to_lowercase();
+    boxes()
+        .iter()
+        .find(|c| {
+            c.name.to_lowercase() == q || c.iso2.to_lowercase() == q || c.iso3.to_lowercase() == q
+        })
+        .map(|c| CountryIdentity {
+            name: c.name.clone(),
+            iso2: c.iso2.clone(),
+            iso3: c.iso3.clone(),
+        })
+}
+
 /// The polygon bboxes of ONE country, looked up by ISO-3166 alpha-3.
 /// Empty slice when the code is unknown. Use this (not a scan of all
 /// countries) when filtering a feed's items: per-item cost is bounded by

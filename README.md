@@ -413,6 +413,62 @@ category with a full-pack shortcut into the Countries drawer, plus
 news/alerts/nuclear/aircraft/earthquakes/cameras sections); marker popups
 and right-click dossier are unchanged.
 
+### `GET /api/unrest` — per-country unrest signals (heuristic indicator)
+
+`?country=<name|iso2|iso3>` returns a per-country unrest-signals score.
+**This is a heuristic indicator, not a prediction or forecast** — the
+response says so, and so does the UI. Everything that feeds the score is
+visible in the response: each component exposes its source, signal
+description, raw value, baseline value, normalized 0–1, and weight, plus
+the methodology string, the disclaimer, and `generated_at`.
+
+**Signals (all baseline-normalized — never raw counts, so large countries
+don't always win):**
+
+| Component | Weight | Signal |
+|---|---|---|
+| GDELT | 0.50 | `theme:PROTEST` articles from the country's own outlets (`sourcecountry:`) via the DOC 2.1 `timelinevol` 90-day mode. 7-day per-bin rate vs the prior ~83-day baseline per-bin rate (the DOC API exposes themes, not raw CAMEO codes; `theme:PROTEST` is the documented proxy for CAMEO 14*). |
+| Google News | 0.35 | Two date-bounded queries: `<country> (protest OR strike OR riot OR unrest)` with `after:<7d>` (recent) and `after:<90d> before:<7d>` (baseline). Recent count vs baseline daily rate. |
+| Bluesky | 0.15 | Two windowed `searchPosts` calls (`<country> protest`) with `since:`/`until:` bounds over the same 7d/83d windows. Country attribution is weak (global full-text search) — hence the low weight. |
+
+**Normalization:** for a recent/baseline rate ratio `r`, each component maps
+to `clamp((r − 1) / 4, 0, 1)` — at baseline → 0, 5× baseline → 1 — with a
+low-evidence discount (`recent_count / 5`, capped at 1) so a handful of
+articles can't max out a component. Zero baseline with recent activity is a
+spike-from-silence (`recent / 25`). **Levels:** <25 low, <50 elevated,
+<75 high, ≥75 severe.
+
+**Cache discipline:** every component reuses its feed's normal cache path,
+key format, and TTL — at most 5 upstream calls per country per TTL window
+(1 GDELT + 2 Google News + 2 Bluesky), all cached; no new API keys, no new
+upstreams. Window boundaries are day-quantized (UTC) so cache keys stay
+stable for 24h.
+
+**Honest failure modes:** a down feed marks its component `ok: false` with
+the error string; the weight redistributes proportionally among the working
+components and the response is marked `partial: true` with a `note` naming
+the dead feeds — never silently zero.
+
+**Limitations (read before citing):** each window is capped at 100 items by
+the upstreams — a saturated window is flagged in the component's `note`
+because a capped baseline biases the ratio upward. GDELT's
+`sourcecountry:` reflects outlet registration, not event location. Google
+News RSS has no country field; the query is keyword-matching. Bluesky has
+no country attribution at all. The score measures *media signals about
+unrest*, not unrest itself — quiet periods can precede major events and
+loud periods can fizzle.
+
+**Deliberately excluded:** Mastodon (the 40-item client-side snapshot can't
+produce a baseline window); conflicts/GDACS (natural disasters — counting
+them as unrest would be mislabeling); RSS outlets (global wires, no country
+field); telegram/markets/cyber/flights/quakes/cameras/vessels (no
+country-attributable unrest semantics). All documented in `src/unrest.rs`.
+
+Missing country → 400; unknown country → 404. In the UI, the country panel
+gains an "Unrest signals" section (score bar, level chip, per-component
+breakdown, methodology one click away in a `<details>`) between the OSINT
+resources and News sections; existing sections are untouched.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,

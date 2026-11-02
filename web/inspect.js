@@ -3,7 +3,9 @@
  * Left-click on empty map area resolves the point via
  * GET /api/country/inspect and shows the country's OSINT resource pack
  * plus the country-tagged items from the other feeds (news, conflicts,
- * nuclear) in one floating panel. Marker popups and the right-click
+ * nuclear) in one floating panel. An "Unrest signals" section (GET
+ * /api/unrest — heuristic indicator, never a forecast) loads async
+ * between OSINT and News. Marker popups and the right-click
  * dossier are untouched.
  */
 (function (OST) {
@@ -59,6 +61,50 @@
     }
   }
 
+  // ---- Unrest signals (GET /api/unrest) ----
+  // Heuristic indicator, never a forecast. Loads async after the main
+  // inspector render; the section title says what it is and the full
+  // methodology + disclaimer sit one click away in <details>.
+
+  const UNREST_COLORS = { low: "#46a758", elevated: "#ffb224", high: "#f76b15", severe: "#e5484d" };
+
+  function renderUnrest(u) {
+    const score = Math.max(0, Math.min(100, Number(u.score) || 0));
+    const color = UNREST_COLORS[u.level] || "#888";
+    const comps = (u.components || []).map((c) => {
+      const head = `<div class="unrest-comp-head"><strong>${esc(c.source)}</strong>
+        <span class="m">weight ${Number(c.weight).toFixed(2)}</span>
+        ${c.ok ? `<span class="unrest-norm">${Number(c.normalized_0_1).toFixed(3)}</span>`
+               : `<span class="unrest-bad">unavailable</span>`}</div>`;
+      const vals = c.ok
+        ? `<div class="m">recent ${esc(String(c.raw_value))} ${esc(c.raw_unit)} · baseline ${esc(String(c.baseline_value))} ${esc(c.baseline_unit)}</div>`
+        : `<div class="m unrest-bad">${esc(c.error || "feed error")}</div>`;
+      return `<li>${head}<div class="m">${esc(c.signal)}</div>${vals}${c.note ? `<div class="m">note: ${esc(c.note)}</div>` : ""}</li>`;
+    }).join("");
+    return `<div class="insp-sec"><h3>Unrest signals <span class="unrest-chip" style="background:${color}">${esc(u.level)}</span>
+      <span class="m">heuristic indicator — not a forecast</span></h3>
+      <div class="unrest-bar"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>
+      <div class="m">score ${score.toFixed(1)} / 100${u.partial ? " · partial (a feed was down, weight redistributed)" : ""}</div>
+      ${u.note ? `<div class="m">${esc(u.note)}</div>` : ""}
+      <ul class="insp-list">${comps}</ul>
+      <details class="unrest-method"><summary>Methodology</summary>
+        <div class="m">${esc(u.methodology)}</div>
+        <div class="unrest-disc">${esc(u.disclaimer)}</div>
+      </details></div>`;
+  }
+
+  async function loadUnrest(iso2) {
+    const slot = document.getElementById("insp-unrest");
+    if (!slot) return;
+    slot.innerHTML = `<div class="insp-sec"><h3>Unrest signals</h3><div class="empty">loading signals…</div></div>`;
+    try {
+      const { data } = await OST.fetchJSON(`/api/unrest?country=${encodeURIComponent(iso2)}`, { timeout: 60000 });
+      slot.innerHTML = renderUnrest(data);
+    } catch (e) {
+      slot.innerHTML = `<div class="insp-sec"><h3>Unrest signals</h3><div class="empty">unavailable — ${esc(e.message || "fetch error")}</div></div>`;
+    }
+  }
+
   function render(data) {
     const body = document.getElementById("insp-body");
     const head = document.getElementById("insp-title");
@@ -89,9 +135,10 @@
       `<li>${link(w.invite_url, w.name)}${w.verified ? " ✓" : ""}<br/><span class="m">${esc(w.category || "")}${w.language ? " · " + esc(w.language) : ""} · directory, not live messages</span></li>`);
     const vessels = feedSection("Vessels", f.vessels || { ok: true, count: 0, items: [] }, (v) =>
       `<li>${esc(v.name || v.mmsi)}${v.vessel_type ? " · " + esc(v.vessel_type) : ""}<br/><span class="m">mmsi ${esc(String(v.mmsi))}${v.speed_knots != null ? " · " + Math.round(v.speed_knots) + " kt" : ""} · ${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}</span></li>`);
-    body.innerHTML = note + osint + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
+    body.innerHTML = note + osint + `<div id="insp-unrest"></div>` + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
+    loadUnrest(c.iso2);
   }
 
   OST.inspectCountry = async function (lat, lon) {
