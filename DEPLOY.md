@@ -175,3 +175,7 @@ unpkg reachability from your browser are all untested in production. The
 Dockerfile was not built here either (no docker daemon in this environment) —
 the multi-stage layout follows the standard `rust:1.99-bookworm` pattern for
 this toolchain.
+
+## CI
+
+Pushes to `main` auto-deploy the backend to Fly.io via `.github/workflows/fly-deploy.yml` (flyctl --remote-only). Manual runs: Actions tab -> Deploy to Fly.io -> Run workflow.
