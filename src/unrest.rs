@@ -310,7 +310,7 @@ async fn gdelt_component(state: &AppState, country: &CountryIdentity) -> UnrestC
                 Ok(b) => b,
                 Err(e) => return mk_err(format!("decode failed: {e}")),
             },
-            Err(e) => return mk_err(format!("{e:?}")),
+            Err(e) => return mk_err(e.user_message()),
         };
     let now = now_secs();
     let mut sum_r = 0.0f64;
@@ -386,7 +386,7 @@ async fn gnews_window_count(
         feeds::gnews::fetch(&client, &q, 100).await
     })
     .await
-    .map_err(|e| format!("{e:?}"))?;
+    .map_err(|e| e.user_message())?;
     let resp: feeds::gnews::GnewsResponse =
         serde_json::from_slice(&body).map_err(|e| format!("decode failed: {e}"))?;
     Ok(resp.count)
@@ -447,7 +447,7 @@ async fn bluesky_window_count(
         feeds::bluesky::fetch_window(&client, &query, 100, Some(&since), until.as_deref()).await
     })
     .await
-    .map_err(|e| format!("{e:?}"))?;
+    .map_err(|e| e.user_message())?;
     let resp: feeds::bluesky::BlueskyResponse =
         serde_json::from_slice(&body).map_err(|e| format!("decode failed: {e}"))?;
     Ok(resp.count)

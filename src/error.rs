@@ -52,12 +52,18 @@ impl ApiError {
 
     /// 503 by design: a keyed feed or gated capability whose credentials /
     /// enable-switch are unset. Mirrors OSIRIS's disabled RECON backend.
-    pub fn service_unavailable(error: impl Into<String>, detail: impl Into<String>) -> Self {
-        Self {
+    pub fn service_unavailable(error: impl Into<String>, detail: impl Into<String>) -> Self {        Self {
             status: StatusCode::SERVICE_UNAVAILABLE,
             error: error.into(),
             detail: detail.into(),
         }
+    }
+
+    /// Human-readable one-liner for embedding in composite responses
+    /// (e.g. the unrest score's per-component error strings). Never emits
+    /// the Rust Debug representation.
+    pub fn user_message(&self) -> String {
+        format!("{}: {}", self.error, self.detail)
     }
 }
 
