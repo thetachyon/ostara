@@ -16,6 +16,8 @@ pub mod cameras;
 pub mod chokepoints;
 pub mod conflicts;
 pub mod cyber;
+pub mod earnings;
+pub mod econ_calendar;
 pub mod fires;
 pub mod flights;
 pub mod gnews;
@@ -184,4 +186,6 @@ pub fn routes() -> axum::Router<crate::routes::AppState> {
         .route("/api/mastodon", get(mastodon::handler))
         .route("/api/rss", get(rss::handler))
         .route("/api/gnews", get(gnews::handler))
+        .route("/api/calendar", get(econ_calendar::handler))
+        .route("/api/earnings", get(earnings::handler))
 }

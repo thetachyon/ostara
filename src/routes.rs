@@ -474,6 +474,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         mastodon,
         rss,
         gnews,
+        earnings,
     ) = tokio::join!(
         feed_count(
             &state,
@@ -735,6 +736,21 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
                 }) as BoxFut<_>
             }
         ),
+        feed_count(
+            &state,
+            "earnings",
+            feeds::earnings::cache_key(&feeds::econ_calendar::today_ymd()),
+            feeds::earnings::TTL,
+            |c| {
+                Box::pin(async move {
+                    let date = feeds::econ_calendar::today_ymd();
+                    let r = feeds::earnings::fetch_earnings(&c, &date).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::earnings::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
         helio_probe(&state),
     );
 
@@ -819,6 +835,25 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             },
         )
     };
+    // Economic calendar: static embedded registry, counted like nuclear.
+    let calendar_stat = match feeds::econ_calendar::load_registry() {
+        Ok(events) => (
+            "calendar".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(events.len()),
+                error: None,
+            },
+        ),
+        Err(detail) => (
+            "calendar".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(format!("registry invalid: {detail}")),
+            },
+        ),
+    };
     for (name, stat) in [
         flights,
         quakes,
@@ -836,12 +871,14 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         helio,
         nuclear_stat,
         chokepoints_stat,
+        calendar_stat,
         vessels_stat,
         telegram,
         bluesky,
         mastodon,
         rss,
         gnews,
+        earnings,
     ] {
         if !stat.ok {
             degraded = true;
@@ -1058,6 +1095,8 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         mastodon,
         rss,
         gnews,
+        calendar,
+        earnings,
     ) = tokio::join!(
         run_probe(state.client.clone(), "flights", |c| async move {
             feeds::flights::fetch(&c, "mil", 1)
@@ -1150,6 +1189,12 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         run_probe(state.client.clone(), "gnews", |c| async move {
             feeds::gnews::probe_detail(&c).await
         }),
+        run_probe(state.client.clone(), "calendar", |_c| async move {
+            feeds::econ_calendar::probe_detail().await
+        }),
+        run_probe(state.client.clone(), "earnings", |c| async move {
+            feeds::earnings::probe_detail(&c).await
+        }),
     );
 
     let mut feeds_map = HashMap::new();
@@ -1177,6 +1222,8 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         mastodon,
         rss,
         gnews,
+        calendar,
+        earnings,
     ] {
         feeds_map.insert(name, report);
     }

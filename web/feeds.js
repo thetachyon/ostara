@@ -285,6 +285,80 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "calendar", label: "Econ calendar", health: "calendar",
+      group: "global",
+      staticNote: "curated registry — 56 events: FOMC, ECB, BoE, BoJ, US CPI, US NFP, OPEC+, G20, elections",
+      note: "curated registry, not a live feed — verify against official calendars before trading",
+      inputs: [
+        { name: "kind", type: "select", options: ["all", "rates", "inflation", "employment", "energy", "elections", "summit"], value: "all" },
+      ],
+      url: (p) => "/api/calendar" + (p.kind && p.kind !== "all" ? `?kind=${encodeURIComponent(p.kind)}` : ""),
+      render(j, el) {
+        const chip = (d) => {
+          let label, style;
+          if (d === 0) { label = "Today"; style = "color:var(--bad);border-color:var(--bad)"; }
+          else if (d < 7) { label = `${d}d`; style = "color:var(--warn);border-color:var(--warn)"; }
+          else { label = `${Math.floor(d / 7)}w`; style = "color:var(--dim)"; }
+          return `<span class="chip" style="border:1px solid;border-radius:3px;padding:0 5px;font-size:10px;white-space:nowrap;${style}">${label}</span>`;
+        };
+        const impBadge = (i) => i === "high"
+          ? `<span class="chip" style="color:var(--bad);border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px">high</span>`
+          : `<span class="chip" style="color:var(--dim);border:1px solid var(--dim);border-radius:3px;padding:0 5px;font-size:10px">medium</span>`;
+        const confTag = (c) => {
+          const short = { "published-schedule": "published", "regular-pattern": "pattern", "announced": "announced", "scheduled": "scheduled" }[c] || c;
+          return `<span class="m" title="schedule confidence: ${esc(c || "")}">${esc(short)}</span>`;
+        };
+        const rows = (j.events || []).slice(0, ROW_CAP).map((e) => [
+          chip(e.days_until),
+          `${esc(e.date || "—")}${e.time_utc ? `<br/><span class="m">${esc(e.time_utc)} UTC</span>` : ""}`,
+          `<b>${esc(e.name || "—")}</b><br/><span class="m">${esc(e.note || "")}</span>`,
+          esc(e.country_org || "—"),
+          esc(e.kind || "—"),
+          impBadge(e.importance),
+          confTag(e.confidence),
+        ]);
+        el.innerHTML = table(["In", "Date", "Event", "Org", "Kind", "Imp.", "Sched."], rows) +
+          `<div class="m" style="margin-top:6px">${(j.events || []).length} shown · ${esc(j.source || "")}</div>` + genLine(j);
+        this.count = (j.events || []).length;
+      },
+    },
+    {
+      id: "earnings", label: "Earnings", health: "earnings",
+      group: "global",
+      note: "Nasdaq earnings calendar (keyless) — date-indexed only; no revenue estimates or per-symbol lookup from upstream",
+      inputs: [{ name: "date", placeholder: "YYYY-MM-DD (blank = today)" }],
+      validate: (p) => {
+        const d = (p.date || "").trim();
+        return d && !/^\d{4}-\d{2}-\d{2}$/.test(d) ? "date must be YYYY-MM-DD" : null;
+      },
+      url: (p) => "/api/earnings" + (p.date && p.date.trim() ? `?date=${encodeURIComponent(p.date.trim())}` : ""),
+      render(j, el) {
+        const timeBadge = (t) => {
+          const map = { bmo: "BMO", amc: "AMC", dmh: "DMH" };
+          const col = t === "bmo" ? "var(--good)" : t === "amc" ? "var(--warn)" : "var(--dim)";
+          return `<span class="chip" style="color:${col};border:1px solid ${col};border-radius:3px;padding:0 5px;font-size:10px;font-weight:700">${esc(map[t] || t || "—")}</span>`;
+        };
+        const eps = (v) => v == null ? "—" : "$" + Number(v).toFixed(2);
+        const cap = (v) => v == null ? "—" : "$" + (v / 1e9).toFixed(1) + "B";
+        const items = j.earnings || [];
+        const rows = items.slice(0, ROW_CAP).map((e) => [
+          `<b>${esc(e.symbol)}</b>`,
+          esc(e.name || "—"),
+          timeBadge(e.time),
+          eps(e.eps_estimate),
+          cap(e.market_cap),
+          esc(e.fiscal_quarter_ending || "—"),
+          e.num_estimates != null ? e.num_estimates : "—",
+        ]);
+        const body = items.length === 0
+          ? `<div class="empty">no earnings scheduled for ${esc(j.date || "")} — markets may be closed</div>`
+          : table(["Symbol", "Company", "Time", "EPS est.", "Mkt cap", "Fiscal Q", "# ests"], rows);
+        el.innerHTML = body +
+          `<div class="m" style="margin-top:6px">${items.length} shown · ${esc(j.source || "")}</div>` + genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
       id: "conflicts", label: "Conflicts", health: "conflicts",
       group: "country",
       url: () => "/api/conflicts",
