@@ -1,35 +1,33 @@
-# OSTARA backend on fly.io.
+# fly.toml app configuration file generated for ostara on 2026-11-02T22:42:35Z
 #
-# Replace `ostara-api` with the app name you chose (or run `fly launch`
-# and let it fill this in). Then:
-#   fly secrets set AIS_API_KEY=... THREATFOX_API_KEY=...
-#   fly deploy
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-# Every secret is optional — feeds degrade gracefully without their keys.
-# See .env.example / DEPLOY.md for the full inventory.
 
-app = "ostara-api"
-primary_region = "iad"
+app = 'ostara'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  RUST_LOG = "info"
+  RUST_LOG = 'info'
 
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
-  # Keep one machine warm: the AIS vessel feed holds a live websocket and
-  # feed caches stay hot. auto-stop would drop the vessel stream whenever
-  # inbound traffic idles.
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
   [[http_service.checks]]
-    grace_period = "30s"
-    interval = "30s"
-    timeout = "5s"
-    method = "GET"
-    path = "/healthz"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/healthz'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
