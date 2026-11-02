@@ -992,3 +992,115 @@ async fn unrest_accepts_name_and_iso2() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// /api/threats/*
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn threats_politicians_lists_watchlist() {
+    let g = get("/api/threats/politicians").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let count = g.body.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+    assert!(count >= 60, "expected 60+ figures, got {count}");
+    let figs = g
+        .body
+        .get("figures")
+        .and_then(|v| v.as_array())
+        .expect("figures array");
+    assert_eq!(figs.len() as u64, count);
+    let first = &figs[0];
+    for k in ["name", "role", "country", "iso2", "iso3", "aliases"] {
+        assert!(first.get(k).is_some(), "figure missing {k}");
+    }
+}
+
+#[tokio::test]
+async fn threats_politicians_country_filter() {
+    let g = get("/api/threats/politicians?country=JP").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let figs = g
+        .body
+        .get("figures")
+        .and_then(|v| v.as_array())
+        .expect("figures array");
+    assert!(!figs.is_empty(), "expected Japanese figures");
+    assert!(
+        figs.iter()
+            .all(|f| f.get("iso2").and_then(|v| v.as_str()) == Some("JP"))
+    );
+}
+
+#[tokio::test]
+async fn threats_scan_missing_name_is_400() {
+    let g = get("/api/threats/scan").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn threats_scan_unknown_figure_is_404() {
+    let g = get("/api/threats/scan?name=Narnia").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND, "got: {}", body_preview(&g));
+}
+
+#[tokio::test]
+async fn threats_scan_bad_severity_is_400() {
+    let g = get("/api/threats/scan?name=Macron&severity=bogus").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn threats_scan_shape() {
+    // Upstreams may be unreachable in the sandbox; the contract is the
+    // shape: 200 with figure/items/sources/disclaimer, honest per-source ok.
+    let g = get("/api/threats/scan?name=Macron").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body
+            .get("figure")
+            .and_then(|f| f.get("name"))
+            .and_then(|v| v.as_str()),
+        Some("Emmanuel Macron")
+    );
+    assert!(g.body.get("items").and_then(|v| v.as_array()).is_some());
+    assert!(g.body.get("sources").and_then(|v| v.as_array()).is_some());
+    let disc = g
+        .body
+        .get("disclaimer")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(disc.contains("NOT VERIFIED THREATS"), "disclaimer present");
+    assert!(
+        disc.contains("human review"),
+        "disclaimer mentions human review"
+    );
+    for it in g.body.get("items").and_then(|v| v.as_array()).unwrap() {
+        let sev = it.get("severity").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["critical", "high", "medium"].contains(&sev),
+            "bad severity {sev}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn threats_scan_severity_filter() {
+    let g = get("/api/threats/scan?name=Macron&severity=critical").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    for it in g.body.get("items").and_then(|v| v.as_array()).unwrap() {
+        assert_eq!(
+            it.get("severity").and_then(|v| v.as_str()),
+            Some("critical")
+        );
+    }
+}

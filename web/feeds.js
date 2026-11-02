@@ -425,6 +425,49 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "threats", label: "Threat scan", health: null,
+      group: "global",
+      note: "keyword-flagged public mentions of political figures · requires human review · not verified threats",
+      inputs: [
+        { name: "name", type: "datalist", listId: "threat-figures", placeholder: "figure name", required: true },
+        { name: "severity", type: "select", options: ["all", "critical", "high", "medium"], value: "all" },
+      ],
+      validate: (p) => (p.name && p.name.trim() ? null : "enter a figure name"),
+      url: (p) => `/api/threats/scan?name=${encodeURIComponent(p.name || "")}&severity=${encodeURIComponent(p.severity || "all")}`,
+      afterInputs(body) {
+        if (body.dataset.threatListLoaded) return;
+        body.dataset.threatListLoaded = "1";
+        OST.fetchJSON("/api/threats/politicians", { timeout: 20000 }).then(({ data }) => {
+          const dl = document.getElementById("threat-figures");
+          if (dl && data.figures) dl.innerHTML = data.figures.map((f) =>
+            `<option value="${esc(f.name)}">${esc(f.role || "")} · ${esc(f.country || "")}</option>`).join("");
+        }).catch(() => { /* datalist stays empty; validation still works */ });
+      },
+      render(j, el) {
+        const items = j.items || [];
+        const sevStyle = (s) => s === "critical"
+          ? "color:var(--bad);border-color:var(--bad)"
+          : s === "high" ? "color:var(--warn);border-color:var(--warn)" : "color:var(--accent,#7aa2f7);border-color:var(--accent,#7aa2f7)";
+        const srcs = (j.sources || []).map((s) =>
+          `${esc(s.source)}: ${s.ok ? "ok" : "unavailable" + (s.detail ? " — " + esc(s.detail) : "")}`).join(" · ");
+        const fig = j.figure || {};
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:4px"><b>${esc(fig.name || "")}</b>${fig.role ? " · " + esc(fig.role) : ""}${fig.country ? " · " + esc(fig.country) : ""}</div>` +
+          `<div class="m" style="margin-bottom:6px">${items.length} flagged item${items.length === 1 ? "" : "s"} · ${esc(srcs)}</div>` +
+          `<details style="margin-bottom:8px"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
+          `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
+          items.slice(0, ROW_CAP).map((it) =>
+            `<div class="feed-item"><div><span class="chip" style="${sevStyle(it.severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(it.severity || "")}</span> ` +
+            `<a href="${esc(it.url || "#")}" target="_blank" rel="noopener">${esc(it.title || "(untitled)")}</a></div>` +
+            `<div class="m">${esc(it.source || "")} · ${esc((it.published || "").slice(0, 16).replace("T", " "))}</div>` +
+            (it.text_snippet ? `<div>${esc(it.text_snippet.slice(0, 260))}${it.text_snippet.length > 260 ? "…" : ""}</div>` : "") +
+            (it.matched_keywords && it.matched_keywords.length ? `<div class="m">matched: ${it.matched_keywords.map(esc).join(", ")}</div>` : "") +
+            `</div>`
+          ).join("") + genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
       id: "helio", label: "Space Wx", health: "helio",
       group: "global",
       url: () => "/api/space-weather",
@@ -551,6 +594,10 @@ window.OST = window.OST || {};
           `<option value="${esc(o)}" ${(lastParams[cat.id] && lastParams[cat.id][i.name] === o) || (!lastParams[cat.id] && i.value === o) ? "selected" : ""}>${esc(o)}</option>`).join("");
         return `<select data-fin="${i.name}">${opts}</select>`;
       }
+      if (i.type === "datalist") {
+        const prev = lastParams[cat.id] && lastParams[cat.id][i.name] != null ? lastParams[cat.id][i.name] : (i.value || "");
+        return `<input data-fin="${i.name}" list="${esc(i.listId)}" placeholder="${esc(i.placeholder || i.name)}" value="${esc(prev)}" spellcheck="false" autocomplete="off" /><datalist id="${esc(i.listId)}"></datalist>`;
+      }
       const prev = lastParams[cat.id] && lastParams[cat.id][i.name] != null ? lastParams[cat.id][i.name] : (i.value || "");
       return `<input data-fin="${i.name}" placeholder="${esc(i.placeholder || i.name)}" value="${esc(prev)}" spellcheck="false" />`;
     }).join("");
@@ -560,6 +607,7 @@ window.OST = window.OST || {};
     const go = () => loadCat(cat, true);
     const btn = document.getElementById("feed-go");
     if (btn) btn.onclick = go;
+    if (cat.afterInputs) cat.afterInputs(body);
     body.querySelectorAll("input").forEach((inp) =>
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }));
   }

@@ -52,7 +52,8 @@ impl ApiError {
 
     /// 503 by design: a keyed feed or gated capability whose credentials /
     /// enable-switch are unset. Mirrors OSIRIS's disabled RECON backend.
-    pub fn service_unavailable(error: impl Into<String>, detail: impl Into<String>) -> Self {        Self {
+    pub fn service_unavailable(error: impl Into<String>, detail: impl Into<String>) -> Self {
+        Self {
             status: StatusCode::SERVICE_UNAVAILABLE,
             error: error.into(),
             detail: detail.into(),

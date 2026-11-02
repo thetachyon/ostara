@@ -469,6 +469,43 @@ gains an "Unrest signals" section (score bar, level chip, per-component
 breakdown, methodology one click away in a `<details>`) between the OSINT
 resources and News sections; existing sections are untouched.
 
+### `GET /api/threats/*` — threats-against-politicians scanning
+
+**Protective scanning only — not a targeting system.** Public officials
+only (78 figures: G20 heads of state/government, US president/VP/cabinet/
+congressional leadership, EU institutional leadership, other major world
+leaders; see `data/politicians.json` provenance notes). Every hit is a
+keyword-flagged public mention requiring human review — never presented
+as a verified threat.
+
+- `GET /api/threats/politicians?country=` — the watchlist (name, aliases,
+  role, country + ISO codes), filterable by country name/ISO2/ISO3.
+- `GET /api/threats/scan?name=<name|alias>&severity=all|critical|high|medium`
+  — scans Google News (`"<name>" (assassination OR assassinate OR "death
+  threat" OR threaten OR threat OR attack OR kill)`) and Bluesky (`"<name>"
+  threat`) through their normal cache paths/TTLs (no new upstreams, no new
+  keys; at most 2 upstream calls per figure per TTL, plus a cached assembled
+  response). Each item is classified into severity tiers — **critical**
+  (`assassinat*`, `death threat`, `kill` + the figure named), **high**
+  (`threaten`, `threat against`, `attack`), **medium** (`harm`, `violence
+  against`, `plot against`) — case-insensitive, word boundaries on the
+  generic single words, first matching tier wins. Items sort by severity
+  then recency, capped at 50. Every response carries the keyword-scan
+  disclaimer and per-source ok/detail statuses; a failed source degrades
+  honestly, never silently.
+
+**Deliberately excluded:** GDELT (no threat-relevant `theme:` value could
+be verified — the DOC API and the GKG theme taxonomy lookup are
+unreachable from this environment; inventing a theme is not acceptable);
+non-English sources (keyword lists are English-first, stated in every
+response). Missing name → 400; unknown figure → 404; bad severity → 400.
+
+In the UI, the Feeds panel gains a "Threat scan" category under Global:
+searchable figure dropdown (populated from the watchlist endpoint),
+severity filter chips, and result cards with severity-colored chips,
+source, date, link, and matched keywords; methodology + disclaimer one
+click away in a `<details>`.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,
