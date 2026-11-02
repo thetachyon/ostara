@@ -924,14 +924,18 @@ async fn unrest_shape_for_france() {
     );
     let level = b.get("level").and_then(|v| v.as_str()).unwrap_or("");
     assert!(
-        ["low", "elevated", "high", "severe"].contains(&level),
+        ["low", "elevated", "high", "severe", "unknown"].contains(&level),
         "bad level {level}"
     );
-    let score = b.get("score").and_then(|v| v.as_f64()).unwrap_or(-1.0);
-    assert!(
-        (0.0..=100.0).contains(&score),
-        "score out of range: {score}"
-    );
+    // Score may honestly be null (all legs down/saturated) — the key must
+    // exist; a present number must be in range.
+    assert!(b.get("score").is_some(), "score key missing");
+    if let Some(score) = b.get("score").and_then(|v| v.as_f64()) {
+        assert!(
+            (0.0..=100.0).contains(&score),
+            "score out of range: {score}"
+        );
+    }
     let comps = b
         .get("components")
         .and_then(|v| v.as_array())
@@ -1299,6 +1303,10 @@ async fn risk_shape_for_france() {
         "score",
         "level",
         "safety",
+        "score_basis",
+        "percentile",
+        "rank",
+        "peer_count",
         "partial",
         "families",
         "methodology",
@@ -1316,19 +1324,32 @@ async fn risk_shape_for_france() {
     assert_eq!(place.get("iso3").and_then(|v| v.as_str()), Some("FRA"));
     let level = b.get("level").and_then(|v| v.as_str()).unwrap_or("");
     assert!(
-        ["low", "moderate", "high", "severe"].contains(&level),
+        ["low", "moderate", "high", "severe", "unknown"].contains(&level),
         "bad level {level}"
+    );
+    // score_basis documents the time-ratio number; percentile fields are
+    // null with a reason when the place isn't a fresh watchlist peer.
+    assert!(
+        b.get("score_basis")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("time-ratio"),
+        "score_basis must document the time-ratio score"
     );
     let safety = b.get("safety").and_then(|v| v.as_str()).unwrap_or("");
     assert!(
-        ["High", "Moderate", "Low", "Very low"].contains(&safety),
+        ["High", "Moderate", "Low", "Very low", "Unknown"].contains(&safety),
         "bad safety {safety}"
     );
-    let score = b.get("score").and_then(|v| v.as_f64()).unwrap_or(-1.0);
-    assert!(
-        (0.0..=100.0).contains(&score),
-        "score out of range: {score}"
-    );
+    // Score may honestly be null (all legs down/saturated); a present
+    // number must be in range.
+    assert!(b.get("score").is_some(), "score key missing");
+    if let Some(score) = b.get("score").and_then(|v| v.as_f64()) {
+        assert!(
+            (0.0..=100.0).contains(&score),
+            "score out of range: {score}"
+        );
+    }
     let fams = b
         .get("families")
         .and_then(|v| v.as_array())
@@ -1443,6 +1464,100 @@ async fn risk_kind_auto_detects() {
     );
 }
 
+#[tokio::test]
+async fn risk_baseline_plan_shape() {
+    let g = get("/api/risk/baseline-plan?place=France").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let b = &g.body;
+    assert_eq!(
+        b.get("subject").and_then(|v| v.as_str()),
+        Some("France"),
+        "got: {}",
+        body_preview(&g)
+    );
+    let chunks = b.get("chunks").and_then(|v| v.as_array()).expect("chunks");
+    assert_eq!(chunks.len(), 6, "six 14-day chunks");
+    for c in chunks {
+        assert!(c.get("after").and_then(|v| v.as_str()).is_some());
+        assert!(c.get("before").and_then(|v| v.as_str()).is_some());
+    }
+    // Chunks are consecutive and ordered oldest-first.
+    let first_after = chunks[0].get("after").and_then(|v| v.as_str()).unwrap();
+    let last_before = chunks[5].get("before").and_then(|v| v.as_str()).unwrap();
+    assert!(first_after < last_before, "chunks span forward in time");
+    let queries = b
+        .get("queries")
+        .and_then(|v| v.as_array())
+        .expect("queries");
+    // 3 families × 2 legs (gnews + bluesky; GDELT keeps its own path).
+    assert_eq!(queries.len(), 6, "got: {}", body_preview(&g));
+    for qd in queries {
+        let leg = qd.get("leg").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(["gnews", "bluesky"].contains(&leg), "bad leg {leg}");
+        assert!(
+            qd.get("base_query")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .contains("France"),
+            "base query must contain the subject"
+        );
+    }
+    // City path: subject includes the country hint.
+    let g = get("/api/risk/baseline-plan?place=Paris&kind=city&country=France").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("subject").and_then(|v| v.as_str()),
+        Some("Paris France")
+    );
+    // Missing place → 400.
+    let g = get("/api/risk/baseline-plan").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn risk_window_count_validates() {
+    // Bad leg → 400 without touching upstreams.
+    let g = get("/api/risk/window-count?leg=gdelt&base_query=x&after=2026-08-01&before=2026-08-15")
+        .await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+    // Bad date → 400.
+    let g = get("/api/risk/window-count?leg=gnews&base_query=x&after=not-a-date&before=2026-08-15")
+        .await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+    // Inverted window → 400.
+    let g = get("/api/risk/window-count?leg=gnews&base_query=x&after=2026-08-15&before=2026-08-01")
+        .await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+    // Missing base_query → 400.
+    let g = get("/api/risk/window-count?leg=gnews&after=2026-08-01&before=2026-08-15").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
 /// Write a minimal risk snapshot into a temp dir and point
 /// RISK_SNAPSHOT_DIR at it. Returns the dir path and the previous env value.
 fn risk_map_fixture(files: &[(&str, &str)]) -> (std::path::PathBuf, Option<String>) {
@@ -1535,6 +1650,89 @@ async fn risk_map_shape_and_delta() {
     assert!(fr["families"].as_array().unwrap().len() == 1);
     let ky = places.iter().find(|p| p["name"] == "Kyiv").unwrap();
     assert!(ky["delta"].is_null(), "new place: null delta");
+    risk_map_restore(&dir, prev);
+}
+
+#[tokio::test]
+async fn risk_map_serves_peer_percentiles() {
+    // Snapshots carrying percentile/rank pass them through; snapshots
+    // without them (older runs) deserialize to nulls, never 500s.
+    let snap = serde_json::json!({"generated_at": "2026-11-02T06:00:00Z", "place_count": 2,
+        "places": [
+            {"name": "France", "kind": "country", "lon": 2.35, "lat": 46.6,
+             "score": 86.8, "level": "severe", "safety": "Very low", "partial": false,
+             "recent_volume": 240.0, "percentile": 96.7, "rank": 1, "peer_count": 30,
+             "families": [{"family": "unrest", "weight": 0.4, "score_0_100": 90.0,
+                           "volume": 120.0, "percentile": 96.7, "rank": 1}]},
+            {"name": "Colombia", "kind": "country", "lon": -74.0, "lat": 4.6,
+             "score": 32.2, "level": "moderate", "safety": "Moderate", "partial": false,
+             "families": [{"family": "unrest", "weight": 0.4, "score_0_100": 30.0}]}
+        ],
+        "caveat": "test"})
+    .to_string();
+    let (dir, prev) = risk_map_fixture(&[("snapshot-20261102-060000.json", &snap)]);
+    let g = get("/api/risk-map").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let places = g.body.get("places").and_then(|v| v.as_array()).unwrap();
+    let fr = places.iter().find(|p| p["name"] == "France").unwrap();
+    assert_eq!(fr["percentile"].as_f64(), Some(96.7));
+    assert_eq!(fr["rank"].as_u64(), Some(1));
+    assert_eq!(fr["peer_count"].as_u64(), Some(30));
+    let fam = fr["families"].as_array().unwrap()[0].clone();
+    assert_eq!(fam["volume"].as_f64(), Some(120.0));
+    assert_eq!(fam["percentile"].as_f64(), Some(96.7));
+    // Older snapshot shape without peer fields → nulls.
+    let co = places.iter().find(|p| p["name"] == "Colombia").unwrap();
+    assert!(
+        co["percentile"].is_null(),
+        "missing percentile must be null"
+    );
+    assert!(co["rank"].is_null());
+    risk_map_restore(&dir, prev);
+}
+
+#[tokio::test]
+async fn risk_peer_fields_match_watchlist_snapshot() {
+    // With a fresh snapshot fixture, /api/risk?place=France reports its
+    // peer rank; a non-watchlist place gets nulls with a reason.
+    let snap = serde_json::json!({"generated_at": "2099-01-01T00:00:00Z", "place_count": 1,
+        "places": [{"name": "France", "kind": "country", "lon": 2.35, "lat": 46.6,
+             "score": 80.0, "level": "high", "safety": "Low", "partial": false,
+             "percentile": 93.3, "rank": 2, "peer_count": 30, "families": []}],
+        "caveat": "test"})
+    .to_string();
+    let (dir, prev) = risk_map_fixture(&[("snapshot-20990101-000000.json", &snap)]);
+    let g = get("/api/risk?place=France").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("percentile").and_then(|v| v.as_f64()),
+        Some(93.3)
+    );
+    assert_eq!(g.body.get("rank").and_then(|v| v.as_u64()), Some(2));
+    assert_eq!(g.body.get("peer_count").and_then(|v| v.as_u64()), Some(30));
+    assert!(
+        g.body
+            .get("percentile_basis")
+            .and_then(|v| v.as_str())
+            .is_some(),
+        "percentile_basis documents the peer-rank number"
+    );
+    assert!(
+        g.body.get("peer_note").is_none(),
+        "no peer_note when ranked"
+    );
+    let g = get("/api/risk?place=Atlantis").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert!(g.body.get("percentile").map(|v| v.is_null()) == Some(true));
+    let note = g
+        .body
+        .get("peer_note")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        note.contains("watchlist"),
+        "peer_note explains nulls: {note}"
+    );
     risk_map_restore(&dir, prev);
 }
 

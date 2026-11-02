@@ -63,9 +63,15 @@ try:
     fams = d.get('families', [])
     comps = [c for f in fams for c in f.get('components', [])]
     okc = sum(1 for c in comps if c.get('ok'))
-    fam = [{'family': f['family'], 'weight': f['weight'], 'score_0_100': round(f.get('score_0_100',0),1)} for f in fams]
+    vol = sum(float(c.get('raw_value') or 0) for c in comps if c.get('ok'))
+    fam = []
+    for f in fams:
+        fvol = sum(float(c.get('raw_value') or 0) for c in f.get('components', []) if c.get('ok'))
+        fam.append({'family': f['family'], 'weight': f['weight'],
+                    'score_0_100': round(f.get('score_0_100',0),1), 'volume': round(fvol,1)})
     print(json.dumps({'ok': okc, 'n': len(comps), 'score': d.get('score'), 'level': d.get('level'),
-                      'safety': d.get('safety'), 'partial': d.get('partial'), 'families': fam}))
+                      'safety': d.get('safety'), 'partial': d.get('partial'),
+                      'recent_volume': round(vol,1), 'families': fam}))
 except Exception as e:
     print(json.dumps({'ok': 0, 'n': 0, 'error': str(e)[:120]}))
 ")"
@@ -75,9 +81,24 @@ except Exception as e:
 done <<< "$places_json"
 
 # --- assemble snapshot (also counts ok places) ---
+# Baseline-free peer ranks: competition rank + percentile from 7-day
+# recent composite volumes, overall and per family. Mirrors
+# feeds::risk_map::rank_percentile in Rust: rank 1 = hottest,
+# percentile = 100*(n-rank)/(n-1). Capping can only tie ranks, never
+# reverse them — the saturation-robust headline.
 counts="$(python3 - "$results_tmp" "$TS" "$TMP" <<'EOF'
 import json, sys, datetime
 results_tmp, ts, tmp = sys.argv[1], sys.argv[2], sys.argv[3]
+
+def rank_percentile(vals):
+    n = len(vals)
+    out = []
+    for v in vals:
+        rank = 1 + sum(1 for u in vals if u > v)
+        pct = round(100.0 * (n - rank) / (n - 1), 1) if n > 1 else 100.0
+        out.append((rank, pct))
+    return out
+
 places = []
 for line in open(results_tmp):
     line = line.rstrip('\n')
@@ -89,13 +110,39 @@ for line in open(results_tmp):
         "level": p.get("level"), "safety": p.get("safety"),
         "partial": bool(p.get("partial")),
         "ok_components": p.get("ok", 0),
+        "recent_volume": p.get("recent_volume"),
         "families": p.get("families", []),
     })
+
+n = len(places)
+peer_count = n
+for (place, (rank, pct)) in zip(places, rank_percentile([p.get("recent_volume") or 0.0 for p in places])):
+    place["percentile"] = pct
+    place["rank"] = rank
+    place["peer_count"] = peer_count
+# per-family peer ranks
+fam_ids = []
+for p in places:
+    for f in p["families"]:
+        if f["family"] not in fam_ids:
+            fam_ids.append(f["family"])
+for fid in fam_ids:
+    vols = []
+    refs = []
+    for p in places:
+        f = next((x for x in p["families"] if x["family"] == fid), None)
+        vols.append((f or {}).get("volume") or 0.0)
+        refs.append(f)
+    for f, (rank, pct) in zip(refs, rank_percentile(vols)):
+        if f is not None:
+            f["percentile"] = pct
+            f["rank"] = rank
+
 snap = {
     "generated_at": datetime.datetime.strptime(ts, "%Y%m%d-%H%M%S").strftime("%Y-%m-%dT%H:%M:%SZ"),
     "place_count": len(places),
     "places": places,
-    "caveat": "Weekly heuristic media-signal snapshot — not a forecast. Scores compare current signals to 83-day baselines; big cities/capitals are systematically over-covered. English-language sources only. Not travel advice.",
+    "caveat": "Weekly heuristic media-signal snapshot — not a forecast. Scores compare current signals to baselines (chunked weekly refresh when fresh); percentile/rank are baseline-free peer ranks vs the 30-place watchlist (rank 1 = hottest). Big cities/capitals are systematically over-covered. English-language sources only. Not travel advice.",
 }
 open(tmp, 'w').write(json.dumps(snap))
 ok_places = sum(1 for p in places if p["ok_components"] >= 1)

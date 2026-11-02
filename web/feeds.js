@@ -750,19 +750,31 @@ window.OST = window.OST || {};
       url: (p) => `/api/risk?place=${encodeURIComponent(p.place || "")}&kind=${encodeURIComponent(p.kind || "auto")}` +
         (p.country && p.country.trim() ? `&country=${encodeURIComponent(p.country.trim())}` : ""),
       render(j, el) {
-        const score = Math.max(0, Math.min(100, Number(j.score) || 0));
-        const colors = { low: "#46a758", moderate: "#ffb224", high: "#f76b15", severe: "#e5484d" };
+        const scoreNull = j.score == null;
+        const score = scoreNull ? 0 : Math.max(0, Math.min(100, Number(j.score)));
+        const colors = { low: "#46a758", moderate: "#ffb224", high: "#f76b15", severe: "#e5484d", unknown: "#888" };
         const color = colors[j.level] || "#888";
         const place = j.place || {};
-        const compLi = (c) =>
-          `<div class="feed-item"><div><strong>${esc(c.source)}</strong>
+        const peerLine = (j.percentile != null && j.rank != null && j.peer_count != null)
+          ? `<div class="m" style="margin-bottom:6px">hotter than <strong>#${j.rank} of ${j.peer_count}</strong> watchlist places this week ` +
+            `<span class="m">(percentile ${Number(j.percentile).toFixed(0)} — baseline-free peer rank, robust to feed capping)</span></div>`
+          : (j.peer_note ? `<div class="m" style="margin-bottom:6px">peer rank unavailable: ${esc(j.peer_note)}</div>` : "");
+        const compLi = (c) => {
+          const diag = [];
+          if (c.baseline_source && c.baseline_source !== "unknown") diag.push(`baseline: ${esc(c.baseline_source)}`);
+          if (c.saturated) diag.push("saturated");
+          if (c.cap_fill_hours != null) diag.push(`cap filled in ${Number(c.cap_fill_hours).toFixed(1)}h`);
+          if (c.cap_fill_intensity != null) diag.push(`intensity ${Number(c.cap_fill_intensity).toFixed(0)}`);
+          return `<div class="feed-item"><div><strong>${esc(c.source)}</strong>
             <span class="m">weight ${Number(c.weight).toFixed(2)}</span>
             ${c.ok ? `<span class="chip" style="color:${color};border:1px solid ${color};border-radius:3px;padding:0 5px;font-size:10px">${Number(c.normalized_0_1).toFixed(3)}</span>`
                    : `<span class="chip" style="color:var(--bad);border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px">unavailable</span>`}</div>
             <div class="m">${esc(c.signal)}</div>
             ${c.ok ? `<div class="m">recent ${esc(String(c.raw_value))} ${esc(c.raw_unit)} · baseline ${esc(String(c.baseline_value))} ${esc(c.baseline_unit)}</div>`
                    : `<div class="m" style="color:var(--bad)">${esc(c.error || "feed error")}</div>`}
+            ${diag.length ? `<div class="m">${diag.join(" · ")}</div>` : ""}
             ${c.note ? `<div class="m">note: ${esc(c.note)}</div>` : ""}</div>`;
+        };
         const fams = (j.families || []).map((f) =>
           `<div class="feed-item"><div><strong>${esc(f.family)}</strong>
             <span class="m">weight ${Number(f.weight).toFixed(2)} · family score ${Number(f.score_0_100 || 0).toFixed(1)}${f.partial ? " · partial" : ""}</span></div>
@@ -771,9 +783,14 @@ window.OST = window.OST || {};
         el.innerHTML =
           `<div class="m" style="margin-bottom:4px"><b>${esc(place.name || "")}</b>${place.kind ? " · " + esc(place.kind) : ""}${place.country_hint ? " · " + esc(place.country_hint) : ""}</div>` +
           `<div style="margin-bottom:6px"><span class="chip" style="background:${color};color:#fff;border-radius:3px;padding:1px 8px;font-size:12px">${esc(j.level || "")}</span> ` +
-          `<span class="m">risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(j.safety || "—")}</strong>${j.partial ? " · partial" : ""}</span></div>` +
-          `<div class="unrest-bar" style="margin-bottom:8px"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>` +
+          (scoreNull
+            ? `<span class="m">risk score unavailable — no usable signal (all feeds down or baselines saturated)</span>`
+            : `<span class="m">risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(j.safety || "—")}</strong>${j.partial ? " · partial" : ""}</span>`) +
+          `</div>` +
+          (scoreNull ? "" : `<div class="unrest-bar" style="margin-bottom:8px"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>`) +
+          peerLine +
           (j.note ? `<div class="m" style="margin-bottom:6px">${esc(j.note)}</div>` : "") +
+          (j.score_basis ? `<div class="m" style="margin-bottom:6px">score basis: ${esc(j.score_basis)}</div>` : "") +
           fams +
           `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
           `<div class="m" style="margin-top:4px">${esc(j.methodology || "")}</div>` +

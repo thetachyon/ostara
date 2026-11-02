@@ -24,15 +24,32 @@
 //!    over the same 7d / 83d windows. Country attribution is weak (global
 //!    full-text search) — hence the low weight; documented, not hidden.
 //!
-//! Each window is capped at 100 items by the upstreams; a saturated window
-//! is flagged in the component's `note` (it understates the baseline and
-//! biases the ratio upward). Normalization: for a recent/baseline rate
-//! ratio `r`, the component maps to `clamp((r-1)/4, 0, 1)` — at baseline →
-//! 0, 5× baseline → 1 — with a low-evidence discount (`recent_count/5`,
-//! capped at 1) so a handful of articles can't max out a component. When a
-//! component is unavailable its weight redistributes proportionally among
-//! the working ones and the response is marked `partial: true` — never
-//! silently zero.
+//! ## Anti-saturation
+//!
+//! Each window is capped at 100 items by the upstreams. A single 83-day
+//! baseline query therefore returns the 100 *most recent* items and
+//! understates the true baseline for high-coverage places, exploding the
+//! ratio and pinning scores at 100. Three defenses:
+//! 1. **Chunked baselines**: `scripts/risk_baseline_refresh.sh` runs weekly
+//!    and issues 6 consecutive 14-day chunk queries per (place, family,
+//!    leg), summed in `data/risk_baselines.json` (git-ignored). Fresh
+//!    (<10d) chunked baselines replace the legacy single-query baseline.
+//! 2. **Saturated legs go null**: if the chunked baseline still saturated
+//!    (any chunk hit the cap) or the legacy fallback window saturates, the
+//!    leg reports `ok: false` with `error: "saturated_baseline: …"` —
+//!    never a fake number. `score: null` + `level: "unknown"` when no leg
+//!    is usable.
+//! 3. **Cap-fill diagnostics**: every recent window reports
+//!    `cap_fill_hours` (now → oldest returned item, ≤168h) and
+//!    `cap_fill_intensity` (100 at ≤6h, hyperbolic decay) — a
+//!    truncation-proof intensity readout that never enters the score.
+//!
+//! Normalization: for a recent/baseline rate ratio `r`, the component maps
+//! to `clamp((r-1)/4, 0, 1)` — at baseline → 0, 5× baseline → 1 — with a
+//! low-evidence discount (`recent_count/5`, capped at 1) so a handful of
+//! articles can't max out a component. When a component is unavailable its
+//! weight redistributes proportionally among the working ones and the
+//! response is marked `partial: true` — never silently zero.
 //!
 //! ## Deliberately excluded
 //!
@@ -53,7 +70,10 @@
 //! window (1 GDELT + 2 Google News + 2 Bluesky), all cached. No new API
 //! keys, no new upstreams.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use axum::{
     Json, Router,
@@ -78,7 +98,7 @@ use crate::{
 /// as one input among many, never as a sole basis for decisions.
 pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This score summarizes how current open-source media signals compare to their own recent baselines. It does not predict whether unrest will occur, when, or where. News and social coverage reflect what gets reported, not what happens on the ground; quiet periods can precede major events and loud periods can fizzle. Use as one input among many, never as a sole basis for decisions.";
 
-pub const METHODOLOGY: &str = "Per-country unrest-signals score (0-100), heuristic only. Components: GDELT protest-themed coverage by domestic outlets — 7-day rate vs prior ~83-day baseline from a 90-day volume timeline (weight 0.50); Google News unrest-keyword volume — two date-bounded queries (last 7 days vs prior 83 days; weight 0.35); Bluesky unrest-keyword posts — two windowed searches over the same 7d/83d windows (weight 0.15; weak country attribution, global full-text search). Each window is capped at 100 items by the upstreams; saturated windows are flagged and understate baselines. Each component maps its recent/baseline rate ratio r to clamp((r-1)/4,0,1) (at baseline = 0, 5x baseline = 1) with a low-evidence discount below 5 recent items. When a component is unavailable its weight redistributes proportionally among the working ones and the score is marked partial. Levels: <25 low, <50 elevated, <75 high, >=75 severe.";
+pub const METHODOLOGY: &str = "Per-country unrest-signals score (0-100), heuristic only. Components: GDELT protest-themed coverage by domestic outlets — 7-day rate vs prior ~83-day baseline from a 90-day volume timeline (weight 0.50); Google News unrest-keyword volume — 7-day window vs baseline (weight 0.35); Bluesky unrest-keyword posts — 7-day window vs baseline (weight 0.15; weak country attribution, global full-text search). ANTI-SATURATION: each upstream caps windows at 100 items, which understates single-query 83-day baselines (search returns most-recent-first) and pins scores at 100 for high-coverage places. Baselines therefore come from a weekly chunked refresh (6 consecutive 14-day chunk queries summed, ~84 days) when fresh (<10 days); otherwise a legacy single 83-day query. A saturated baseline (chunked chunks or legacy window hit the cap) nulls the leg with saturated_baseline instead of scoring a fake number — weights redistribute, and score is null/level unknown when no leg is usable. Each component maps its recent/baseline rate ratio r to clamp((r-1)/4,0,1) (at baseline = 0, 5x baseline = 1) with a low-evidence discount below 5 recent items. Per-leg diagnostics: saturated flag, baseline_source (chunked|legacy|unknown), cap_fill_hours (how fast the 100-item cap filled — small = intense) and cap_fill_intensity (100 at <=6h, hyperbolic decay). When a component is unavailable its weight redistributes proportionally among the working ones and the score is marked partial. Levels: <25 low, <50 elevated, <75 high, >=75 severe.";
 
 const WEIGHT_GDELT: f64 = 0.50;
 const WEIGHT_GNEWS: f64 = 0.35;
@@ -162,6 +182,12 @@ pub(crate) struct ComponentCounts<'a> {
     pub(crate) recent_count: f64,
     pub(crate) baseline_count: f64,
     pub(crate) baseline_days: f64,
+    /// Whether the baseline window itself hit the upstream item cap.
+    /// (Chunked-baseline totals legitimately exceed 100 — the flag, not
+    /// the magnitude, drives the note.)
+    pub(crate) baseline_capped: bool,
+    /// Where the baseline came from: "chunked" | "legacy".
+    pub(crate) baseline_source: &'a str,
 }
 
 /// Build a component from explicit recent/baseline counts over a known
@@ -170,9 +196,14 @@ pub(crate) fn build_component(p: ComponentCounts<'_>) -> UnrestComponent {
     let baseline_per_day = p.baseline_count / p.baseline_days.max(1.0);
     let normalized = normalize_component(p.recent_count, baseline_per_day);
     let mut notes: Vec<String> = Vec::new();
-    if p.recent_count >= 100.0 || p.baseline_count >= 100.0 {
+    if p.baseline_capped {
         notes.push(
-            "a window hit the upstream 100-item cap — counts are lower bounds; a capped baseline biases the ratio upward"
+            "the baseline window hit the upstream 100-item cap — the baseline is a lower bound and the ratio is biased upward"
+                .to_string(),
+        );
+    } else if p.recent_count >= 100.0 {
+        notes.push(
+            "the recent window hit the upstream 100-item cap — the recent count is a lower bound"
                 .to_string(),
         );
     }
@@ -187,12 +218,107 @@ pub(crate) fn build_component(p: ComponentCounts<'_>) -> UnrestComponent {
         baseline_unit: p.baseline_unit.to_string(),
         normalized_0_1: (normalized * 1000.0).round() / 1000.0,
         weight: p.weight,
+        saturated: false,
+        baseline_source: p.baseline_source.to_string(),
+        cap_fill_hours: None,
+        cap_fill_intensity: None,
         note: if notes.is_empty() {
             None
         } else {
             Some(notes.join(" "))
         },
         error: None,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Anti-saturation package: chunked baselines, saturation detection,
+// cap-fill diagnostics. See module docs.
+// ---------------------------------------------------------------------------
+
+/// Upstream per-query item cap (Google News + Bluesky both serve ≤100).
+pub(crate) const ITEM_CAP: usize = 100;
+/// Hours after which cap-fill saturates as a diagnostic (7 days).
+pub(crate) const CAP_FILL_MAX_HOURS: f64 = 168.0;
+/// A chunked baseline older than this is ignored (weekly refresh + grace).
+pub(crate) const BASELINE_FRESH_DAYS: i64 = 10;
+/// Number of baseline chunks and their span in days (6 × 14d ≈ 84d).
+pub(crate) const BASELINE_CHUNKS: usize = 6;
+pub(crate) const BASELINE_CHUNK_DAYS: i64 = 14;
+
+/// One windowed upstream query, with saturation + recency diagnostics.
+#[derive(Debug, Clone)]
+pub(crate) struct WindowStats {
+    pub count: usize,
+    /// True when the query returned exactly the upstream item cap — the
+    /// true count is at least this large (a lower bound).
+    pub saturated: bool,
+    /// Oldest item timestamp in the returned set (epoch seconds), if any
+    /// item carried a parseable timestamp.
+    pub oldest_epoch: Option<i64>,
+}
+
+/// Hours from `now` back to the oldest item in a returned window, capped
+/// at [`CAP_FILL_MAX_HOURS`]. `None` when the window was empty. Pure.
+/// A small value means the upstream cap filled fast → high intensity.
+pub(crate) fn cap_fill_hours(oldest_epoch: Option<i64>, now: i64) -> Option<f64> {
+    let hours = (now - oldest_epoch?).max(0) as f64 / 3600.0;
+    Some(((hours * 10.0).round() / 10.0).min(CAP_FILL_MAX_HOURS))
+}
+
+/// Cap-fill intensity 0–100: 100 when the cap fills in ≤6h, decaying
+/// hyperbolically (12h→50, 24h→25, 168h→3.6). Pure. Diagnostic only —
+/// it never enters the headline score.
+pub(crate) fn cap_fill_intensity(hours: f64) -> f64 {
+    (100.0 * 6.0 / hours.max(6.0)).clamp(0.0, 100.0)
+}
+
+/// One chunked baseline entry: 6 consecutive ~14-day chunk counts summed
+/// to defeat the per-query item cap that biases single-query baselines.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ChunkedBaseline {
+    #[allow(dead_code)]
+    #[serde(default)]
+    pub chunks: Vec<f64>,
+    pub total: f64,
+    pub saturated_chunks: usize,
+    pub window_days: f64,
+}
+
+/// Load the weekly chunked-baseline store. Returns `None` when the file is
+/// missing, unparseable, or older than [`BASELINE_FRESH_DAYS`] — callers
+/// fall back to the legacy single-query baseline. Pure apart from the
+/// filesystem read; keyed by "<subject>|<family>|<leg>".
+pub(crate) fn load_chunked_baselines() -> Option<HashMap<String, ChunkedBaseline>> {
+    let path = std::env::var("RISK_BASELINES_PATH")
+        .unwrap_or_else(|_| "data/risk_baselines.json".to_string());
+    let raw = std::fs::read_to_string(&path).ok()?;
+    let v: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    let gen_at = v.get("generated_at")?.as_str()?;
+    let epoch = crate::time::parse_rfc3339(gen_at)?;
+    if now_secs() - epoch > BASELINE_FRESH_DAYS * 86_400 {
+        return None;
+    }
+    serde_json::from_value(v.get("baselines")?.clone()).ok()
+}
+
+/// Baseline selection for one leg. Pure — the async caller fetches the
+/// legacy window only when this returns [`BaselineDecision::FetchLegacy`].
+pub(crate) enum BaselineDecision<'a> {
+    /// Use the chunked total over its day span.
+    UseChunked(&'a ChunkedBaseline),
+    /// Chunked baseline exists but chunks saturated — the ratio is
+    /// unreliable; the leg must report saturated instead of scoring.
+    SaturatedChunked(&'a ChunkedBaseline),
+    /// No usable chunked baseline — fetch the legacy single-query window.
+    FetchLegacy,
+}
+
+pub(crate) fn decide_baseline(cached: Option<&ChunkedBaseline>) -> BaselineDecision<'_> {
+    match cached {
+        Some(cb) if cb.saturated_chunks > 0 => BaselineDecision::SaturatedChunked(cb),
+        Some(cb) => BaselineDecision::UseChunked(cb),
+        None => BaselineDecision::FetchLegacy,
     }
 }
 
@@ -282,10 +408,39 @@ pub struct UnrestComponent {
     pub baseline_unit: String,
     pub normalized_0_1: f64,
     pub weight: f64,
+    /// True when the baseline window hit the upstream item cap, making the
+    /// ratio unreliable. A saturated leg scores `ok: false` with
+    /// `error: "saturated_baseline: …"` instead of a fake number.
+    pub saturated: bool,
+    /// Where the baseline denominator came from: "chunked" (weekly
+    /// 6×14-day chunk refresh), "legacy" (single live 83-day query), or
+    /// "unknown" (no baseline could be established).
+    pub baseline_source: String,
+    /// Hours from now back to the oldest item in the returned recent
+    /// window (capped at 168). Diagnostic only — not in the score.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cap_fill_hours: Option<f64>,
+    /// 100 when the cap fills in ≤6h, decaying hyperbolically
+    /// (12h→50, 24h→25, 168h→3.6). Diagnostic only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cap_fill_intensity: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+}
+
+/// Parameters for [`UnrestComponent::saturated`] — kept as a struct so
+/// the constructor stays within clippy's argument limit.
+pub(crate) struct SaturatedSpec<'a> {
+    pub source: &'a str,
+    pub signal: &'a str,
+    pub query: &'a str,
+    pub weight: f64,
+    pub baseline_source: &'a str,
+    pub detail: String,
+    pub recent_count: f64,
+    pub cap_fill_hours: Option<f64>,
 }
 
 impl UnrestComponent {
@@ -301,8 +456,39 @@ impl UnrestComponent {
             baseline_unit: String::new(),
             normalized_0_1: 0.0,
             weight,
+            saturated: false,
+            baseline_source: "unknown".to_string(),
+            cap_fill_hours: None,
+            cap_fill_intensity: None,
             note: None,
             error: Some(error),
+        }
+    }
+
+    /// A leg whose baseline is saturated (hit the upstream item cap): the
+    /// ratio is unreliable, so the leg reports `ok: false` with a
+    /// `saturated_baseline` reason instead of a fake score. Weights of
+    /// working legs redistribute; callers treat this like any down leg.
+    pub(crate) fn saturated(p: SaturatedSpec<'_>) -> Self {
+        Self {
+            source: p.source.to_string(),
+            signal: p.signal.to_string(),
+            ok: false,
+            query: p.query.to_string(),
+            raw_value: p.recent_count,
+            raw_unit: "items (last 7 days)".to_string(),
+            baseline_value: 0.0,
+            baseline_unit: String::new(),
+            normalized_0_1: 0.0,
+            weight: p.weight,
+            saturated: true,
+            baseline_source: p.baseline_source.to_string(),
+            cap_fill_hours: p.cap_fill_hours,
+            cap_fill_intensity: p
+                .cap_fill_hours
+                .map(|h| (cap_fill_intensity(h) * 10.0).round() / 10.0),
+            note: None,
+            error: Some(format!("saturated_baseline: {}", p.detail)),
         }
     }
 }
@@ -310,7 +496,10 @@ impl UnrestComponent {
 #[derive(Debug, Serialize)]
 pub struct UnrestResponse {
     pub country: UnrestCountry,
-    pub score: f64,
+    /// Null when no component produced a usable score (all down or all
+    /// saturated) — an honest unknown, never a fake number.
+    pub score: Option<f64>,
+    /// "low" | "elevated" | "high" | "severe", or "unknown" when score is null.
     pub level: String,
     /// True when any component was unavailable (weights redistributed).
     pub partial: bool,
@@ -383,22 +572,27 @@ async fn gdelt_component(state: &AppState, country: &CountryIdentity) -> UnrestC
         baseline_unit: "articles/day (prior ~83-day baseline)".to_string(),
         normalized_0_1: (normalized * 1000.0).round() / 1000.0,
         weight: WEIGHT_GDELT,
+        saturated: false,
+        baseline_source: "legacy".to_string(),
+        cap_fill_hours: None,
+        cap_fill_intensity: None,
         note,
         error: None,
     }
 }
 
-/// Fetch one date-bounded window for Google News and return its item count.
-/// Shared with the risk scorer (same cache-key format/TTL).
+/// Fetch one date-bounded window for Google News and return window stats
+/// (count, saturation flag, oldest item timestamp). Shared with the risk
+/// scorer (same cache-key format/TTL).
 /// The `after:`/`before:` operators are honored by the RSS endpoint
 /// (verified live 2026-11-01); the full query string is part of the cache
 /// key, so each window is cached independently on the feed's normal TTL.
-pub(crate) async fn gnews_window_count(
+pub(crate) async fn gnews_window_stats(
     state: &AppState,
     base_query: &str,
     after: &str,
     before: Option<&str>,
-) -> Result<usize, String> {
+) -> Result<WindowStats, String> {
     let q = match before {
         Some(b) => format!("{base_query} after:{after} before:{b}"),
         None => format!("{base_query} after:{after}"),
@@ -412,53 +606,191 @@ pub(crate) async fn gnews_window_count(
     .map_err(|e| e.user_message())?;
     let resp: feeds::gnews::GnewsResponse =
         serde_json::from_slice(&body).map_err(|e| format!("decode failed: {e}"))?;
-    Ok(resp.count)
+    let oldest_epoch = resp
+        .items
+        .iter()
+        .filter_map(|it| it.published.as_deref())
+        .filter_map(crate::time::parse_rfc3339)
+        .min();
+    Ok(WindowStats {
+        saturated: resp.count >= ITEM_CAP,
+        count: resp.count,
+        oldest_epoch,
+    })
+}
+
+/// Parameters for [`keyword_leg_component`] — one (family, leg) pair over
+/// a subject string. Keeps the shared builder within clippy's arg limit.
+pub(crate) struct LegSpec<'a> {
+    pub leg: &'a str,
+    pub family: &'a str,
+    pub subject: &'a str,
+    pub base_query: &'a str,
+    pub weight: f64,
+    pub signal: &'a str,
+    pub query_repr: &'a str,
+    pub raw_unit: &'a str,
+}
+
+/// Shared keyword-leg builder used by the unrest scorer and the risk
+/// scorer's three families. Flow per leg:
+/// 1. Fetch the 7-day recent window (always live) → raw count + cap-fill.
+/// 2. Baseline: fresh chunked baseline from the weekly refresh wins;
+///    otherwise the legacy single 83-day query.
+/// 3. A saturated baseline (chunked chunks or legacy window hit the
+///    upstream cap) nulls the leg with `saturated_baseline` — never a
+///    fake score. Weight redistributes to working legs downstream.
+pub(crate) async fn keyword_leg_component(state: &AppState, spec: LegSpec<'_>) -> UnrestComponent {
+    let now = now_secs();
+    let (recent_since, baseline_since) = day_windows(now);
+    let mk_err =
+        |e: String| UnrestComponent::err(spec.leg, spec.signal, spec.query_repr, spec.weight, e);
+
+    // 1. Recent window — always fetched live.
+    let recent_after = ymd(recent_since);
+    let recent_res: Result<WindowStats, String> = match spec.leg {
+        "gnews" => gnews_window_stats(state, spec.base_query, &recent_after, None).await,
+        _ => bluesky_window_stats(state, spec.base_query, &rfc3339_day(recent_since), None).await,
+    };
+    let recent = match recent_res {
+        Ok(s) => s,
+        Err(e) => return mk_err(e),
+    };
+    // 2. Baseline selection.
+    let key = format!("{}|{}|{}", spec.subject, spec.family, spec.leg);
+    let baselines = load_chunked_baselines();
+    enum Sel {
+        Chunked(f64, f64),
+        Legacy,
+    }
+    let sel = match decide_baseline(baselines.as_ref().and_then(|m| m.get(&key))) {
+        BaselineDecision::UseChunked(cb) => Sel::Chunked(cb.total, cb.window_days),
+        BaselineDecision::SaturatedChunked(cb) => {
+            return UnrestComponent::saturated(SaturatedSpec {
+                source: spec.leg,
+                signal: spec.signal,
+                query: spec.query_repr,
+                weight: spec.weight,
+                baseline_source: "chunked",
+                detail: format!(
+                    "{} of {} baseline chunks hit the {}-item cap — baseline is a lower bound, ratio unreliable",
+                    cb.saturated_chunks, BASELINE_CHUNKS, ITEM_CAP
+                ),
+                recent_count: recent.count as f64,
+                cap_fill_hours: cap_fill_hours(recent.oldest_epoch, now),
+            });
+        }
+        BaselineDecision::FetchLegacy => Sel::Legacy,
+    };
+    let (baseline_count, baseline_days, baseline_source, baseline_unit) = match sel {
+        Sel::Chunked(total, days) => (
+            total,
+            days,
+            "chunked",
+            format!(
+                "items/day ({}-day chunked baseline, weekly refresh)",
+                days as i64
+            ),
+        ),
+        Sel::Legacy => {
+            let baseline_after = ymd(baseline_since);
+            let legacy_res: Result<WindowStats, String> = match spec.leg {
+                "gnews" => {
+                    gnews_window_stats(state, spec.base_query, &baseline_after, Some(&recent_after))
+                        .await
+                }
+                _ => {
+                    bluesky_window_stats(
+                        state,
+                        spec.base_query,
+                        &rfc3339_day(baseline_since),
+                        Some(&rfc3339_day(recent_since)),
+                    )
+                    .await
+                }
+            };
+            let legacy = match legacy_res {
+                Ok(s) => s,
+                Err(e) => return mk_err(e),
+            };
+            if legacy.saturated {
+                return UnrestComponent::saturated(SaturatedSpec {
+                    source: spec.leg,
+                    signal: spec.signal,
+                    query: spec.query_repr,
+                    weight: spec.weight,
+                    baseline_source: "legacy",
+                    detail: format!(
+                        "83-day baseline window hit the {ITEM_CAP}-item cap — baseline understated, ratio unreliable"
+                    ),
+                    recent_count: recent.count as f64,
+                    cap_fill_hours: cap_fill_hours(recent.oldest_epoch, now),
+                });
+            }
+            (
+                legacy.count as f64,
+                83.0,
+                "legacy",
+                "items/day (prior 83 days)".to_string(),
+            )
+        }
+    };
+
+    let fill_hours = cap_fill_hours(recent.oldest_epoch, now);
+    let mut comp = build_component(ComponentCounts {
+        source: spec.leg,
+        signal: spec.signal,
+        query: spec.query_repr,
+        weight: spec.weight,
+        raw_unit: spec.raw_unit,
+        baseline_unit: &baseline_unit,
+        recent_count: recent.count as f64,
+        baseline_count,
+        baseline_days,
+        baseline_capped: false,
+        baseline_source,
+    });
+    comp.saturated = recent.saturated;
+    comp.cap_fill_hours = fill_hours.map(|h| (h * 10.0).round() / 10.0);
+    comp.cap_fill_intensity = fill_hours.map(|h| (cap_fill_intensity(h) * 10.0).round() / 10.0);
+    if recent.count == 0 && baseline_count == 0.0 {
+        comp.note =
+            Some("no matching items in either window — treated as no detected signal".to_string());
+    }
+    comp
 }
 
 async fn gnews_component(state: &AppState, country: &CountryIdentity) -> UnrestComponent {
     let base_q = format!("{} (protest OR strike OR riot OR unrest)", country.name);
     let now = now_secs();
-    let (recent_since, baseline_since) = day_windows(now);
+    let (recent_since, _) = day_windows(now);
     // Representative query shown in the response (the recent window's).
     let q = format!("{base_q} after:{}", ymd(recent_since));
-    let mk_err = |e: String| UnrestComponent::err("gnews", SIGNAL_GNEWS, &q, WEIGHT_GNEWS, e);
-    let recent_after = ymd(recent_since);
-    let baseline_after = ymd(baseline_since);
-    let (recent, baseline) = tokio::join!(
-        gnews_window_count(state, &base_q, &recent_after, None),
-        gnews_window_count(state, &base_q, &baseline_after, Some(&recent_after))
-    );
-    let (recent, baseline) = match (recent, baseline) {
-        (Ok(r), Ok(b)) => (r as f64, b as f64),
-        (Err(e), _) | (_, Err(e)) => return mk_err(e),
-    };
-    let mut comp = build_component(ComponentCounts {
-        source: "gnews",
-        signal: SIGNAL_GNEWS,
-        query: &q,
-        weight: WEIGHT_GNEWS,
-        raw_unit: "articles (last 7 days)",
-        baseline_unit: "articles/day (prior 83 days)",
-        recent_count: recent,
-        baseline_count: baseline,
-        baseline_days: 83.0,
-    });
-    if recent == 0.0 && baseline == 0.0 {
-        comp.note = Some(
-            "no matching articles in either window — treated as no detected signal".to_string(),
-        );
-    }
-    comp
+    keyword_leg_component(
+        state,
+        LegSpec {
+            leg: "gnews",
+            family: "unrest",
+            subject: &country.name,
+            base_query: &base_q,
+            weight: WEIGHT_GNEWS,
+            signal: SIGNAL_GNEWS,
+            query_repr: &q,
+            raw_unit: "articles (last 7 days)",
+        },
+    )
+    .await
 }
 
-/// Fetch one time-bounded window from Bluesky and return its post count.
-/// Shared with the risk scorer (same cache-key format/TTL).
-pub(crate) async fn bluesky_window_count(
+/// Fetch one time-bounded window from Bluesky and return window stats
+/// (count, saturation flag, oldest post timestamp). Shared with the risk
+/// scorer (same cache-key format/TTL).
+pub(crate) async fn bluesky_window_stats(
     state: &AppState,
     query: &str,
     since: &str,
     until: Option<&str>,
-) -> Result<usize, String> {
+) -> Result<WindowStats, String> {
     let key = format!(
         "bluesky:q={query}:limit=100:since={since}:until={}",
         until.unwrap_or("")
@@ -474,40 +806,34 @@ pub(crate) async fn bluesky_window_count(
     .map_err(|e| e.user_message())?;
     let resp: feeds::bluesky::BlueskyResponse =
         serde_json::from_slice(&body).map_err(|e| format!("decode failed: {e}"))?;
-    Ok(resp.count)
+    let oldest_epoch = resp
+        .posts
+        .iter()
+        .filter_map(|p| crate::time::parse_rfc3339(&p.created_at))
+        .min();
+    Ok(WindowStats {
+        saturated: resp.count >= ITEM_CAP,
+        count: resp.count,
+        oldest_epoch,
+    })
 }
 
 async fn bluesky_component(state: &AppState, country: &CountryIdentity) -> UnrestComponent {
-    let q = format!("{} protest", country.name);
-    let now = now_secs();
-    let (recent_since, baseline_since) = day_windows(now);
-    let mk_err = |e: String| UnrestComponent::err("bluesky", SIGNAL_BLUESKY, &q, WEIGHT_BLUESKY, e);
-    let recent_since_ts = rfc3339_day(recent_since);
-    let baseline_since_ts = rfc3339_day(baseline_since);
-    let (recent, baseline) = tokio::join!(
-        bluesky_window_count(state, &q, &recent_since_ts, None),
-        bluesky_window_count(state, &q, &baseline_since_ts, Some(&recent_since_ts))
-    );
-    let (recent, baseline) = match (recent, baseline) {
-        (Ok(r), Ok(b)) => (r as f64, b as f64),
-        (Err(e), _) | (_, Err(e)) => return mk_err(e),
-    };
-    let mut comp = build_component(ComponentCounts {
-        source: "bluesky",
-        signal: SIGNAL_BLUESKY,
-        query: &q,
-        weight: WEIGHT_BLUESKY,
-        raw_unit: "posts (last 7 days)",
-        baseline_unit: "posts/day (prior 83 days)",
-        recent_count: recent,
-        baseline_count: baseline,
-        baseline_days: 83.0,
-    });
-    if recent == 0.0 && baseline == 0.0 {
-        comp.note =
-            Some("no matching posts in either window — treated as no detected signal".to_string());
-    }
-    comp
+    let base_q = format!("{} protest", country.name);
+    keyword_leg_component(
+        state,
+        LegSpec {
+            leg: "bluesky",
+            family: "unrest",
+            subject: &country.name,
+            base_query: &base_q,
+            weight: WEIGHT_BLUESKY,
+            signal: SIGNAL_BLUESKY,
+            query_repr: &base_q,
+            raw_unit: "posts (last 7 days)",
+        },
+    )
+    .await
 }
 
 /// RFC-3339 midnight UTC for a day boundary, e.g. `2026-10-25T00:00:00.000Z`.
@@ -561,16 +887,22 @@ pub async fn unrest(
 
     let ok_weight: f64 = components.iter().filter(|c| c.ok).map(|c| c.weight).sum();
     let score = if ok_weight > 0.0 {
-        100.0
-            * components
-                .iter()
-                .filter(|c| c.ok)
-                .map(|c| c.weight * c.normalized_0_1)
-                .sum::<f64>()
-            / ok_weight
+        Some(
+            (100.0
+                * components
+                    .iter()
+                    .filter(|c| c.ok)
+                    .map(|c| c.weight * c.normalized_0_1)
+                    .sum::<f64>()
+                / ok_weight
+                * 10.0)
+                .round()
+                / 10.0,
+        )
     } else {
-        0.0
+        None
     };
+    let level = score.map_or("unknown", level_for).to_string();
     let partial = components.iter().any(|c| !c.ok);
     let down: Vec<&str> = components
         .iter()
@@ -594,8 +926,8 @@ pub async fn unrest(
 
     Ok(Json(UnrestResponse {
         country,
-        score: (score * 10.0).round() / 10.0,
-        level: level_for(score).to_string(),
+        score,
+        level,
         partial,
         note,
         components,
@@ -691,6 +1023,8 @@ mod tests {
             recent_count: 14.0,
             baseline_count: 83.0,
             baseline_days: 83.0,
+            baseline_capped: false,
+            baseline_source: "legacy",
         });
         assert!(c.ok);
         assert_eq!(c.raw_value, 14.0);
@@ -705,6 +1039,7 @@ mod tests {
 
     #[test]
     fn build_component_flags_saturated_windows() {
+        // Baseline capped: the note must warn the ratio is biased upward.
         let c = build_component(ComponentCounts {
             source: "bluesky",
             signal: "sig",
@@ -712,13 +1047,56 @@ mod tests {
             weight: 0.15,
             raw_unit: "posts (last 7 days)",
             baseline_unit: "posts/day (prior 83 days)",
-            recent_count: 100.0,
+            recent_count: 40.0,
             baseline_count: 100.0,
             baseline_days: 83.0,
+            baseline_capped: true,
+            baseline_source: "legacy",
         });
         assert!(c.ok);
-        let note = c.note.expect("saturated windows must be flagged");
+        assert!(!c.saturated);
+        assert_eq!(c.baseline_source, "legacy");
+        let note = c.note.expect("saturated baseline must be flagged");
         assert!(note.contains("100-item cap"), "{note}");
+        assert!(note.contains("biased upward"), "{note}");
+        // Recent-only cap: different note, no upward-bias claim.
+        let c2 = build_component(ComponentCounts {
+            source: "bluesky",
+            signal: "sig",
+            query: "q",
+            weight: 0.15,
+            raw_unit: "posts (last 7 days)",
+            baseline_unit: "posts/day (prior 83 days)",
+            recent_count: 100.0,
+            baseline_count: 40.0,
+            baseline_days: 83.0,
+            baseline_capped: false,
+            baseline_source: "legacy",
+        });
+        let note2 = c2.note.expect("capped recent window must be flagged");
+        assert!(note2.contains("recent window"), "{note2}");
+        assert!(!note2.contains("biased upward"), "{note2}");
+        // Chunked totals legitimately exceed 100 without the flag.
+        let c3 = build_component(ComponentCounts {
+            source: "gnews",
+            signal: "sig",
+            query: "q",
+            weight: 0.35,
+            raw_unit: "articles (last 7 days)",
+            baseline_unit: "articles/day (84-day chunked baseline)",
+            recent_count: 40.0,
+            baseline_count: 320.0,
+            baseline_days: 84.0,
+            baseline_capped: false,
+            baseline_source: "chunked",
+        });
+        assert!(c3.ok);
+        assert!(
+            c3.note.is_none(),
+            "chunked total >100 is not a cap: {:?}",
+            c3.note
+        );
+        assert_eq!(c3.baseline_source, "chunked");
     }
 
     #[test]
@@ -733,6 +1111,8 @@ mod tests {
             recent_count: 0.0,
             baseline_count: 0.0,
             baseline_days: 83.0,
+            baseline_capped: false,
+            baseline_source: "legacy",
         });
         assert!(c.ok);
         assert_eq!(c.normalized_0_1, 0.0);
@@ -786,5 +1166,168 @@ mod tests {
             "United States"
         );
         assert_eq!(gdelt_country_name("France"), "France");
+    }
+
+    // --- anti-saturation package -------------------------------------------
+
+    #[test]
+    fn cap_fill_curve() {
+        let now = 1_793_577_600i64;
+        assert_eq!(cap_fill_hours(None, now), None);
+        assert_eq!(cap_fill_hours(Some(now - 3 * 3600), now), Some(3.0));
+        // Capped at 168h.
+        assert_eq!(
+            cap_fill_hours(Some(now - 300 * 3600), now),
+            Some(CAP_FILL_MAX_HOURS)
+        );
+        // Future timestamps clamp to 0, not negative.
+        assert_eq!(cap_fill_hours(Some(now + 3600), now), Some(0.0));
+        // Intensity: 100 at <=6h, hyperbolic decay.
+        assert_eq!(cap_fill_intensity(6.0), 100.0);
+        assert_eq!(cap_fill_intensity(1.0), 100.0);
+        assert!((cap_fill_intensity(12.0) - 50.0).abs() < 1e-9);
+        assert!((cap_fill_intensity(24.0) - 25.0).abs() < 1e-9);
+        assert!((cap_fill_intensity(168.0) - 100.0 * 6.0 / 168.0).abs() < 1e-9);
+        assert!((cap_fill_intensity(10_000.0)).abs() < 1e-9 + 0.06);
+    }
+
+    #[test]
+    fn decide_baseline_branches() {
+        let fresh_ok = ChunkedBaseline {
+            chunks: vec![50.0; 6],
+            total: 300.0,
+            saturated_chunks: 0,
+            window_days: 84.0,
+        };
+        assert!(matches!(
+            decide_baseline(Some(&fresh_ok)),
+            BaselineDecision::UseChunked(_)
+        ));
+        let fresh_sat = ChunkedBaseline {
+            chunks: vec![100.0; 6],
+            total: 600.0,
+            saturated_chunks: 6,
+            window_days: 84.0,
+        };
+        assert!(matches!(
+            decide_baseline(Some(&fresh_sat)),
+            BaselineDecision::SaturatedChunked(_)
+        ));
+        assert!(matches!(
+            decide_baseline(None),
+            BaselineDecision::FetchLegacy
+        ));
+    }
+
+    #[test]
+    fn chunked_baseline_recovers_true_ratio_where_legacy_fails() {
+        // Synthetic ground truth: 300 items over 84 days (3.57/day), 50 in
+        // the recent 7 days → true ratio (50/7)/3.57 = 2.0 → norm 0.25.
+        // Legacy single-query baseline: upstream returns the 100 most
+        // recent items clustered in the last days → measured baseline
+        // 100/83 = 1.2/day → ratio 5.9 → pinned at 1.0 (fake severe).
+        let legacy_ratio = (50.0 / 7.0) / (100.0 / 83.0);
+        assert!((normalize_ratio(legacy_ratio) - 1.0).abs() < 1e-9);
+        // Chunked: 6 chunks × ~50 = 300, none saturate → recovered.
+        let c = build_component(ComponentCounts {
+            source: "gnews",
+            signal: "sig",
+            query: "q",
+            weight: 0.35,
+            raw_unit: "articles (last 7 days)",
+            baseline_unit: "articles/day (84-day chunked baseline)",
+            recent_count: 50.0,
+            baseline_count: 300.0,
+            baseline_days: 84.0,
+            baseline_capped: false,
+            baseline_source: "chunked",
+        });
+        assert!(
+            (c.normalized_0_1 - 0.25).abs() < 0.01,
+            "got {}",
+            c.normalized_0_1
+        );
+        assert!(
+            (c.baseline_value - 3.57).abs() < 0.01,
+            "got {}",
+            c.baseline_value
+        );
+    }
+
+    #[test]
+    fn saturated_component_shape() {
+        let c = UnrestComponent::saturated(SaturatedSpec {
+            source: "gnews",
+            signal: "sig",
+            query: "q",
+            weight: 0.35,
+            baseline_source: "chunked",
+            detail: "2 of 6 chunks capped".to_string(),
+            recent_count: 100.0,
+            cap_fill_hours: Some(4.5),
+        });
+        assert!(!c.ok);
+        assert!(c.saturated);
+        assert_eq!(c.baseline_source, "chunked");
+        assert!(
+            c.error
+                .as_deref()
+                .unwrap_or("")
+                .starts_with("saturated_baseline:")
+        );
+        assert_eq!(c.raw_value, 100.0, "recent count kept for transparency");
+        assert_eq!(c.cap_fill_hours, Some(4.5));
+        assert_eq!(c.cap_fill_intensity, Some(100.0));
+        // Weight kept so redistribution math downstream still sees it.
+        assert_eq!(c.weight, 0.35);
+    }
+
+    #[test]
+    fn saturated_leg_redistributes_like_down_leg() {
+        // A saturated leg must not contribute to the score: same math as a
+        // down leg — 100*(0.5*0.5 + 0.35*1.0)/0.85.
+        let ok = UnrestComponent {
+            source: "t".to_string(),
+            signal: "s".to_string(),
+            ok: true,
+            query: "q".to_string(),
+            raw_value: 0.0,
+            raw_unit: String::new(),
+            baseline_value: 0.0,
+            baseline_unit: String::new(),
+            normalized_0_1: 0.5,
+            weight: 0.5,
+            saturated: false,
+            baseline_source: "chunked".to_string(),
+            cap_fill_hours: None,
+            cap_fill_intensity: None,
+            note: None,
+            error: None,
+        };
+        let ok2 = UnrestComponent {
+            normalized_0_1: 1.0,
+            weight: 0.35,
+            ..ok.clone()
+        };
+        let sat = UnrestComponent::saturated(SaturatedSpec {
+            source: "x",
+            signal: "s",
+            query: "q",
+            weight: 0.15,
+            baseline_source: "legacy",
+            detail: "d".to_string(),
+            recent_count: 0.0,
+            cap_fill_hours: None,
+        });
+        let comps = [ok, ok2, sat];
+        let ok_weight: f64 = comps.iter().filter(|c| c.ok).map(|c| c.weight).sum();
+        let score = 100.0
+            * comps
+                .iter()
+                .filter(|c| c.ok)
+                .map(|c| c.weight * c.normalized_0_1)
+                .sum::<f64>()
+            / ok_weight;
+        assert!((score - 70.588).abs() < 0.01, "score {score}");
     }
 }

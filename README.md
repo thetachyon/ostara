@@ -464,6 +464,27 @@ them as unrest would be mislabeling); RSS outlets (global wires, no country
 field); telegram/markets/cyber/flights/quakes/cameras/vessels (no
 country-attributable unrest semantics). All documented in `src/unrest.rs`.
 
+**Anti-saturation package:** upstream 100-item caps understate single-query
+83-day baselines for high-coverage places (search returns most-recent-first),
+exploding the ratio and pinning scores at 100. Three defenses: (1) weekly
+chunked baselines — `scripts/risk_baseline_refresh.sh` issues 6 consecutive
+14-day chunk queries per (place, family, leg) and sums them into
+`data/risk_baselines.json` (git-ignored); fresh (<10d) chunked baselines
+replace the legacy single-query baseline; (2) a saturated baseline nulls
+the leg with `saturated_baseline` instead of scoring — weights redistribute,
+and `score: null` + `level: "unknown"` when nothing is usable; (3)
+baseline-free peer percentiles/ranks vs the 30-place watchlist, computed
+from 7-day recent volumes in the weekly scoring run (capping can only tie
+ranks, never reverse them). Per-leg diagnostics: `saturated`,
+`baseline_source` (`chunked`|`legacy`|`unknown`), `cap_fill_hours` and
+`cap_fill_intensity` (100 at ≤6h, hyperbolic decay — a truncation-proof
+intensity readout). New endpoints: `GET /api/risk/baseline-plan`
+(chunk windows + exact base queries for the refresh script) and
+`GET /api/risk/window-count` (one cached upstream window count).
+`/api/risk` also returns `percentile`/`rank`/`peer_count` for watchlist
+places (with `score_basis`/`percentile_basis` documenting the two numbers)
+and `/api/risk-map` serves the peer ranks per place.
+
 Missing country → 400; unknown country → 404. In the UI, the country panel
 gains an "Unrest signals" section (score bar, level chip, per-component
 breakdown, methodology one click away in a `<details>`) between the OSINT

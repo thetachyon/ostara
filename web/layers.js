@@ -133,6 +133,8 @@ window.OST = window.OST || {};
           const lvl = esc(p.level || "");
           const delta = p.delta == null ? "" :
             ` <span class="m">(${p.delta > 0 ? "+" : ""}${Number(p.delta).toFixed(1)} vs last week)</span>`;
+          const peer = (p.percentile != null && p.rank != null && p.peer_count != null) ?
+            `<br/><span class="m">hotter than <b>#${p.rank} of ${p.peer_count}</b> watchlist places this week <span class="m">(percentile ${Number(p.percentile).toFixed(0)} — baseline-free peer rank)</span></span>` : "";
           const fams = (p.families || [])
             .map((f) => `${esc(f.family)} ${Number(f.score_0_100).toFixed(0)}`)
             .join(" · ");
@@ -142,6 +144,7 @@ window.OST = window.OST || {};
             properties: {
               title: `${esc(p.name || "")} <span class="m">(${esc(p.kind || "")})</span>`,
               desc: `risk <b>${s.toFixed(1)} / 100</b> · ${lvl} · safety: <b>${esc(p.safety || "—")}</b>${delta}` +
+                peer +
                 (fams ? `<br/><span class="m">${fams}</span>` : "") +
                 (p.partial ? `<br/><span class="m">partial — a feed was down, weights redistributed</span>` : "") +
                 `<br/><span class="m">snapshot ${esc(j.generated_at || "—")} — weekly, not live</span>`,

@@ -43,6 +43,53 @@ pub fn now_iso8601() -> String {
     epoch_millis_to_iso8601(ms)
 }
 
+/// Parse an RFC-3339 timestamp to Unix epoch seconds. Handles `Z` and
+/// numeric offsets (`+HH:MM`/`-HH:MM`), with optional fractional seconds.
+/// Returns `None` on any malformed input — never panics.
+pub(crate) fn parse_rfc3339(s: &str) -> Option<i64> {
+    let s = s.trim();
+    // Split off the timezone designator.
+    let (core, off_secs) = if let Some(c) = s.strip_suffix('Z') {
+        (c, 0i64)
+    } else {
+        let t_pos = s.find('T')?;
+        let mut split: Option<(usize, char)> = None;
+        for (i, ch) in s.char_indices().skip(t_pos + 1) {
+            if ch == '+' || ch == '-' {
+                split = Some((i, ch));
+            }
+        }
+        let (p, sign) = split?;
+        let off = &s[p + 1..];
+        let (hh, mm) = off.split_once(':')?;
+        if hh.len() != 2 || mm.len() != 2 {
+            return None;
+        }
+        let secs = hh.parse::<i64>().ok()? * 3600 + mm.parse::<i64>().ok()? * 60;
+        (&s[..p], if sign == '+' { secs } else { -secs })
+    };
+    // core: YYYY-MM-DDTHH:MM:SS[.frac]
+    let b = core.as_bytes();
+    if b.len() < 19 || b[10] != b'T' {
+        return None;
+    }
+    let num = |i: usize, n: usize| -> Option<i64> { core.get(i..i + n)?.parse().ok() };
+    let (y, mo, d) = (num(0, 4)?, num(5, 2)?, num(8, 2)?);
+    let (h, mi, se) = (num(11, 2)?, num(14, 2)?, num(17, 2)?);
+    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || se > 60 {
+        return None;
+    }
+    // Days from civil (Hinnant), inverse of civil_from_days above.
+    let y_adj = if mo <= 2 { y - 1 } else { y };
+    let era = y_adj.div_euclid(400);
+    let yoe = y_adj - era * 400;
+    let mp = (mo + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146097 + doe - 719468;
+    Some(days * 86_400 + h * 3600 + mi * 60 + se - off_secs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,6 +121,18 @@ mod tests {
             epoch_millis_to_iso8601(1_709_164_800_000),
             "2024-02-29T00:00:00.000Z"
         );
+    }
+
+    #[test]
+    fn parse_rfc3339_shapes() {
+        // Ground truths from CPython datetime.
+        assert_eq!(parse_rfc3339("2026-11-02T00:00:00Z"), Some(1793577600));
+        assert_eq!(parse_rfc3339("2026-11-02T00:00:00.000Z"), Some(1793577600));
+        assert_eq!(parse_rfc3339("2026-11-02T05:30:00+05:30"), Some(1793577600));
+        assert_eq!(parse_rfc3339("2026-11-01T19:00:00-05:00"), Some(1793577600));
+        assert_eq!(parse_rfc3339("not-a-date"), None);
+        assert_eq!(parse_rfc3339("2026-13-01T00:00:00Z"), None);
+        assert_eq!(parse_rfc3339("2026-11-02 00:00:00"), None);
     }
 
     #[test]

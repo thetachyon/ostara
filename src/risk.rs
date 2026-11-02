@@ -55,8 +55,8 @@ use crate::{
     routes::{AppState, cached_bytes},
     time::now_iso8601,
     unrest::{
-        self, ComponentCounts, MIN_BASELINE_BINS, UnrestComponent, build_component,
-        gdelt_country_name, gdelt_normalize, gdelt_window_sums, now_secs,
+        self, MIN_BASELINE_BINS, UnrestComponent, gdelt_country_name, gdelt_normalize,
+        gdelt_window_sums, now_secs,
     },
 };
 
@@ -72,7 +72,7 @@ use crate::{
 /// among many, never as a sole basis for decisions.
 pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This score summarizes how current open-source media signals about a place compare to their own recent baselines. It does not predict whether risk will materialize, when, or where. News and social coverage reflect what gets reported, not what happens on the ground: big cities and capitals are systematically over-covered relative to smaller places, so scores are not comparable as absolute risk between places of very different media visibility. Coverage is English-language sources only. This is not travel advice and not a substitute for official government guidance. Use as one input among many, never as a sole basis for decisions.";
 
-pub const METHODOLOGY: &str = "Per-place risk & safety score (0-100), heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs prior ~83-day baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): unrest (weight 0.40) — protest/strike/riot keywords; violent_incidents (weight 0.35) — bombing/shooting/terrorist-attack/explosion keywords; crime_disorder (weight 0.25) — crime/murder/robbery/looting keywords. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
+pub const METHODOLOGY: &str = "Per-place risk & safety score (0-100), heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): unrest (weight 0.40) — protest/strike/riot keywords; violent_incidents (weight 0.35) — bombing/shooting/terrorist-attack/explosion keywords; crime_disorder (weight 0.25) — crime/murder/robbery/looting keywords. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
 
 const W_UNREST: f64 = 0.40;
 const W_VIOLENT: f64 = 0.35;
@@ -187,10 +187,29 @@ pub struct RiskFamily {
 #[derive(Debug, Serialize)]
 pub struct RiskResponse {
     pub place: RiskPlace,
-    pub score: f64,
+    /// Time-ratio score 0–100 (7d recent vs baseline). Null when no
+    /// component produced a usable score — an honest unknown.
+    pub score: Option<f64>,
+    /// "low" | "moderate" | "high" | "severe", or "unknown" when null.
     pub level: String,
-    /// Inverse reading of the same score: "High"/"Moderate"/"Low"/"Very low".
+    /// Inverse reading of the same score: "High"/"Moderate"/"Low"/"Very low"
+    /// ("Unknown" when score is null).
     pub safety: String,
+    /// What `score` measures (kept for backward compatibility).
+    pub score_basis: String,
+    /// Baseline-free peer rank vs the 30-place watchlist, when the place
+    /// matches a watchlist entry and the weekly snapshot is fresh.
+    pub percentile: Option<f64>,
+    /// 1-based rank among watchlist peers (1 = hottest).
+    pub rank: Option<usize>,
+    /// Watchlist peer count.
+    pub peer_count: Option<usize>,
+    /// What `percentile`/`rank` measure, when present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub percentile_basis: Option<String>,
+    /// Why peer fields are null, when they are.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peer_note: Option<String>,
     pub partial: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
@@ -199,6 +218,9 @@ pub struct RiskResponse {
     pub generated_at: String,
     pub disclaimer: String,
 }
+
+pub const SCORE_BASIS: &str = "time-ratio: 7-day recent media volume vs the place's own baseline (weekly chunked 6x14-day refresh when fresh, else legacy 83-day query); saturated baselines null the leg instead of scoring";
+pub const PERCENTILE_BASIS: &str = "peer-rank: this place's 7-day recent composite media volume ranked against the 30-place weekly risk watchlist — baseline-free, robust to upstream capping";
 
 // ---------------------------------------------------------------------------
 // Component builders (each reuses its feed's normal cache path + TTL)
@@ -250,72 +272,55 @@ async fn gdelt_component(state: &AppState, query: &str, signal: &str) -> UnrestC
         baseline_unit: "articles/day (prior ~83-day baseline)".to_string(),
         normalized_0_1: (normalized * 1000.0).round() / 1000.0,
         weight: FW_GDELT,
+        saturated: false,
+        baseline_source: "legacy".to_string(),
+        cap_fill_hours: None,
+        cap_fill_intensity: None,
         note,
         error: None,
     }
 }
 
-/// Google News leg for one family: two date-bounded windows over
-/// `subject + keyword group`. Reuses unrest's window counter (same
-/// `gnews:q=…:limit=100` cache keys).
+/// Google News leg for one family, via the shared keyword-leg builder
+/// (chunked baselines, saturation nulling, cap-fill diagnostics).
 async fn gnews_component(state: &AppState, subject: &str, fam: &FamilyDef) -> UnrestComponent {
     let base_q = format!("{} {}", subject, fam.gnews_kw);
     let now = now_secs_local();
-    let (recent_since, baseline_since) = unrest::day_windows(now);
+    let (recent_since, _) = unrest::day_windows(now);
     let q = format!("{base_q} after:{}", unrest::ymd(recent_since));
-    let mk_err = |e: String| UnrestComponent::err("gnews", fam.signal_gnews, &q, FW_GNEWS, e);
-    let recent_after = unrest::ymd(recent_since);
-    let baseline_after = unrest::ymd(baseline_since);
-    let (recent, baseline) = tokio::join!(
-        unrest::gnews_window_count(state, &base_q, &recent_after, None),
-        unrest::gnews_window_count(state, &base_q, &baseline_after, Some(&recent_after))
-    );
-    let (recent, baseline) = match (recent, baseline) {
-        (Ok(r), Ok(b)) => (r as f64, b as f64),
-        (Err(e), _) | (_, Err(e)) => return mk_err(e),
-    };
-    build_component(ComponentCounts {
-        source: "gnews",
-        signal: fam.signal_gnews,
-        query: &q,
-        weight: FW_GNEWS,
-        raw_unit: "articles (last 7 days)",
-        baseline_unit: "articles/day (prior 83 days)",
-        recent_count: recent,
-        baseline_count: baseline,
-        baseline_days: 83.0,
-    })
+    unrest::keyword_leg_component(
+        state,
+        unrest::LegSpec {
+            leg: "gnews",
+            family: fam.id,
+            subject,
+            base_query: &base_q,
+            weight: FW_GNEWS,
+            signal: fam.signal_gnews,
+            query_repr: &q,
+            raw_unit: "articles (last 7 days)",
+        },
+    )
+    .await
 }
 
-/// Bluesky leg for one family: two windowed searches over
-/// `subject + keyword`. Reuses unrest's window counter (same
-/// `bluesky:q=…:limit=100:since=…:until=…` cache keys).
+/// Bluesky leg for one family, via the shared keyword-leg builder.
 async fn bluesky_component(state: &AppState, subject: &str, fam: &FamilyDef) -> UnrestComponent {
-    let q = format!("{} {}", subject, fam.bluesky_kw);
-    let now = now_secs_local();
-    let (recent_since, baseline_since) = unrest::day_windows(now);
-    let mk_err = |e: String| UnrestComponent::err("bluesky", fam.signal_bluesky, &q, FW_BLUESKY, e);
-    let recent_since_ts = unrest::rfc3339_day(recent_since);
-    let baseline_since_ts = unrest::rfc3339_day(baseline_since);
-    let (recent, baseline) = tokio::join!(
-        unrest::bluesky_window_count(state, &q, &recent_since_ts, None),
-        unrest::bluesky_window_count(state, &q, &baseline_since_ts, Some(&recent_since_ts))
-    );
-    let (recent, baseline) = match (recent, baseline) {
-        (Ok(r), Ok(b)) => (r as f64, b as f64),
-        (Err(e), _) | (_, Err(e)) => return mk_err(e),
-    };
-    build_component(ComponentCounts {
-        source: "bluesky",
-        signal: fam.signal_bluesky,
-        query: &q,
-        weight: FW_BLUESKY,
-        raw_unit: "posts (last 7 days)",
-        baseline_unit: "posts/day (prior 83 days)",
-        recent_count: recent,
-        baseline_count: baseline,
-        baseline_days: 83.0,
-    })
+    let base_q = format!("{} {}", subject, fam.bluesky_kw);
+    unrest::keyword_leg_component(
+        state,
+        unrest::LegSpec {
+            leg: "bluesky",
+            family: fam.id,
+            subject,
+            base_query: &base_q,
+            weight: FW_BLUESKY,
+            signal: fam.signal_bluesky,
+            query_repr: &base_q,
+            raw_unit: "posts (last 7 days)",
+        },
+    )
+    .await
 }
 
 /// Assemble one family's components. `gdelt_query`: `Some` on the country
@@ -375,16 +380,87 @@ pub struct RiskQuery {
     pub country: Option<String>,
 }
 
-/// `GET /api/risk?place=<name>&kind=auto|country|city[&country=<hint>]`.
-///
-/// Never fails on feed trouble: components degrade to `ok: false`
-/// independently, weights redistribute within and across families, and the
-/// response is marked `partial`. 400 on missing/invalid params, 404 on an
-/// unresolvable `kind=country` place.
-pub async fn risk(
-    State(state): State<AppState>,
-    Query(q): Query<RiskQuery>,
-) -> Result<Json<RiskResponse>, ApiError> {
+/// Resolved place: the API response place block, the subject string used
+/// in news/social queries (and chunked-baseline keys), and per-family
+/// GDELT queries (`None` on the city path).
+struct ResolvedPlace {
+    place: RiskPlace,
+    subject: String,
+    gdelt_queries: Vec<Option<String>>,
+}
+
+fn resolve_place(
+    place_raw: &str,
+    kind: &str,
+    hint: Option<&str>,
+) -> Result<ResolvedPlace, ApiError> {
+    enum Resolved<'a> {
+        Country(crate::geo::CountryIdentity),
+        City(&'a str),
+    }
+    let resolved = match kind {
+        "country" => Resolved::Country(find_country(place_raw).ok_or_else(|| {
+            ApiError::not_found(
+                "unknown country",
+                format!(
+                    "no country matches {place_raw:?}; try a name, ISO-3166 alpha-2, or alpha-3 code"
+                ),
+            )
+        })?),
+        "city" => Resolved::City(place_raw),
+        _ => match find_country(place_raw) {
+            Some(c) => Resolved::Country(c),
+            None => Resolved::City(place_raw),
+        },
+    };
+    Ok(match resolved {
+        Resolved::Country(c) => {
+            let subject = c.name.clone();
+            let gdelt_queries = FAMILIES
+                .iter()
+                .map(|f| {
+                    Some(format!(
+                        "{} sourcecountry:\"{}\"",
+                        f.gdelt_q,
+                        gdelt_country_name(&c.name)
+                    ))
+                })
+                .collect();
+            ResolvedPlace {
+                place: RiskPlace {
+                    name: c.name.clone(),
+                    kind: "country".to_string(),
+                    iso2: Some(c.iso2.clone()),
+                    iso3: Some(c.iso3.clone()),
+                    country_hint: None,
+                },
+                subject,
+                gdelt_queries,
+            }
+        }
+        Resolved::City(name) => {
+            let subject = match hint {
+                Some(h) => format!("{name} {h}"),
+                None => name.to_string(),
+            };
+            ResolvedPlace {
+                place: RiskPlace {
+                    name: name.to_string(),
+                    kind: "city".to_string(),
+                    iso2: None,
+                    iso3: None,
+                    country_hint: hint.map(str::to_string),
+                },
+                subject,
+                gdelt_queries: vec![None, None, None],
+            }
+        }
+    })
+}
+
+/// Validate the shared `place`/`kind`/`country` params. Returns
+/// `(place_raw, kind, hint)`.
+fn parse_place_params(q: &RiskQuery) -> Result<(&str, String, Option<&str>), ApiError> {
     let place_raw = q
         .place
         .as_deref()
@@ -408,71 +484,25 @@ pub async fn risk(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
+    Ok((place_raw, kind, hint))
+}
 
-    // Resolve country vs city.
-    enum Resolved<'a> {
-        Country(crate::geo::CountryIdentity),
-        City(&'a str),
-    }
-    let resolved = match kind.as_str() {
-        "country" => Resolved::Country(find_country(place_raw).ok_or_else(|| {
-            ApiError::not_found(
-                "unknown country",
-                format!(
-                    "no country matches {place_raw:?}; try a name, ISO-3166 alpha-2, or alpha-3 code"
-                ),
-            )
-        })?),
-        "city" => Resolved::City(place_raw),
-        _ => match find_country(place_raw) {
-            Some(c) => Resolved::Country(c),
-            None => Resolved::City(place_raw),
-        },
-    };
-
-    let (place, subject, gdelt_queries): (RiskPlace, String, Vec<Option<String>>) = match resolved {
-        Resolved::Country(c) => {
-            let subject = c.name.clone();
-            let queries = FAMILIES
-                .iter()
-                .map(|f| {
-                    Some(format!(
-                        "{} sourcecountry:\"{}\"",
-                        f.gdelt_q,
-                        gdelt_country_name(&c.name)
-                    ))
-                })
-                .collect();
-            (
-                RiskPlace {
-                    name: c.name.clone(),
-                    kind: "country".to_string(),
-                    iso2: Some(c.iso2.clone()),
-                    iso3: Some(c.iso3.clone()),
-                    country_hint: None,
-                },
-                subject,
-                queries,
-            )
-        }
-        Resolved::City(name) => {
-            let subject = match hint {
-                Some(h) => format!("{name} {h}"),
-                None => name.to_string(),
-            };
-            (
-                RiskPlace {
-                    name: name.to_string(),
-                    kind: "city".to_string(),
-                    iso2: None,
-                    iso3: None,
-                    country_hint: hint.map(str::to_string),
-                },
-                subject,
-                vec![None, None, None],
-            )
-        }
-    };
+/// `GET /api/risk?place=<name>&kind=auto|country|city[&country=<hint>]`.
+///
+/// Never fails on feed trouble: components degrade to `ok: false`
+/// independently, weights redistribute within and across families, and the
+/// response is marked `partial`. 400 on missing/invalid params, 404 on an
+/// unresolvable `kind=country` place.
+pub async fn risk(
+    State(state): State<AppState>,
+    Query(q): Query<RiskQuery>,
+) -> Result<Json<RiskResponse>, ApiError> {
+    let (place_raw, kind, hint) = parse_place_params(&q)?;
+    let ResolvedPlace {
+        place,
+        subject,
+        gdelt_queries,
+    } = resolve_place(place_raw, &kind, hint)?;
 
     // Concurrent fan-out over families; latency ~= the slowest component.
     let (f0, f1, f2) = tokio::join!(
@@ -500,10 +530,65 @@ pub async fn risk(
 
     let work_weight: f64 = fam_scores.iter().map(|(w, _)| w).sum();
     let score = if work_weight > 0.0 {
-        fam_scores.iter().map(|(w, s)| w * s).sum::<f64>() / work_weight
+        Some(
+            (fam_scores.iter().map(|(w, s)| w * s).sum::<f64>() / work_weight * 10.0).round()
+                / 10.0,
+        )
     } else {
-        0.0
+        None
     };
+    let (level, safety) = match score {
+        Some(s) => (level_for(s).to_string(), safety_for(s).to_string()),
+        None => ("unknown".to_string(), "Unknown".to_string()),
+    };
+
+    // Baseline-free peer rank vs the weekly watchlist snapshot.
+    let (percentile, rank, peer_count, percentile_basis, peer_note) =
+        match crate::feeds::risk_map::peer_status(&place.name) {
+            crate::feeds::risk_map::PeerStatus::Ranked {
+                percentile,
+                rank,
+                peer_count,
+            } => (
+                Some(percentile),
+                Some(rank),
+                Some(peer_count),
+                Some(PERCENTILE_BASIS.to_string()),
+                None,
+            ),
+            crate::feeds::risk_map::PeerStatus::NoSnapshot => (
+                None,
+                None,
+                None,
+                None,
+                Some("no watchlist snapshot yet".to_string()),
+            ),
+            crate::feeds::risk_map::PeerStatus::Stale => (
+                None,
+                None,
+                None,
+                None,
+                Some("watchlist snapshot is stale (>9 days)".to_string()),
+            ),
+            crate::feeds::risk_map::PeerStatus::NotListed => (
+                None,
+                None,
+                None,
+                None,
+                Some("place is not in the 30-place risk watchlist".to_string()),
+            ),
+            crate::feeds::risk_map::PeerStatus::NoPeerData => (
+                None,
+                None,
+                None,
+                None,
+                Some(
+                    "watchlist snapshot predates peer ranks — the next weekly scoring run adds them"
+                        .to_string(),
+                ),
+            ),
+        };
+
     let partial = families.iter().any(|f| f.partial);
     let down: Vec<String> = families
         .iter()
@@ -522,9 +607,15 @@ pub async fn risk(
 
     Ok(Json(RiskResponse {
         place,
-        score: (score * 10.0).round() / 10.0,
-        level: level_for(score).to_string(),
-        safety: safety_for(score).to_string(),
+        score,
+        level,
+        safety,
+        score_basis: SCORE_BASIS.to_string(),
+        percentile,
+        rank,
+        peer_count,
+        percentile_basis,
+        peer_note,
         partial,
         note,
         families,
@@ -535,7 +626,206 @@ pub async fn risk(
 }
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/api/risk", get(risk))
+    Router::new()
+        .route("/api/risk", get(risk))
+        .route("/api/risk/baseline-plan", get(baseline_plan))
+        .route("/api/risk/window-count", get(window_count))
+}
+
+// ---------------------------------------------------------------------------
+// Chunked-baseline infrastructure: plan + window counting
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct BaselineChunk {
+    /// `YYYY-MM-DD` (inclusive start).
+    pub after: String,
+    /// `YYYY-MM-DD` (exclusive end).
+    pub before: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BaselineQueryDef {
+    pub family: String,
+    pub leg: String,
+    pub base_query: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BaselinePlanResponse {
+    pub place: RiskPlace,
+    pub subject: String,
+    /// 6 consecutive 14-day chunks covering the last 84 days, oldest first.
+    pub chunks: Vec<BaselineChunk>,
+    /// One entry per (family, leg) — gnews + bluesky only (GDELT's
+    /// timelinevol has its own binning and is unreachable from some
+    /// sandboxes; its leg keeps the legacy path).
+    pub queries: Vec<BaselineQueryDef>,
+    pub generated_at: String,
+}
+
+/// `GET /api/risk/baseline-plan?place=<name>&kind=auto|country|city[&country=<hint>]`.
+///
+/// Returns the exact chunk windows and base queries the weekly
+/// `scripts/risk_baseline_refresh.sh` uses, so query construction lives in
+/// one place (here) and the script is pure orchestration. Same params and
+/// resolution as `/api/risk`.
+pub async fn baseline_plan(
+    State(_state): State<AppState>,
+    Query(q): Query<RiskQuery>,
+) -> Result<Json<BaselinePlanResponse>, ApiError> {
+    let (place_raw, kind, hint) = parse_place_params(&q)?;
+    let ResolvedPlace { place, subject, .. } = resolve_place(place_raw, &kind, hint)?;
+
+    let now = now_secs_local();
+    let today = now - now.rem_euclid(86_400);
+    let chunks: Vec<BaselineChunk> = (0..unrest::BASELINE_CHUNKS)
+        .map(|i| {
+            let start = today - 84 * 86_400 + i as i64 * unrest::BASELINE_CHUNK_DAYS * 86_400;
+            let end = start + unrest::BASELINE_CHUNK_DAYS * 86_400;
+            BaselineChunk {
+                after: unrest::ymd(start),
+                before: unrest::ymd(end),
+            }
+        })
+        .collect();
+    let queries: Vec<BaselineQueryDef> = FAMILIES
+        .iter()
+        .flat_map(|f| {
+            [
+                BaselineQueryDef {
+                    family: f.id.to_string(),
+                    leg: "gnews".to_string(),
+                    base_query: format!("{} {}", subject, f.gnews_kw),
+                },
+                BaselineQueryDef {
+                    family: f.id.to_string(),
+                    leg: "bluesky".to_string(),
+                    base_query: format!("{} {}", subject, f.bluesky_kw),
+                },
+            ]
+        })
+        .collect();
+
+    Ok(Json(BaselinePlanResponse {
+        place,
+        subject,
+        chunks,
+        queries,
+        generated_at: now_iso8601(),
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WindowCountQuery {
+    pub leg: Option<String>,
+    pub base_query: Option<String>,
+    pub after: Option<String>,
+    pub before: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WindowCountResponse {
+    pub leg: String,
+    pub count: usize,
+    /// True when the query hit the upstream item cap (count is a lower bound).
+    pub saturated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cap_fill_hours: Option<f64>,
+}
+
+/// `GET /api/risk/window-count?leg=gnews|bluesky&base_query=<q>&after=<YYYY-MM-DD>&before=<YYYY-MM-DD>`.
+///
+/// Counts one upstream window through the feed's normal cache path — the
+/// primitive the weekly baseline refresh calls per chunk. `after`/`before`
+/// are day dates; the window is `[after, before)`.
+pub async fn window_count(
+    State(state): State<AppState>,
+    Query(q): Query<WindowCountQuery>,
+) -> Result<Json<WindowCountResponse>, ApiError> {
+    let leg = q
+        .leg
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ApiError::bad_request("missing leg", "leg must be gnews or bluesky"))?;
+    if leg != "gnews" && leg != "bluesky" {
+        return Err(ApiError::bad_request(
+            "bad leg",
+            "leg must be gnews or bluesky",
+        ));
+    }
+    let base_query = q
+        .base_query
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ApiError::bad_request("missing base_query", "base_query is required"))?;
+    let after = q
+        .after
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| valid_ymd(s))
+        .ok_or_else(|| ApiError::bad_request("bad after", "after must be a YYYY-MM-DD date"))?;
+    let before = q
+        .before
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| valid_ymd(s))
+        .ok_or_else(|| ApiError::bad_request("bad before", "before must be a YYYY-MM-DD date"))?;
+    if before <= after {
+        return Err(ApiError::bad_request(
+            "bad window",
+            "before must be after after",
+        ));
+    }
+
+    let stats = if leg == "gnews" {
+        unrest::gnews_window_stats(&state, base_query, after, Some(before))
+            .await
+            .map_err(|e| ApiError::bad_gateway("window count failed", e))?
+    } else {
+        unrest::bluesky_window_stats(
+            &state,
+            base_query,
+            &unrest::rfc3339_day(ymd_to_epoch(after).ok_or_else(|| {
+                ApiError::bad_request("bad after", "after must be a YYYY-MM-DD date")
+            })?),
+            Some(&unrest::rfc3339_day(ymd_to_epoch(before).ok_or_else(
+                || ApiError::bad_request("bad before", "before must be a YYYY-MM-DD date"),
+            )?)),
+        )
+        .await
+        .map_err(|e| ApiError::bad_gateway("window count failed", e))?
+    };
+    let now = now_secs_local();
+    Ok(Json(WindowCountResponse {
+        leg: leg.to_string(),
+        count: stats.count,
+        saturated: stats.saturated,
+        cap_fill_hours: unrest::cap_fill_hours(stats.oldest_epoch, now),
+    }))
+}
+
+/// Strict `YYYY-MM-DD` shape check (also rejects impossible months/days
+/// via the round-trip).
+fn valid_ymd(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
+        return false;
+    }
+    ymd_to_epoch(s).is_some()
+}
+
+/// `YYYY-MM-DD` → epoch seconds at 00:00 UTC. `None` on malformed input.
+fn ymd_to_epoch(s: &str) -> Option<i64> {
+    let epoch = crate::time::parse_rfc3339(&format!("{s}T00:00:00Z"))?;
+    // Round-trip guard: rejects e.g. month 13 or day 32.
+    if unrest::ymd(epoch) == s {
+        Some(epoch)
+    } else {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -602,6 +892,10 @@ mod tests {
             baseline_unit: String::new(),
             normalized_0_1: norm,
             weight,
+            saturated: false,
+            baseline_source: "legacy".to_string(),
+            cap_fill_hours: None,
+            cap_fill_intensity: None,
             note: None,
             error: None,
         }

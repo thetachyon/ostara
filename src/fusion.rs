@@ -280,7 +280,9 @@ async fn fetch_risk(
         .await
         .ok()?;
     let r = resp.0;
-    Some((r.score, r.level.clone(), r.partial))
+    // A null risk score is an honest unknown — the fusion input degrades
+    // rather than carrying a fake number forward.
+    Some((r.score?, r.level.clone(), r.partial))
 }
 
 /// Critical-only sanctions count for a country, in-process. Uses the
