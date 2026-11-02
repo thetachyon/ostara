@@ -136,14 +136,17 @@ window.OST = window.OST || {};
           const peer = (p.percentile != null && p.rank != null && p.peer_count != null) ?
             `<br/><span class="m">hotter than <b>#${p.rank} of ${p.peer_count}</b> watchlist places this week <span class="m">(percentile ${Number(p.percentile).toFixed(0)} — baseline-free peer rank)</span></span>` : "";
           const fams = (p.families || [])
-            .map((f) => `${esc(f.family)} ${Number(f.score_0_100).toFixed(0)}`)
+            .map((f) => `${esc(f.family)} ${Number(f.score_0_100).toFixed(0)}${f.thin_basis ? " (thin)" : ""}`)
             .join(" · ");
+          const thinLine = p.thin_basis
+            ? `<br/><span class="chip" style="color:#b7791f;border:1px solid #b7791f;border-radius:3px;padding:0 5px;font-size:10px">thin basis — score rests on &lt;50% of intended signal, level provisional</span>` : "";
           return {
             type: "Feature",
             geometry: { type: "Point", coordinates: [p.lon, p.lat] },
             properties: {
               title: `${esc(p.name || "")} <span class="m">(${esc(p.kind || "")})</span>`,
               desc: `risk <b>${s.toFixed(1)} / 100</b> · ${lvl} · safety: <b>${esc(p.safety || "—")}</b>${delta}` +
+                thinLine +
                 peer +
                 (fams ? `<br/><span class="m">${fams}</span>` : "") +
                 (p.partial ? `<br/><span class="m">partial — a feed was down, weights redistributed</span>` : "") +

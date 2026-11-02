@@ -72,7 +72,7 @@ use crate::{
 /// among many, never as a sole basis for decisions.
 pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This score summarizes how current open-source media signals about a place compare to their own recent baselines. It does not predict whether risk will materialize, when, or where. News and social coverage reflect what gets reported, not what happens on the ground: big cities and capitals are systematically over-covered relative to smaller places, so scores are not comparable as absolute risk between places of very different media visibility. Coverage is English-language sources only. This is not travel advice and not a substitute for official government guidance. Use as one input among many, never as a sole basis for decisions.";
 
-pub const METHODOLOGY: &str = "Per-place risk & safety score (0-100), heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): unrest (weight 0.40) — protest/strike/riot keywords; violent_incidents (weight 0.35) — bombing/shooting/terrorist-attack/explosion keywords; crime_disorder (weight 0.25) — crime/murder/robbery/looting keywords. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
+pub const METHODOLOGY: &str = "Per-place risk & safety score (0-100), heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): unrest (weight 0.40) — protest/strike/riot keywords; violent_incidents (weight 0.35) — bombing/shooting/terrorist-attack/explosion keywords; crime_disorder (weight 0.25) — crime/murder/robbery/looting keywords. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. THIN-BASIS RULE: when the surviving signal rests on <50% of intended weight — within a family or across families — the score is kept (it is real) but flagged thin_basis:true, confidence forced to \"low\", and the level capped one step down (severe→high→moderate→low); the note names the live families. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
 
 const W_UNREST: f64 = 0.40;
 const W_VIOLENT: f64 = 0.35;
@@ -180,6 +180,16 @@ pub struct RiskFamily {
     pub weight: f64,
     /// Family score 0–100 (weighted, redistributed over working components).
     pub score_0_100: f64,
+    /// "low" | "moderate" | "high" | "severe", or "unknown" when the family
+    /// has no working components. Capped one step down when `thin_basis`.
+    pub level: String,
+    /// True when the family scored on <50% of its intended leg weight —
+    /// the score is real but rests on a thin basis; treat the level as
+    /// provisional.
+    pub thin_basis: bool,
+    /// Fraction of the family's intended leg weight that actually scored
+    /// (0–1). The denominator the thin-basis rule is judged against.
+    pub live_weight: f64,
     pub partial: bool,
     pub components: Vec<UnrestComponent>,
 }
@@ -210,6 +220,15 @@ pub struct RiskResponse {
     /// Why peer fields are null, when they are.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peer_note: Option<String>,
+    /// "high" | "medium" | "low". high = full signal; medium = partial
+    /// (degraded feeds, weights redistributed); low = thin basis or no
+    /// usable score.
+    pub confidence: String,
+    /// True when the composite scored on <50% of its intended family
+    /// weight — the surviving signal is real, but the headline rests on a
+    /// thin basis: `confidence` is forced to "low" and `level` is capped
+    /// one step down. Treat the level as provisional.
+    pub thin_basis: bool,
     pub partial: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
@@ -353,11 +372,34 @@ async fn family_components(
 }
 
 /// Family score 0–100 with weight redistribution over working components.
-/// Returns `(score, partial, all_down)`.
-fn family_score(components: &[UnrestComponent]) -> (f64, bool, bool) {
+struct FamilyScore {
+    score: f64,
+    partial: bool,
+    all_down: bool,
+    /// Fraction of the family's intended leg weight that actually scored
+    /// (0–1). The anti-saturation package nulls legs with saturated
+    /// baselines; when most legs are nulled this fraction goes thin.
+    live_weight: f64,
+    /// True when the family scored on <50% of its intended leg weight.
+    thin_basis: bool,
+}
+
+fn family_score(components: &[UnrestComponent]) -> FamilyScore {
+    let total_weight: f64 = components.iter().map(|c| c.weight).sum();
     let ok_weight: f64 = components.iter().filter(|c| c.ok).map(|c| c.weight).sum();
+    let live_weight = if total_weight > 0.0 {
+        ok_weight / total_weight
+    } else {
+        0.0
+    };
     if ok_weight <= 0.0 {
-        return (0.0, true, true);
+        return FamilyScore {
+            score: 0.0,
+            partial: true,
+            all_down: true,
+            live_weight: 0.0,
+            thin_basis: false,
+        };
     }
     let score = 100.0
         * components
@@ -366,7 +408,87 @@ fn family_score(components: &[UnrestComponent]) -> (f64, bool, bool) {
             .map(|c| c.weight * c.normalized_0_1)
             .sum::<f64>()
         / ok_weight;
-    (score, components.iter().any(|c| !c.ok), false)
+    FamilyScore {
+        score,
+        partial: components.iter().any(|c| !c.ok),
+        all_down: false,
+        live_weight,
+        thin_basis: live_weight < 0.5,
+    }
+}
+
+/// Cap a level one step down the ladder (severe→high→moderate→low).
+/// "low" and "unknown" have nothing below them and stay put.
+fn cap_level_one_step(level: &str) -> String {
+    match level {
+        "severe" => "high".to_string(),
+        "high" => "moderate".to_string(),
+        "moderate" => "low".to_string(),
+        _ => level.to_string(),
+    }
+}
+
+/// Composite-level thin-basis qualification, pure for testing.
+/// `live_weight_frac` = fraction of total intended family weight that
+/// actually scored. When it drops below 0.5 the surviving signal is kept
+/// but qualified: thin_basis flag, confidence forced low, headline level
+/// capped one step down.
+struct CompositeQualifiers {
+    thin_basis: bool,
+    level: String,
+    confidence: String,
+}
+
+fn qualify_composite(
+    score: Option<f64>,
+    live_weight_frac: f64,
+    partial: bool,
+) -> CompositeQualifiers {
+    let thin_basis = score.is_some() && live_weight_frac < 0.5;
+    let level = match score {
+        Some(s) => {
+            let lvl = level_for(s);
+            if thin_basis {
+                cap_level_one_step(lvl)
+            } else {
+                lvl.to_string()
+            }
+        }
+        None => "unknown".to_string(),
+    };
+    let confidence = if thin_basis || score.is_none() {
+        "low"
+    } else if partial {
+        "medium"
+    } else {
+        "high"
+    }
+    .to_string();
+    CompositeQualifiers {
+        thin_basis,
+        level,
+        confidence,
+    }
+}
+
+/// The thin-basis note sentence, pure for testing.
+fn thin_basis_note(
+    live_weight_frac: f64,
+    live_families: &[String],
+    thin_families: &[String],
+) -> String {
+    let pct = (live_weight_frac * 100.0).round() as i64;
+    let mut note = format!(
+        "thin basis: score rests on {pct}% of intended signal ({}) — treat the level as provisional.",
+        live_families.join(", ")
+    );
+    if !thin_families.is_empty() {
+        note.push_str(&format!(
+            " thin-basis families: {}.",
+            thin_families.join(", ")
+        ));
+    }
+    note
 }
 
 // ---------------------------------------------------------------------------
@@ -514,21 +636,43 @@ pub async fn risk(
 
     let mut families: Vec<RiskFamily> = Vec::with_capacity(3);
     let mut fam_scores: Vec<(f64, f64)> = Vec::new(); // (weight, score)
+    let mut live_family_names: Vec<String> = Vec::new();
+    let mut thin_family_names: Vec<String> = Vec::new();
     for (fam, comps) in FAMILIES.iter().zip(family_comps.iter()) {
-        let (score, partial, all_down) = family_score(comps);
-        if !all_down {
-            fam_scores.push((fam.weight, score));
+        let fs = family_score(comps);
+        if !fs.all_down {
+            fam_scores.push((fam.weight, fs.score));
+            live_family_names.push(fam.id.to_string());
         }
+        if fs.thin_basis {
+            thin_family_names.push(fam.id.to_string());
+        }
+        let family_level = if fs.all_down {
+            "unknown".to_string()
+        } else if fs.thin_basis {
+            cap_level_one_step(level_for(fs.score))
+        } else {
+            level_for(fs.score).to_string()
+        };
         families.push(RiskFamily {
             family: fam.id.to_string(),
             weight: fam.weight,
-            score_0_100: (score * 10.0).round() / 10.0,
-            partial,
+            score_0_100: (fs.score * 10.0).round() / 10.0,
+            level: family_level,
+            thin_basis: fs.thin_basis,
+            live_weight: (fs.live_weight * 1000.0).round() / 1000.0,
+            partial: fs.partial,
             components: comps.to_vec(),
         });
     }
 
+    let total_family_weight: f64 = FAMILIES.iter().map(|f| f.weight).sum();
     let work_weight: f64 = fam_scores.iter().map(|(w, _)| w).sum();
+    let live_weight_frac = if total_family_weight > 0.0 {
+        work_weight / total_family_weight
+    } else {
+        0.0
+    };
     let score = if work_weight > 0.0 {
         Some(
             (fam_scores.iter().map(|(w, s)| w * s).sum::<f64>() / work_weight * 10.0).round()
@@ -537,10 +681,19 @@ pub async fn risk(
     } else {
         None
     };
+    // THIN-BASIS RULE: the surviving signal is real, so keep the
+    // redistributed score — but when it rests on <50% of the intended
+    // family weight, qualify it: flag it, force confidence low, and cap
+    // the headline level one step down. No score at all (all families
+    // down) is already "unknown" and needs no flag.
+    let partial = families.iter().any(|f| f.partial);
+    let q = qualify_composite(score, live_weight_frac, partial);
+    let thin_basis = q.thin_basis;
     let (level, safety) = match score {
-        Some(s) => (level_for(s).to_string(), safety_for(s).to_string()),
-        None => ("unknown".to_string(), "Unknown".to_string()),
+        Some(s) => (q.level, safety_for(s).to_string()),
+        None => (q.level, "Unknown".to_string()),
     };
+    let confidence = q.confidence;
 
     // Baseline-free peer rank vs the weekly watchlist snapshot.
     let (percentile, rank, peer_count, percentile_basis, peer_note) =
@@ -589,20 +742,37 @@ pub async fn risk(
             ),
         };
 
-    let partial = families.iter().any(|f| f.partial);
     let down: Vec<String> = families
         .iter()
         .flat_map(|f| f.components.iter())
         .filter(|c| !c.ok)
         .map(|c| format!("{}:{}", c.source, c.error.as_deref().unwrap_or("error")))
         .collect();
-    let note = if partial {
-        Some(format!(
-            "partial score: {} unavailable; working weights redistributed proportionally",
+    let mut note_parts: Vec<String> = Vec::new();
+    if partial {
+        note_parts.push(format!(
+            "partial score: {} unavailable; working weights redistributed proportionally.",
             down.join("; ")
-        ))
-    } else {
+        ));
+    }
+    if thin_basis {
+        note_parts.push(thin_basis_note(
+            live_weight_frac,
+            &live_family_names,
+            &thin_family_names,
+        ));
+    } else if !thin_family_names.is_empty() {
+        // Composite rests on >=50% of intended weight, but some of the
+        // contributing families are thin themselves — say so.
+        note_parts.push(format!(
+            "thin-basis families (levels capped one step down): {}.",
+            thin_family_names.join(", ")
+        ));
+    }
+    let note = if note_parts.is_empty() {
         None
+    } else {
+        Some(note_parts.join(" "))
     };
 
     Ok(Json(RiskResponse {
@@ -616,6 +786,8 @@ pub async fn risk(
         peer_count,
         percentile_basis,
         peer_note,
+        confidence,
+        thin_basis,
         partial,
         note,
         families,
@@ -909,19 +1081,148 @@ mod tests {
     fn family_score_redistributes_on_partial() {
         // 0.5@0.5 + 0.35@1.0 ok, 0.15 down -> 100*(0.25+0.35)/0.85
         let comps = vec![ok_comp(0.5, 0.5), ok_comp(0.35, 1.0), err_comp(0.15)];
-        let (score, partial, all_down) = family_score(&comps);
-        assert!(!all_down);
-        assert!(partial);
-        assert!((score - 70.588).abs() < 0.01, "score {score}");
+        let fs = family_score(&comps);
+        assert!(!fs.all_down);
+        assert!(fs.partial);
+        assert!((fs.score - 70.588).abs() < 0.01, "score {}", fs.score);
+        // 0.85 of leg weight live — not thin.
+        assert!((fs.live_weight - 0.85).abs() < 1e-9);
+        assert!(!fs.thin_basis);
     }
 
     #[test]
     fn family_score_all_down() {
         let comps = vec![err_comp(0.5), err_comp(0.35), err_comp(0.15)];
-        let (score, partial, all_down) = family_score(&comps);
-        assert!(all_down);
-        assert!(partial);
-        assert_eq!(score, 0.0);
+        let fs = family_score(&comps);
+        assert!(fs.all_down);
+        assert!(fs.partial);
+        assert_eq!(fs.score, 0.0);
+        assert_eq!(fs.live_weight, 0.0);
+        assert!(!fs.thin_basis); // no score at all — unknown, not "thin"
+    }
+
+    #[test]
+    fn thin_basis_boundary_at_half() {
+        // Exactly 0.50 live weight is NOT thin (>= 0.5 keeps current behavior).
+        let comps = vec![ok_comp(0.5, 0.8), err_comp(0.5)];
+        let fs = family_score(&comps);
+        assert!((fs.live_weight - 0.5).abs() < 1e-9);
+        assert!(!fs.thin_basis, "0.50 must not be thin");
+        // A hair below is thin.
+        let comps = vec![ok_comp(0.35, 0.8), ok_comp(0.14, 0.8), err_comp(0.51)];
+        let fs = family_score(&comps);
+        assert!(fs.live_weight < 0.5);
+        assert!(fs.thin_basis, "0.49 must be thin");
+    }
+
+    #[test]
+    fn thin_basis_family_keeps_score_but_flags() {
+        // Only the 0.15-weight leg survives at normalized 1.0.
+        let comps = vec![err_comp(0.5), err_comp(0.35), ok_comp(0.15, 1.0)];
+        let fs = family_score(&comps);
+        assert!(!fs.all_down);
+        assert!((fs.score - 100.0).abs() < 1e-9, "score kept: {}", fs.score);
+        assert!(fs.thin_basis);
+        assert!((fs.live_weight - 0.15).abs() < 1e-9);
+    }
+
+    #[test]
+    fn level_cap_steps_down_once() {
+        assert_eq!(cap_level_one_step("severe"), "high");
+        assert_eq!(cap_level_one_step("high"), "moderate");
+        assert_eq!(cap_level_one_step("moderate"), "low");
+        assert_eq!(cap_level_one_step("low"), "low"); // floor
+        assert_eq!(cap_level_one_step("unknown"), "unknown");
+    }
+
+    #[test]
+    fn qualify_composite_china_case() {
+        // China: unrest + violent_incidents nulled, only crime_disorder
+        // (0.25) live at 100. Live weight 0.25 < 0.5 → thin basis:
+        // score kept, level capped severe→high, confidence low.
+        let q = qualify_composite(Some(100.0), 0.25, true);
+        assert!(q.thin_basis);
+        assert_eq!(q.level, "high");
+        assert_eq!(q.confidence, "low");
+    }
+
+    #[test]
+    fn qualify_composite_healthy_cases() {
+        // Full signal, no partial: high confidence, no cap.
+        let q = qualify_composite(Some(80.0), 1.0, false);
+        assert!(!q.thin_basis);
+        assert_eq!(q.level, "severe");
+        assert_eq!(q.confidence, "high");
+        // Partial but >= 0.5 live: medium, no cap.
+        let q = qualify_composite(Some(80.0), 0.6, true);
+        assert!(!q.thin_basis);
+        assert_eq!(q.level, "severe");
+        assert_eq!(q.confidence, "medium");
+        // Exactly 0.5: not thin.
+        let q = qualify_composite(Some(30.0), 0.5, true);
+        assert!(!q.thin_basis);
+        assert_eq!(q.level, "moderate");
+        // No score at all: unknown + low, no thin flag.
+        let q = qualify_composite(None, 0.0, true);
+        assert!(!q.thin_basis);
+        assert_eq!(q.level, "unknown");
+        assert_eq!(q.confidence, "low");
+    }
+
+    #[test]
+    fn qualify_composite_thin_caps_every_level() {
+        // 0.4 live weight → thin; each score's level steps down once.
+        let cases = [
+            (100.0, "high"),
+            (80.0, "high"),
+            (74.9, "moderate"),
+            (60.0, "moderate"),
+            (49.9, "low"),
+            (30.0, "low"),
+            (24.9, "low"),
+            (0.0, "low"),
+        ];
+        for (score, capped) in cases {
+            let q = qualify_composite(Some(score), 0.4, true);
+            assert!(q.thin_basis);
+            assert_eq!(q.level, capped, "score {score}");
+            assert_eq!(q.confidence, "low");
+        }
+    }
+
+    #[test]
+    fn thin_basis_note_text() {
+        let note = thin_basis_note(
+            0.25,
+            &["crime_disorder".to_string()],
+            &["crime_disorder".to_string()],
+        );
+        assert!(
+            note.contains("thin basis: score rests on 25% of intended signal (crime_disorder)"),
+            "note: {note}"
+        );
+        assert!(
+            note.contains("treat the level as provisional"),
+            "note: {note}"
+        );
+        assert!(
+            note.contains("thin-basis families: crime_disorder"),
+            "note: {note}"
+        );
+        // No forbidden forecast language in the note.
+        let low = note.to_lowercase();
+        assert!(!low.contains("forecast"));
+        assert!(!low.contains("prediction"));
+        assert!(!low.contains("probability"));
+    }
+
+    #[test]
+    fn thin_basis_note_without_thin_families() {
+        // Composite thin via all-down families (no family scored thin
+        // itself): the family list clause is omitted.
+        let note = thin_basis_note(0.25, &["crime_disorder".to_string()], &[]);
+        assert!(note.contains("25% of intended signal (crime_disorder)"));
+        assert!(!note.contains("thin-basis families"));
     }
 
     #[test]

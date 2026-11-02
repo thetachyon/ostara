@@ -70,6 +70,13 @@ pub struct SnapshotPlace {
     pub level: Option<String>,
     pub safety: Option<String>,
     pub partial: bool,
+    /// Thin-basis flag from /api/risk: the score rests on <50% of
+    /// intended signal — level capped one step down, confidence low.
+    #[serde(default)]
+    pub thin_basis: bool,
+    /// "high" | "medium" | "low" from /api/risk.
+    #[serde(default)]
+    pub confidence: Option<String>,
     #[serde(default)]
     pub ok_components: usize,
     #[serde(default)]
@@ -99,6 +106,9 @@ pub struct SnapshotFamily {
     pub percentile: Option<f64>,
     #[serde(default)]
     pub rank: Option<usize>,
+    /// Thin-basis flag from /api/risk for this family.
+    #[serde(default)]
+    pub thin_basis: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -196,6 +206,10 @@ pub struct RiskMapPlace {
     pub level: Option<String>,
     pub safety: Option<String>,
     pub partial: bool,
+    /// Thin-basis flag: the score rests on <50% of intended signal.
+    pub thin_basis: bool,
+    /// "high" | "medium" | "low".
+    pub confidence: Option<String>,
     /// Score minus the previous snapshot's score; `null` on first run or
     /// when the place is new.
     pub delta: Option<f64>,
@@ -266,6 +280,8 @@ pub fn build_response(dir: &Path) -> Result<RiskMapResponse, ApiError> {
                 level: p.level.clone(),
                 safety: p.safety.clone(),
                 partial: p.partial,
+                thin_basis: p.thin_basis,
+                confidence: p.confidence.clone(),
                 delta,
                 percentile: p.percentile,
                 rank: p.rank,

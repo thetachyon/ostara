@@ -68,9 +68,11 @@ try:
     for f in fams:
         fvol = sum(float(c.get('raw_value') or 0) for c in f.get('components', []) if c.get('ok'))
         fam.append({'family': f['family'], 'weight': f['weight'],
-                    'score_0_100': round(f.get('score_0_100',0),1), 'volume': round(fvol,1)})
+                    'score_0_100': round(f.get('score_0_100',0),1), 'volume': round(fvol,1),
+                    'thin_basis': bool(f.get('thin_basis'))})
     print(json.dumps({'ok': okc, 'n': len(comps), 'score': d.get('score'), 'level': d.get('level'),
                       'safety': d.get('safety'), 'partial': d.get('partial'),
+                      'thin_basis': bool(d.get('thin_basis')), 'confidence': d.get('confidence'),
                       'recent_volume': round(vol,1), 'families': fam}))
 except Exception as e:
     print(json.dumps({'ok': 0, 'n': 0, 'error': str(e)[:120]}))
@@ -109,6 +111,7 @@ for line in open(results_tmp):
         "score": round(p["score"], 1) if p.get("score") is not None else None,
         "level": p.get("level"), "safety": p.get("safety"),
         "partial": bool(p.get("partial")),
+        "thin_basis": bool(p.get("thin_basis")), "confidence": p.get("confidence"),
         "ok_components": p.get("ok", 0),
         "recent_volume": p.get("recent_volume"),
         "families": p.get("families", []),

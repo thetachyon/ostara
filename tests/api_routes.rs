@@ -1307,6 +1307,8 @@ async fn risk_shape_for_france() {
         "percentile",
         "rank",
         "peer_count",
+        "confidence",
+        "thin_basis",
         "partial",
         "families",
         "methodology",
@@ -1350,6 +1352,17 @@ async fn risk_shape_for_france() {
             "score out of range: {score}"
         );
     }
+    // Thin-basis coherence: flagged → confidence forced low.
+    let thin = b.get("thin_basis").and_then(|v| v.as_bool()).unwrap();
+    let conf = b.get("confidence").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["high", "medium", "low"].contains(&conf),
+        "bad confidence {conf}"
+    );
+    if thin {
+        assert_eq!(conf, "low", "thin basis must force confidence low");
+        assert_ne!(level, "severe", "thin basis caps the level below severe");
+    }
     let fams = b
         .get("families")
         .and_then(|v| v.as_array())
@@ -1362,8 +1375,37 @@ async fn risk_shape_for_france() {
     fam_ids.sort_unstable();
     assert_eq!(fam_ids, ["crime_disorder", "unrest", "violent_incidents"]);
     for f in fams {
-        for key in ["family", "weight", "score_0_100", "partial", "components"] {
+        for key in [
+            "family",
+            "weight",
+            "score_0_100",
+            "level",
+            "thin_basis",
+            "live_weight",
+            "partial",
+            "components",
+        ] {
             assert!(f.get(key).is_some(), "family missing {key}: {f}");
+        }
+        // Family level honors the same vocabulary as the composite,
+        // capped one step down when the family is thin-basis.
+        let flevel = f.get("level").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["low", "moderate", "high", "severe", "unknown"].contains(&flevel),
+            "bad family level {flevel}"
+        );
+        // thin_basis is coherent with live_weight: thin ⟺ live < 0.5
+        // (all-down families report thin_basis false with level unknown).
+        let fthin = f.get("thin_basis").and_then(|v| v.as_bool()).unwrap();
+        let flive = f.get("live_weight").and_then(|v| v.as_f64()).unwrap();
+        if flevel == "unknown" {
+            assert!(!fthin, "all-down family must not be thin_basis");
+        } else {
+            assert_eq!(
+                fthin,
+                flive < 0.5,
+                "thin_basis must match live_weight < 0.5"
+            );
         }
         let comps = f
             .get("components")

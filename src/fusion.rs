@@ -158,6 +158,16 @@ pub fn level_for(score: f64) -> &'static str {
     }
 }
 
+/// Downgrade indicator confidence to at most medium when any live input
+/// rests on a thin-basis risk score. Pure for testing.
+fn apply_thin_basis_confidence(confidence: &str, inputs: &[EvaluatedInput]) -> String {
+    if confidence == "high" && inputs.iter().any(|i| i.live && i.thin_basis) {
+        "medium".to_string()
+    } else {
+        confidence.to_string()
+    }
+}
+
 /// Confidence from the fraction of total weight that was live.
 pub fn confidence_for(live_weight_fraction: f64) -> &'static str {
     if live_weight_fraction >= 0.8 {
@@ -229,6 +239,10 @@ struct EvaluatedInput {
     evidence_value: String,
     /// Extra detail for the evidence list.
     detail: String,
+    /// True when this input's upstream risk score was flagged thin_basis
+    /// (rested on <50% of intended signal). Downgrades the indicator's
+    /// confidence to at most medium.
+    thin_basis: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -266,11 +280,12 @@ fn score_inputs(inputs: &[EvaluatedInput]) -> (Option<f64>, f64) {
 
 /// Risk score via the /api/risk handler, in-process. Risk degrades
 /// internally and never fails hard, so a successful call is a live input.
+/// Returns (score, level, partial, thin_basis).
 async fn fetch_risk(
     state: &AppState,
     place: &str,
     kind: Option<&str>,
-) -> Option<(f64, String, bool)> {
+) -> Option<(f64, String, bool, bool)> {
     let q = crate::risk::RiskQuery {
         place: Some(place.to_string()),
         kind: kind.map(str::to_string),
@@ -282,7 +297,7 @@ async fn fetch_risk(
     let r = resp.0;
     // A null risk score is an honest unknown — the fusion input degrades
     // rather than carrying a fake number forward.
-    Some((r.score?, r.level.clone(), r.partial))
+    Some((r.score?, r.level.clone(), r.partial, r.thin_basis))
 }
 
 /// Critical-only sanctions count for a country, in-process. Uses the
@@ -388,6 +403,7 @@ async fn eval_static_input(state: &AppState, inp: &RegistryInput) -> EvaluatedIn
         value: None,
         evidence_value: "unavailable".to_string(),
         detail: String::new(),
+        thin_basis: false,
     };
     let live = |value: f64, evidence_value: String, detail: String| EvaluatedInput {
         live: true,
@@ -416,18 +432,27 @@ async fn eval_static_input(state: &AppState, inp: &RegistryInput) -> EvaluatedIn
             // URL-decode the place (registry uses plain names; be lenient).
             let place = percent_decode(place);
             match fetch_risk(state, &place, kind.as_deref()).await {
-                Some((score, level, partial)) => live(
-                    score,
-                    format!("{score:.1} ({level})"),
-                    format!(
-                        "composite risk score for {place}{}",
-                        if partial {
-                            " · partial (some feeds down)"
-                        } else {
-                            ""
-                        }
-                    ),
-                ),
+                Some((score, level, partial, thin)) => {
+                    let mut e = live(
+                        score,
+                        format!("{score:.1} ({level})"),
+                        format!(
+                            "composite risk score for {place}{}{}",
+                            if partial {
+                                " · partial (some feeds down)"
+                            } else {
+                                ""
+                            },
+                            if thin {
+                                " · THIN BASIS (<50% of intended signal) — treat as provisional"
+                            } else {
+                                ""
+                            }
+                        ),
+                    );
+                    e.thin_basis = thin;
+                    e
+                }
                 None => base,
             }
         }
@@ -625,24 +650,26 @@ async fn eval_election_indicator(state: &AppState, def: &RegistryIndicator) -> V
             value: Some(0.0),
             evidence_value: "none scheduled".to_string(),
             detail: "curated calendar registry — complete by construction".to_string(),
+            thin_basis: false,
         }];
     }
 
     // Score each election country concurrently; keep the top `keep`.
-    let scored: Vec<(String, String, f64, String)> = join_all(elections.iter().map(|(c, name)| {
-        let state = state.clone();
-        let c = c.clone();
-        let name = name.clone();
-        async move {
-            fetch_risk(&state, &c, None)
-                .await
-                .map(|(score, level, _)| (c, name, score, level))
-        }
-    }))
-    .await
-    .into_iter()
-    .flatten()
-    .collect();
+    let scored: Vec<(String, String, f64, String, bool)> =
+        join_all(elections.iter().map(|(c, name)| {
+            let state = state.clone();
+            let c = c.clone();
+            let name = name.clone();
+            async move {
+                fetch_risk(&state, &c, None)
+                    .await
+                    .map(|(score, level, _, thin)| (c, name, score, level, thin))
+            }
+        }))
+        .await
+        .into_iter()
+        .flatten()
+        .collect();
 
     let mut ranked = scored;
     ranked.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
@@ -652,16 +679,26 @@ async fn eval_election_indicator(state: &AppState, def: &RegistryIndicator) -> V
     ranked
         .into_iter()
         .enumerate()
-        .map(|(i, (country, event_name, score, level))| EvaluatedInput {
-            key: format!("election_risk:{country}"),
-            feed: format!("/api/risk?place={country}"),
-            role: format!("election-country risk ({event_name})"),
-            weight: weights.get(i).copied().unwrap_or(0.0) / live_w.max(f64::MIN_POSITIVE),
-            live: true,
-            value: Some(score),
-            evidence_value: format!("{country}: {score:.1} ({level})"),
-            detail: format!("risk score for election country {country}"),
-        })
+        .map(
+            |(i, (country, event_name, score, level, thin))| EvaluatedInput {
+                key: format!("election_risk:{country}"),
+                feed: format!("/api/risk?place={country}"),
+                role: format!("election-country risk ({event_name})"),
+                weight: weights.get(i).copied().unwrap_or(0.0) / live_w.max(f64::MIN_POSITIVE),
+                live: true,
+                value: Some(score),
+                evidence_value: format!("{country}: {score:.1} ({level})"),
+                detail: format!(
+                    "risk score for election country {country}{}",
+                    if thin {
+                        " · THIN BASIS (<50% of intended signal) — treat as provisional"
+                    } else {
+                        ""
+                    }
+                ),
+                thin_basis: thin,
+            },
+        )
         .collect()
 }
 
@@ -726,6 +763,9 @@ async fn evaluate(state: &AppState, def: &RegistryIndicator) -> FusionIndicator 
         None => ("unknown".to_string(), label_for(def, "unknown")),
     };
     let live_n = inputs.iter().filter(|i| i.live).count();
+    // A thin-basis risk input caps the indicator's confidence at medium:
+    // the score is real, but part of its foundation is provisional.
+    let confidence = apply_thin_basis_confidence(confidence_for(live_frac), &inputs);
 
     // Methodology in words: the arithmetic, with renormalized weights.
     let terms: Vec<String> = inputs
@@ -786,7 +826,7 @@ async fn evaluate(state: &AppState, def: &RegistryIndicator) -> FusionIndicator 
         score: score.map(|s| (s * 100.0).round() / 100.0),
         level,
         label,
-        confidence: confidence_for(live_frac).to_string(),
+        confidence,
         live_inputs: format!("{live_n}/{}", inputs.len()),
         evidence,
         methodology,
@@ -979,6 +1019,25 @@ mod tests {
         assert_eq!(confidence_for(0.0), "low");
     }
 
+    #[test]
+    fn thin_basis_risk_input_caps_confidence_at_medium() {
+        // high + thin-basis live input → medium.
+        let inputs = vec![ev("a", 0.5, true, 80.0), ev_thin("risk_thin", 0.5, 100.0)];
+        assert_eq!(apply_thin_basis_confidence("high", &inputs), "medium");
+        // medium stays medium (at most medium, never raised).
+        assert_eq!(apply_thin_basis_confidence("medium", &inputs), "medium");
+        // low stays low.
+        assert_eq!(apply_thin_basis_confidence("low", &inputs), "low");
+        // thin input that is NOT live does not downgrade.
+        let mut dead = ev("risk_dead", 0.5, false, 0.0);
+        dead.thin_basis = true;
+        let inputs = vec![ev("a", 0.5, true, 80.0), dead];
+        assert_eq!(apply_thin_basis_confidence("high", &inputs), "high");
+        // no thin inputs → unchanged.
+        let inputs = vec![ev("a", 0.5, true, 80.0), ev("b", 0.5, true, 60.0)];
+        assert_eq!(apply_thin_basis_confidence("high", &inputs), "high");
+    }
+
     // -- weight redistribution --------------------------------------------
 
     fn ev(key: &str, weight: f64, live: bool, value: f64) -> EvaluatedInput {
@@ -991,6 +1050,15 @@ mod tests {
             value: live.then_some(value),
             evidence_value: format!("{value}"),
             detail: String::new(),
+            thin_basis: false,
+        }
+    }
+
+    fn ev_thin(key: &str, weight: f64, value: f64) -> EvaluatedInput {
+        EvaluatedInput {
+            thin_basis: true,
+            detail: "THIN BASIS".to_string(),
+            ..ev(key, weight, true, value)
         }
     }
 
