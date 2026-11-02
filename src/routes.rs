@@ -466,6 +466,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         cyber,
         threatfox,
         markets,
+        prices,
         conflicts,
         helio,
         telegram,
@@ -617,6 +618,28 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
                 let r = feeds::markets::fetch(&c).await?;
                 serde_json::to_value(&r).map_err(|e| {
                     FeedError::new(feeds::markets::FEED, format!("serialize failed: {e}"))
+                })
+            }) as BoxFut<_>
+        ),
+        feed_count(
+            &state,
+            "prices",
+            {
+                let syms: Vec<String> = feeds::prices::DEFAULT_SYMBOLS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
+                feeds::prices::cache_key(&syms)
+            },
+            feeds::prices::TTL,
+            |c| Box::pin(async move {
+                let syms: Vec<String> = feeds::prices::DEFAULT_SYMBOLS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
+                let r = feeds::prices::fetch_quotes(&c, &syms).await?;
+                serde_json::to_value(&r).map_err(|e| {
+                    FeedError::new(feeds::prices::FEED, format!("serialize failed: {e}"))
                 })
             }) as BoxFut<_>
         ),
@@ -808,6 +831,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         cyber,
         threatfox,
         markets,
+        prices,
         conflicts,
         helio,
         nuclear_stat,
@@ -1024,6 +1048,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         threatfox,
         telegram,
         markets,
+        prices,
         nuclear,
         chokepoints,
         risk_map,
@@ -1091,6 +1116,9 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
             let config = config.clone();
             move |c| async move { feeds::markets::probe_detail(&c, &config).await }
         }),
+        run_probe(state.client.clone(), "prices", {
+            move |c| async move { feeds::prices::probe_detail(&c).await }
+        }),
         run_probe(state.client.clone(), "nuclear", {
             let config = config.clone();
             move |c| async move { feeds::nuclear::probe_detail(&c, &config).await }
@@ -1139,6 +1167,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         threatfox,
         telegram,
         markets,
+        prices,
         nuclear,
         chokepoints,
         risk_map,

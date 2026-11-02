@@ -1537,3 +1537,103 @@ async fn risk_map_shape_and_delta() {
     assert!(ky["delta"].is_null(), "new place: null delta");
     risk_map_restore(&dir, prev);
 }
+
+// ---------------------------------------------------------------------------
+// /api/prices contract
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn prices_default_shape_or_degraded() {
+    let g = get("/api/prices").await;
+    match g.status {
+        StatusCode::OK => {
+            let quotes = g
+                .body
+                .get("quotes")
+                .and_then(|v| v.as_array())
+                .expect("quotes array");
+            assert!(
+                quotes.len() >= 20,
+                "default list should return 20+ quotes, got: {}",
+                body_preview(&g)
+            );
+            for q in quotes {
+                assert!(q.get("symbol").and_then(|v| v.as_str()).is_some());
+                assert!(q.get("price").and_then(|v| v.as_f64()).is_some());
+                assert!(q.get("spark").and_then(|v| v.as_array()).is_some());
+            }
+            assert!(g.body.get("missing").and_then(|v| v.as_array()).is_some());
+            let source = g.body.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            assert!(source.contains("delayed"), "got: {}", body_preview(&g));
+        }
+        StatusCode::BAD_GATEWAY => {
+            assert!(g.body.get("error").is_some(), "got: {}", body_preview(&g));
+            assert!(g.body.get("detail").is_some(), "got: {}", body_preview(&g));
+        }
+        s => panic!("unexpected status {s}, got: {}", body_preview(&g)),
+    }
+}
+
+#[tokio::test]
+async fn prices_custom_symbols_and_missing() {
+    let g = get("/api/prices?symbols=AAPL,ZZZZQQQNOTREAL").await;
+    match g.status {
+        StatusCode::OK => {
+            let quotes = g.body.get("quotes").and_then(|v| v.as_array()).unwrap();
+            assert!(
+                quotes
+                    .iter()
+                    .any(|q| q.get("symbol").and_then(|v| v.as_str()) == Some("AAPL")),
+                "got: {}",
+                body_preview(&g)
+            );
+            let missing = g.body.get("missing").and_then(|v| v.as_array()).unwrap();
+            assert!(
+                missing
+                    .iter()
+                    .any(|m| m.get("symbol").and_then(|v| v.as_str()) == Some("ZZZZQQQNOTREAL")),
+                "bad symbol must be reported in missing[], got: {}",
+                body_preview(&g)
+            );
+        }
+        StatusCode::BAD_GATEWAY => {
+            assert!(g.body.get("error").is_some(), "got: {}", body_preview(&g));
+        }
+        s => panic!("unexpected status {s}, got: {}", body_preview(&g)),
+    }
+}
+
+#[tokio::test]
+async fn prices_rejects_too_many_symbols() {
+    let many = (0..41)
+        .map(|i| format!("S{i}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let g = get(&format!("/api/prices?symbols={many}")).await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+#[tokio::test]
+async fn prices_blank_symbols_uses_default_list() {
+    // Pure whitespace trims to empty -> default watchlist (matches the UI's
+    // "blank = watchlist" placeholder).
+    let g = get("/api/prices?symbols=%20").await;
+    match g.status {
+        StatusCode::OK => {
+            let quotes = g.body.get("quotes").and_then(|v| v.as_array()).unwrap();
+            assert!(
+                quotes.len() >= 20,
+                "blank should serve the default list, got: {}",
+                body_preview(&g)
+            );
+        }
+        StatusCode::BAD_GATEWAY => {
+            assert!(g.body.get("error").is_some(), "got: {}", body_preview(&g));
+        }
+        s => panic!("unexpected status {s}, got: {}", body_preview(&g)),
+    }
+}

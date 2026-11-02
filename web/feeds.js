@@ -244,6 +244,47 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "prices", label: "Prices", health: "prices",
+      group: "global",
+      note: "delayed quotes \u2014 Yahoo Finance (free, keyless), ~15 min delay on most venues",
+      inputs: [{ name: "symbols", placeholder: "AAPL, NVDA, EURUSD=X, CL=F, ^GSPC (blank = watchlist)" }],
+      url: (p) => "/api/prices" + (p.symbols && p.symbols.trim() ? `?symbols=${encodeURIComponent(p.symbols.trim())}` : ""),
+      render(j, el) {
+        const spark = (vals) => {
+          if (!vals || vals.length < 2) return "—";
+          const w = 76, h = 22;
+          const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+          const pts = vals.map((v, i) =>
+            `${(i / (vals.length - 1) * w).toFixed(1)},${(h - 2 - (v - min) / rng * (h - 4)).toFixed(1)}`
+          ).join(" ");
+          const col = vals[vals.length - 1] >= vals[0] ? "var(--good)" : "var(--bad)";
+          return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">` +
+            `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5"/></svg>`;
+        };
+        const fmtP = (v) => v == null ? "—" : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        const rows = (j.quotes || []).slice(0, ROW_CAP).map((q) => {
+          const chg = q.change_pct != null ? Number(q.change_pct).toFixed(2) + "%" : "—";
+          const cls = q.change_pct > 0 ? "color:var(--good)" : q.change_pct < 0 ? "color:var(--bad)" : "";
+          const range = (q.day_low != null && q.day_high != null)
+            ? `${fmtP(q.day_low)} – ${fmtP(q.day_high)}` : "—";
+          return [
+            `<b>${esc(q.symbol)}</b><br/><span style="color:var(--dim)">${esc(q.name || "")}</span>`,
+            fmtP(q.price),
+            `<span style="${cls}">${chg}</span>`,
+            range,
+            spark(q.spark),
+            esc(q.date || ""),
+          ];
+        });
+        const missing = (j.missing || []).map((m) =>
+          `<div class="m">no data: <b>${esc(m.symbol)}</b> — ${esc(m.reason || "")}</div>`
+        ).join("");
+        el.innerHTML = table(["Symbol", "Price", "Chg %", "Day range", "Trend", "Date"], rows) +
+          missing + genLine(j);
+        this.count = (j.quotes || []).length;
+      },
+    },
+    {
       id: "conflicts", label: "Conflicts", health: "conflicts",
       group: "country",
       url: () => "/api/conflicts",

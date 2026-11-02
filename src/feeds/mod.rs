@@ -25,6 +25,7 @@ pub mod mastodon;
 pub mod n2yo;
 pub mod news;
 pub mod nuclear;
+pub mod prices;
 pub mod quakes;
 pub mod risk_map;
 pub mod rss;
@@ -173,6 +174,7 @@ pub fn routes() -> axum::Router<crate::routes::AppState> {
         .route("/api/threatfox", get(threatfox::handler))
         .route("/api/telegram", get(telegram::handler))
         .route("/api/markets", get(markets::handler))
+        .route("/api/prices", get(prices::handler))
         .route("/api/nuclear", get(nuclear::handler))
         .route("/api/chokepoints", get(chokepoints::handler))
         .route("/api/risk-map", get(risk_map::handler))
