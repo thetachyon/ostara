@@ -93,6 +93,34 @@ window.OST = window.OST || {};
         })),
     },
     {
+      id: "chokepoints", label: "Chokepoints", color: "#ff5252",
+      url: "/api/chokepoints?category=chokepoint",
+      toFeatures: (j) => (j.entries || [])
+        .filter((c) => c.latitude != null && c.longitude != null)
+        .map((c) => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [c.longitude, c.latitude] },
+          properties: {
+            title: esc(c.name || "chokepoint"),
+            desc: `${esc(c.status || "")}<br/><span class="m">status as of ${esc(c.status_date || "—")} — dated snapshot, not live</span>`,
+          },
+        })),
+    },
+    {
+      id: "chokepoint_ports", label: "Congested ports", color: "#f5a524",
+      url: "/api/chokepoints?category=congestion_port",
+      toFeatures: (j) => (j.entries || [])
+        .filter((c) => c.latitude != null && c.longitude != null)
+        .map((c) => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [c.longitude, c.latitude] },
+          properties: {
+            title: esc(c.name || "port"),
+            desc: `${esc(c.status || "")}<br/><span class="m">status as of ${esc(c.status_date || "—")} — dated snapshot, not live</span>`,
+          },
+        })),
+    },
+    {
       id: "cameras", label: "Public cameras", color: "#40c4ff",
       url: "/api/cameras?limit=200",
       toFeatures: (j) => (j.cameras || [])

@@ -1191,3 +1191,65 @@ async fn threats_scan_severity_filter() {
         );
     }
 }
+
+#[tokio::test]
+async fn chokepoints_endpoint_shape() {
+    let g = get("/api/chokepoints").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(10),
+        "got: {}",
+        body_preview(&g)
+    );
+    let caveat = g
+        .body
+        .get("caveat")
+        .and_then(|v| v.as_str())
+        .expect("caveat key");
+    assert!(caveat.contains("2026-11-02"), "got: {}", body_preview(&g));
+    assert!(
+        caveat.contains("not a live feed"),
+        "got: {}",
+        body_preview(&g)
+    );
+    let entries = g
+        .body
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .expect("entries array");
+    assert_eq!(entries.len(), 10);
+    for e in entries {
+        assert!(e.get("id").and_then(|v| v.as_str()).is_some());
+        assert!(e.get("name").and_then(|v| v.as_str()).is_some());
+        let cat = e.get("category").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(["chokepoint", "congestion_port"].contains(&cat));
+        assert!(e.get("latitude").and_then(|v| v.as_f64()).is_some());
+        assert!(e.get("longitude").and_then(|v| v.as_f64()).is_some());
+        assert!(e.get("status").and_then(|v| v.as_str()).is_some());
+        assert_eq!(
+            e.get("status_date").and_then(|v| v.as_str()),
+            Some("2026-11-02")
+        );
+    }
+}
+
+#[tokio::test]
+async fn chokepoints_category_filter() {
+    let g = get("/api/chokepoints?category=chokepoint").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(6),
+        "got: {}",
+        body_preview(&g)
+    );
+    let g = get("/api/chokepoints?category=congestion_port").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(4),
+        "got: {}",
+        body_preview(&g)
+    );
+}

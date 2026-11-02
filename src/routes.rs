@@ -756,6 +756,25 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             },
         ),
     };
+    // Maritime chokepoints: static embedded registry, counted like nuclear.
+    let chokepoints_stat = match feeds::chokepoints::load_registry() {
+        Ok(entries) => (
+            "chokepoints".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(entries.len()),
+                error: None,
+            },
+        ),
+        Err(detail) => (
+            "chokepoints".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(format!("registry invalid: {detail}")),
+            },
+        ),
+    };
     // Vessels: live AISStream snapshot when AIS_API_KEY is set; disabled
     // by design otherwise (honestly reported, never fetched).
     let vessels_stat = if state.vessels.is_enabled() {
@@ -792,6 +811,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         conflicts,
         helio,
         nuclear_stat,
+        chokepoints_stat,
         vessels_stat,
         telegram,
         bluesky,
@@ -1005,6 +1025,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         telegram,
         markets,
         nuclear,
+        chokepoints,
         conflicts,
         helio,
         bluesky,
@@ -1073,6 +1094,10 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
             let config = config.clone();
             move |c| async move { feeds::nuclear::probe_detail(&c, &config).await }
         }),
+        run_probe(state.client.clone(), "chokepoints", {
+            let config = config.clone();
+            move |c| async move { feeds::chokepoints::probe_detail(&c, &config).await }
+        }),
         run_probe(state.client.clone(), "conflicts", {
             let config = config.clone();
             move |c| async move { feeds::conflicts::probe_detail(&c, &config).await }
@@ -1097,8 +1122,27 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
 
     let mut feeds_map = HashMap::new();
     for (name, report) in [
-        flights, quakes, weather, satellites, news, cameras, fires, n2yo, vessels, cyber,
-        threatfox, telegram, markets, nuclear, conflicts, helio, bluesky, mastodon, rss, gnews,
+        flights,
+        quakes,
+        weather,
+        satellites,
+        news,
+        cameras,
+        fires,
+        n2yo,
+        vessels,
+        cyber,
+        threatfox,
+        telegram,
+        markets,
+        nuclear,
+        chokepoints,
+        conflicts,
+        helio,
+        bluesky,
+        mastodon,
+        rss,
+        gnews,
     ] {
         feeds_map.insert(name, report);
     }

@@ -13,6 +13,7 @@
 
 pub mod bluesky;
 pub mod cameras;
+pub mod chokepoints;
 pub mod conflicts;
 pub mod cyber;
 pub mod fires;
@@ -172,6 +173,7 @@ pub fn routes() -> axum::Router<crate::routes::AppState> {
         .route("/api/telegram", get(telegram::handler))
         .route("/api/markets", get(markets::handler))
         .route("/api/nuclear", get(nuclear::handler))
+        .route("/api/chokepoints", get(chokepoints::handler))
         .route("/api/conflicts", get(conflicts::handler))
         .route("/api/space-weather", get(helio::handler))
         .route("/api/bluesky", get(bluesky::handler))

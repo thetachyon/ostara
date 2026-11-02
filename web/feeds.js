@@ -519,6 +519,28 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "chokepoints", label: "Chokepoints", health: "chokepoints", map: "chokepoints",
+      group: "global",
+      staticNote: "embedded registry — 10 entries",
+      note: "dated snapshot (2026-11-02) — verify before operational use; reference data, not a live feed",
+      inputs: [
+        { name: "category", type: "select", options: ["all", "chokepoint", "congestion_port"], value: "all" },
+      ],
+      url: (p) => "/api/chokepoints" + (p.category && p.category !== "all" ? `?category=${encodeURIComponent(p.category)}` : ""),
+      render(j, el) {
+        const catChip = (c) => c === "chokepoint"
+          ? `<span class="chip" style="color:var(--bad);border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px">chokepoint</span>`
+          : `<span class="chip" style="color:var(--warn);border:1px solid var(--warn);border-radius:3px;padding:0 5px;font-size:10px">congested port</span>`;
+        el.innerHTML = (j.entries || []).slice(0, ROW_CAP).map((c) =>
+          `<div class="feed-item"><div>${catChip(c.category)} <b>${esc(c.name || "—")}</b></div>` +
+          `<div>${esc(c.status || "")}</div>` +
+          `<div class="m">status as of ${esc(c.status_date || "—")}</div></div>`
+        ).join("") +
+        `<div class="m" style="margin-top:6px">${(j.entries || []).length} shown · ${esc(j.caveat || "")}</div>` + genLine(j);
+        this.count = (j.entries || []).length;
+      },
+    },
+    {
       id: "nuclear", label: "Nuclear", health: "nuclear", map: "nuclear",
       group: "country",
       staticNote: "embedded registry — 189 stations",
