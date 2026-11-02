@@ -620,6 +620,75 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "sanctions", label: "Sanctions", health: null,
+      group: "global",
+      note: "keyword-flagged sanctions/tariff/export-control mentions by country · not verified designations · verify against OFAC/EU lists before trading",
+      inputs: [
+        { name: "country", placeholder: "country (default: all 15)" },
+        { name: "severity", type: "select", options: ["all", "critical", "high", "medium"], value: "all" },
+      ],
+      url: (p) => `/api/sanctions?country=${encodeURIComponent((p.country || "all").trim() || "all")}&severity=${encodeURIComponent(p.severity || "all")}`,
+      render(j, el) {
+        const items = j.items || [];
+        const countries = j.countries || [];
+        const sevStyle = (s) => s === "critical"
+          ? "color:var(--bad);border-color:var(--bad)"
+          : s === "high" ? "color:var(--warn);border-color:var(--warn)" : "color:var(--accent,#7aa2f7);border-color:var(--accent,#7aa2f7)";
+        const srcs = (j.sources || []).map((s) =>
+          `${esc(s.source)}: ${s.ok ? "ok" : "unavailable" + (s.detail ? " — " + esc(s.detail) : "")}`).join(" · ");
+        const cards = items.slice(0, ROW_CAP).map((it) =>
+            `<div class="feed-item"><div><span class="chip" style="${sevStyle(it.severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(it.severity || "")}</span> ` +
+            `<b>${esc(it.country || "")}</b> ` +
+            `<a href="${esc(it.url || "#")}" target="_blank" rel="noopener">${esc(it.title || "(untitled)")}</a></div>` +
+            `<div class="m">${esc(it.source || "")} · ${esc((it.published || "").slice(0, 16).replace("T", " "))}</div>` +
+            (it.text_snippet ? `<div>${esc(it.text_snippet.slice(0, 260))}${it.text_snippet.length > 260 ? "…" : ""}</div>` : "") +
+            (it.matched_keywords && it.matched_keywords.length ? `<div class="m">matched: ${it.matched_keywords.map(esc).join(", ")}</div>` : "") +
+            `</div>`
+          ).join("") || `<div class="m">no flagged mentions</div>`;
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:4px"><b>${esc(j.mode === "country" ? (j.country || "") : "all 15 watchlist countries")}</b></div>` +
+          `<div class="m" style="margin-bottom:6px">${items.length} flagged item${items.length === 1 ? "" : "s"} · ${esc(srcs)}</div>` +
+          (countries.length > 1 ? `<div class="m" style="margin-bottom:8px">` + countries.map((c) =>
+            `<span class="chip" style="border:1px solid var(--dim,#9aa4b2);border-radius:3px;padding:0 5px;font-size:10px;margin:0 4px 4px 0;display:inline-block">${esc(c.country)} ${c.count}` +
+            (c.critical ? ` · <b style="${sevStyle("critical")}">crit ${c.critical}</b>` : "") +
+            (c.high ? ` · <b style="${sevStyle("high")}">high ${c.high}</b>` : "") + `</span>`).join("") + `</div>` : "") +
+          cards +
+          `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
+          `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
+          genLine(j);
+        this.count = items.length;
+      },
+    },
+    {
+      id: "storms", label: "Storms", health: "storms", map: "storms",
+      group: "global",
+      note: "NOAA NHC active tropical cyclones — position, category, wind/pressure",
+      url: () => "/api/storms",
+      render(j, el) {
+        const active = j.active || [];
+        const catStyle = (c) => /^Cat[345]/.test(c || "")
+          ? "color:var(--bad);border-color:var(--bad)"
+          : /^Cat[12]/.test(c || "") ? "color:var(--warn);border-color:var(--warn)"
+          : (c === "TS" ? "color:var(--accent,#7aa2f7);border-color:var(--accent,#7aa2f7)" : "color:var(--dim,#9aa4b2);border-color:var(--dim,#9aa4b2)");
+        if (j.none_active) {
+          el.innerHTML = `<div class="m">no active tropical cyclones (NHC, as of ${esc((j.generated_at || "").slice(0, 16).replace("T", " "))} UTC)</div>` + genLine(j);
+          this.count = 0;
+          return;
+        }
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px">${active.length} active storm${active.length === 1 ? "" : "s"}</div>` +
+          active.map((s) =>
+            `<div class="feed-item"><div><span class="chip" style="${catStyle(s.category)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(s.category || "")}</span> ` +
+            `<b>${esc(s.name || "unnamed")}</b> <span class="m">${esc(s.basin || "")} · ${esc(s.atcf_id || "")}</span></div>` +
+            `<div>wind ${s.wind_kt != null ? s.wind_kt + " kt" : "—"} · pressure ${s.pressure_mb != null ? s.pressure_mb + " mb" : "—"} · moving ${esc(s.movement || "—")}</div>` +
+            `<div class="m">advisory ${esc(s.advisory_time || "—")}</div>` +
+            (s.headline ? `<div style="margin-top:4px">${esc(s.headline)}</div>` : "") +
+            `</div>`
+          ).join("") + genLine(j);
+        this.count = active.length;
+      },
+    },
+    {
       id: "risk", label: "Risk & safety", health: null,
       group: "global",
       note: "heuristic risk & safety score per country or city · not a forecast · not travel advice",

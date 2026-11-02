@@ -514,6 +514,60 @@ severity filter chips, and result cards with severity-colored chips,
 source, date, link, and matched keywords; methodology + disclaimer one
 click away in a `<details>`.
 
+### `GET /api/sanctions` — sanctions/tariff/export-control keyword monitor
+
+Keyword scanning of public sources for sanctions language touching a
+curated 15-country watchlist (Russia, Iran, China, North Korea,
+Venezuela, Belarus, Myanmar, Cuba, Syria, Nicaragua, Sudan, Zimbabwe,
+Lebanon, Libya, Hong Kong; see `data/sanctions_watchlist.json`). Reuses
+the threat-scan architecture: severity tiers (**critical** — designation
+language: `designat*` + `sanction`, entity list, asset freeze, new
+sanctions announced/imposed; **high** — `tariff`, `export controls`,
+`secondary sanctions`; **medium** — sanctions debate, waivers,
+relief/easing, extensions, plus a "sanctions mention" fallback for query
+matches below every tier), word-boundary matching, per-item source
+attribution, and the KEYWORD SCAN disclaimer style. Sources: Google News
+RSS + Bluesky + configured `TELEGRAM_CHANNELS` (each through its normal
+cache path/TTL; assembled per-country scan cached 900s).
+
+- `GET /api/sanctions?country=<name|alias|iso|all>&severity=all|critical|high|medium`
+  — `country` defaults to `all` (all 15 countries scanned concurrently,
+  grouped per country with item counts); a single country does a deep
+  scan. Items sort by severity then recency, capped (25/country, 150 in
+  all-mode). Bad severity → 400; unknown country → 404.
+
+**Not verified designations.** Every response states: verify against
+OFAC's SDN list, the EU sanctions map, and other official sources before
+trading or taking compliance action. English-language coverage only.
+Feeds panel "Sanctions" category under Global: country input (default
+all), severity filter, per-country count chips, and cards with severity
+badges, source links, matched keywords, and the disclaimer.
+
+### `GET /api/storms` — active tropical cyclones (NOAA NHC)
+
+```sh
+curl http://localhost:3000/api/storms
+```
+```json
+{
+  "generated_at": "2026-11-02T16:10:00.000Z",
+  "none_active": true,
+  "count": 0,
+  "active": [],
+  "source": "NOAA NHC nhc_active.kml — experimental active-storms product, keyless"
+}
+```
+
+Keyless parse of NHC's experimental `nhc_active.kml` (120s refresh;
+structure verified against an archived 2024-09-27 copy captured during
+Hurricane Helene). When storms are active, each carries name, basin
+(atlantic/east_pacific/central_pacific from the ATCF id), Saffir-Simpson
+category (TD/TS/Cat1–5 from wind speed, PT for post-tropical), lat/lon,
+wind (kt), pressure (mb), movement, advisory time, and the NHC headline.
+When none are active the response carries `"none_active": true` — it
+never invents a storm. Cached 600s. Feeds panel "Storms" category under
+Global plus a map layer (off by default) with category-scaled markers.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,

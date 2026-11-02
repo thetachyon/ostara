@@ -32,6 +32,7 @@ pub mod quakes;
 pub mod risk_map;
 pub mod rss;
 pub mod satellites;
+pub mod storms;
 pub mod telegram;
 pub mod threatfox;
 pub mod vessels;
@@ -188,4 +189,5 @@ pub fn routes() -> axum::Router<crate::routes::AppState> {
         .route("/api/gnews", get(gnews::handler))
         .route("/api/calendar", get(econ_calendar::handler))
         .route("/api/earnings", get(earnings::handler))
+        .route("/api/storms", get(storms::handler))
 }

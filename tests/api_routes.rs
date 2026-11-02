@@ -1637,3 +1637,109 @@ async fn prices_blank_symbols_uses_default_list() {
         s => panic!("unexpected status {s}, got: {}", body_preview(&g)),
     }
 }
+
+#[tokio::test]
+async fn sanctions_bad_severity_is_400() {
+    let g = get("/api/sanctions?country=Iran&severity=bogus").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn sanctions_unknown_country_is_404() {
+    let g = get("/api/sanctions?country=Narnia").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND, "got: {}", body_preview(&g));
+}
+
+#[tokio::test]
+async fn sanctions_country_shape_and_severity_filter() {
+    // Live scan; upstreams may be down in the sandbox — the contract is
+    // the shape and the filter behavior on whatever items exist.
+    let g = get("/api/sanctions?country=Cuba").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_json(&g, "/api/sanctions");
+    assert_eq!(g.body["mode"], "country");
+    assert_eq!(g.body["country"], "Cuba");
+    let countries = g.body.get("countries").and_then(|v| v.as_array()).unwrap();
+    assert_eq!(countries.len(), 1);
+    assert_eq!(
+        countries[0].get("country").and_then(|v| v.as_str()),
+        Some("Cuba")
+    );
+    let disc = g.body.get("disclaimer").and_then(|v| v.as_str()).unwrap();
+    assert!(
+        disc.contains("NOT VERIFIED DESIGNATIONS"),
+        "disclaimer states non-verified status"
+    );
+    assert!(disc.contains("OFAC"), "disclaimer names OFAC");
+    let items = g.body.get("items").and_then(|v| v.as_array()).unwrap();
+    for it in items {
+        let sev = it.get("severity").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["critical", "high", "medium"].contains(&sev),
+            "bad severity {sev}"
+        );
+        assert_eq!(
+            it.get("country").and_then(|v| v.as_str()),
+            Some("Cuba"),
+            "country-mode items carry the country"
+        );
+        assert!(
+            it.get("matched_keywords")
+                .and_then(|v| v.as_array())
+                .is_some(),
+            "items carry matched_keywords"
+        );
+    }
+    // severity=critical is a subset of severity=all.
+    let crit = get("/api/sanctions?country=Cuba&severity=critical").await;
+    assert_eq!(crit.status, StatusCode::OK, "got: {}", body_preview(&crit));
+    let crit_items = crit.body.get("items").and_then(|v| v.as_array()).unwrap();
+    assert!(
+        crit_items.len() <= items.len(),
+        "severity=critical is a subset of all"
+    );
+    for it in crit_items {
+        assert_eq!(
+            it.get("severity").and_then(|v| v.as_str()),
+            Some("critical"),
+            "filter keeps only critical"
+        );
+    }
+}
+
+#[tokio::test]
+async fn storms_shape() {
+    // Feed contract: 200 with the payload, or 502 with {error, detail}.
+    let g = get("/api/storms").await;
+    assert_feed_contract(&g, "/api/storms");
+    if g.status == StatusCode::OK {
+        let none_active = g.body.get("none_active").and_then(|v| v.as_bool()).unwrap();
+        let active = g.body.get("active").and_then(|v| v.as_array()).unwrap();
+        let count = g.body.get("count").and_then(|v| v.as_u64()).unwrap() as usize;
+        assert_eq!(count, active.len(), "count matches active array");
+        assert_eq!(none_active, active.is_empty(), "none_active is consistent");
+        for s in active {
+            for f in ["name", "basin", "category", "atcf_id"] {
+                assert!(
+                    s.get(f).and_then(|v| v.as_str()).is_some(),
+                    "storm carries {f}"
+                );
+            }
+            assert!(s.get("lat").and_then(|v| v.as_f64()).is_some());
+            assert!(s.get("lon").and_then(|v| v.as_f64()).is_some());
+            let cat = s.get("category").and_then(|v| v.as_str()).unwrap_or("");
+            assert!(
+                [
+                    "TD", "TS", "Cat1", "Cat2", "Cat3", "Cat4", "Cat5", "PT", "HU"
+                ]
+                .contains(&cat),
+                "bad category {cat}"
+            );
+        }
+    }
+}

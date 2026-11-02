@@ -21,6 +21,7 @@ pub mod intel;
 pub mod recon;
 pub mod risk;
 pub mod routes;
+pub mod sanctions;
 pub mod threats;
 pub mod time;
 pub mod unrest;

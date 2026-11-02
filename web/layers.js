@@ -152,6 +152,30 @@ window.OST = window.OST || {};
         }),
     },
     {
+      id: "storms", label: "Storms", color: "#e5484d",
+      url: "/api/storms",
+      scoreStyled: true,
+      defaultOff: true,
+      note: "NOAA NHC active tropical cyclones — marker size/color scale with Saffir-Simpson category",
+      toFeatures: (j) => {
+        // Reuse the score-driven paint: category → pseudo-score.
+        const catScore = { TD: 15, PT: 25, TS: 35, HU: 60, Cat1: 55, Cat2: 65, Cat3: 80, Cat4: 90, Cat5: 100 };
+        return (j.active || [])
+          .filter((s) => s.lat != null && s.lon != null)
+          .map((s) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+            properties: {
+              title: `${esc(s.category || "")} ${esc(s.name || "unnamed")} <span class="m">(${esc(s.atcf_id || "")})</span>`,
+              desc: `wind <b>${s.wind_kt != null ? s.wind_kt + " kt" : "—"}</b> · pressure ${s.pressure_mb != null ? s.pressure_mb + " mb" : "—"} · moving ${esc(s.movement || "—")}` +
+                `<br/><span class="m">advisory ${esc(s.advisory_time || "—")} · ${esc(s.basin || "")}</span>` +
+                (s.headline ? `<br/>${esc(s.headline)}` : ""),
+              score: catScore[s.category] != null ? catScore[s.category] : 30,
+            },
+          }));
+      },
+    },
+    {
       id: "cameras", label: "Public cameras", color: "#40c4ff",
       url: "/api/cameras?limit=200",
       toFeatures: (j) => (j.cameras || [])

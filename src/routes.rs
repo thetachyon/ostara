@@ -475,6 +475,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         rss,
         gnews,
         earnings,
+        storms,
     ) = tokio::join!(
         feed_count(
             &state,
@@ -751,6 +752,20 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
                 }) as BoxFut<_>
             }
         ),
+        feed_count(
+            &state,
+            "storms",
+            "storms:active".to_string(),
+            feeds::storms::TTL,
+            |c| {
+                Box::pin(async move {
+                    let r = feeds::storms::fetch(&c).await?;
+                    serde_json::to_value(&r).map_err(|e| {
+                        FeedError::new(feeds::storms::FEED, format!("serialize failed: {e}"))
+                    })
+                }) as BoxFut<_>
+            }
+        ),
         helio_probe(&state),
     );
 
@@ -879,6 +894,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         rss,
         gnews,
         earnings,
+        storms,
     ] {
         if !stat.ok {
             degraded = true;
@@ -1097,6 +1113,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         gnews,
         calendar,
         earnings,
+        storms,
     ) = tokio::join!(
         run_probe(state.client.clone(), "flights", |c| async move {
             feeds::flights::fetch(&c, "mil", 1)
@@ -1195,6 +1212,9 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         run_probe(state.client.clone(), "earnings", |c| async move {
             feeds::earnings::probe_detail(&c).await
         }),
+        run_probe(state.client.clone(), "storms", |c| async move {
+            feeds::storms::probe_detail(&c).await
+        }),
     );
 
     let mut feeds_map = HashMap::new();
@@ -1224,6 +1244,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         gnews,
         calendar,
         earnings,
+        storms,
     ] {
         feeds_map.insert(name, report);
     }
@@ -1264,6 +1285,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::unrest::routes())
         .merge(crate::risk::routes())
         .merge(crate::threats::routes())
+        .merge(crate::sanctions::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take
         // precedence; anything unmatched falls through to the static bundle.
         .fallback_service(ServeDir::new("web"))

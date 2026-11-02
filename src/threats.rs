@@ -797,7 +797,13 @@ fn snippet(s: &str, max: usize) -> String {
     if s.len() <= max {
         s
     } else {
-        format!("{}…", s[..max].trim_end())
+        // Truncate on a char boundary — byte slicing can split a
+        // multi-byte codepoint (e.g. Arabic-script snippets).
+        let mut end = max.min(s.len());
+        while !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}…", s[..end].trim_end())
     }
 }
 
