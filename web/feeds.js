@@ -427,13 +427,14 @@ window.OST = window.OST || {};
     {
       id: "threats", label: "Threat scan", health: null,
       group: "global",
-      note: "keyword-flagged public mentions of political figures · requires human review · not verified threats",
+      note: "keyword-flagged public mentions of political figures · direction defaults to threats against the figure · requires human review · not verified threats",
       inputs: [
         { name: "name", type: "datalist", listId: "threat-figures", placeholder: "figure name", required: true },
         { name: "severity", type: "select", options: ["all", "critical", "high", "medium"], value: "all" },
+        { name: "direction", type: "select", options: ["against", "by", "unclear", "all"], value: "against" },
       ],
       validate: (p) => (p.name && p.name.trim() ? null : "enter a figure name"),
-      url: (p) => `/api/threats/scan?name=${encodeURIComponent(p.name || "")}&severity=${encodeURIComponent(p.severity || "all")}`,
+      url: (p) => `/api/threats/scan?name=${encodeURIComponent(p.name || "")}&severity=${encodeURIComponent(p.severity || "all")}&direction=${encodeURIComponent(p.direction || "against")}`,
       afterInputs(body) {
         if (body.dataset.threatListLoaded) return;
         body.dataset.threatListLoaded = "1";
@@ -457,6 +458,7 @@ window.OST = window.OST || {};
           : `<span class="chip" style="color:#4c9aff;border:1px solid #4c9aff;border-radius:3px;padding:0 5px;font-size:10px">bluesky</span>`;
         const renderMentions = () => items.slice(0, ROW_CAP).map((it) =>
             `<div class="feed-item"><div><span class="chip" style="${sevStyle(it.severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(it.severity || "")}</span> ` +
+            (it.direction ? `<span class="chip" style="color:var(--dim,#9aa4b2);border:1px solid var(--dim,#9aa4b2);border-radius:3px;padding:0 5px;font-size:10px">${esc(it.direction)}</span> ` : "") +
             `<a href="${esc(it.url || "#")}" target="_blank" rel="noopener">${esc(it.title || "(untitled)")}</a></div>` +
             `<div class="m">${esc(it.source || "")} · ${esc((it.published || "").slice(0, 16).replace("T", " "))}</div>` +
             (it.text_snippet ? `<div>${esc(it.text_snippet.slice(0, 260))}${it.text_snippet.length > 260 ? "…" : ""}</div>` : "") +

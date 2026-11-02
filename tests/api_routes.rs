@@ -1060,6 +1060,66 @@ async fn threats_scan_bad_severity_is_400() {
 }
 
 #[tokio::test]
+async fn threats_scan_bad_direction_is_400() {
+    let g = get("/api/threats/scan?name=Macron&direction=bogus").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn threats_scan_direction_filter() {
+    // Default: every returned item is direction=against. direction=all is
+    // a superset. Upstreams may be down in the sandbox; the contract is
+    // the filter behavior on whatever items exist.
+    let dflt = get("/api/threats/scan?name=Trump").await;
+    assert_eq!(dflt.status, StatusCode::OK, "got: {}", body_preview(&dflt));
+    let items = dflt.body.get("items").and_then(|v| v.as_array()).unwrap();
+    for it in items {
+        assert_eq!(
+            it.get("direction").and_then(|v| v.as_str()),
+            Some("against"),
+            "default filter keeps only against"
+        );
+    }
+    let by = get("/api/threats/scan?name=Trump&direction=by").await;
+    assert_eq!(by.status, StatusCode::OK, "got: {}", body_preview(&by));
+    for it in by.body.get("items").and_then(|v| v.as_array()).unwrap() {
+        assert_eq!(
+            it.get("direction").and_then(|v| v.as_str()),
+            Some("by"),
+            "direction=by keeps only by"
+        );
+    }
+    let all = get("/api/threats/scan?name=Trump&direction=all").await;
+    assert_eq!(all.status, StatusCode::OK, "got: {}", body_preview(&all));
+    let all_items = all.body.get("items").and_then(|v| v.as_array()).unwrap();
+    assert!(
+        all_items.len() >= items.len(),
+        "direction=all is a superset of the default"
+    );
+    for it in all_items {
+        let dir = it.get("direction").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["against", "by", "unclear"].contains(&dir),
+            "bad direction {dir}"
+        );
+    }
+    let disc = all
+        .body
+        .get("disclaimer")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(
+        disc.contains("DIRECTIONALITY"),
+        "disclaimer documents directionality"
+    );
+}
+
+#[tokio::test]
 async fn threats_scan_shape() {
     // Upstreams may be unreachable in the sandbox; the contract is the
     // shape: 200 with figure/items/sources/disclaimer, honest per-source ok.

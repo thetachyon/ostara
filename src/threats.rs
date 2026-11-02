@@ -12,14 +12,17 @@
 //! - `GET /api/threats/politicians?country=` — the watchlist (78 figures:
 //!   G20 heads of state/government, US president/VP/cabinet/congressional
 //!   leadership, EU institutional leadership, other major world leaders).
-//! - `GET /api/threats/scan?name=<name|alias>&severity=` — scans Google
+//! - `GET /api/threats/scan?name=<name|alias>&severity=&direction=` — scans Google
 //!   News, Bluesky, and the configured Telegram channels (TELEGRAM_CHANNELS)
 //!   through their normal cache paths and TTLs (no new upstreams, no new
-//!   keys), classifies each returned item into severity tiers, and returns
-//!   items sorted by severity then recency, capped at 50 — plus an
-//!   `accounts` array rolling social items up by (platform, author) with
-//!   per-tier counts and sample posts. News outlets are excluded from
-//!   `accounts`.
+//!   keys), classifies each returned item into severity tiers AND a threat
+//!   direction (against | by | unclear — see below), filters to
+//!   `direction=against` by default, and returns items sorted by severity
+//!   then recency, capped at 50 — plus an `accounts` array rolling social
+//!   items up by (platform, author) with per-tier counts and sample posts.
+//!   News outlets are excluded from `accounts`. The accounts rollup is
+//!   built from the direction-filtered items, so it shows who posts
+//!   against-figure content under the default filter.
 //!
 //! ## Keyword tiers (English-first — documented limitation)
 //!
@@ -34,6 +37,49 @@
 //! (`pharmacy` must not match `harm`); stems and phrases match as
 //! substrings. Tiers are checked in order and the first match wins;
 //! `matched_keywords` lists the terms that fired in the winning tier.
+//!
+//! ## Threat direction (rule-based, English-only)
+//!
+//! Severity says how alarming the language is; **direction** says who it
+//! points at — the two are orthogonal fields on each item. A scan for
+//! Trump returns both "Trump threatens Iran" (figure as threatener) and
+//! "threatened to kill Trump" (figure as target); keyword tiers score
+//! them the same, so direction is classified separately by
+//! [`classify_direction`] with three values:
+//!
+//! - **against** — the figure is the target of the threatening language.
+//! - **by** — the figure is the one making the threat.
+//! - **unclear** — the patterns could not determine direction.
+//!
+//! Pattern classes (all case-insensitive, matched positionally around
+//! each name/alias occurrence; title words like "President" between a
+//! threat verb and the name are skipped):
+//!
+//! - *Threat-noun + preposition* (against): "threats against Macron",
+//!   "threat to Trump".
+//! - *Death-threat noun phrases* (against): "death threats against
+//!   Zelensky", "Macron received death threats".
+//! - *Assassination/attempt/plot nouns* (against): "assassination attempt
+//!   on Trump", "plot against Macron", "attempt on Macron's life".
+//! - *Threat verb applied to the figure* (against): "X threatened Trump".
+//! - *Kill-verbs with the figure as object* (against): "plot to kill
+//!   Trump", "threatened to shoot Macron".
+//! - *Prosecuted-threat construction* (against): "charged after
+//!   assassination threat", "arrested over death threats" — someone was
+//!   charged and the figure is named nearby, so the figure is the
+//!   implied target.
+//! - *Figure + threat verb* (by): "Trump threatens Iran", "Trump
+//!   threatened to jail critics".
+//! - *Figure + vow/kill + other object* (by): "Trump vows to strike
+//!   Iran", "demands Trump kill the diesel deal" (fixes figurative
+//!   "kill <policy>" noise).
+//!
+//! Precedence: explicit against-patterns win over by-patterns when both
+//! match the same text; neither matching → unclear. Deliberate limits:
+//! no "X urges <figure> to attack Y" handling (third-party subject →
+//! unclear), sarcasm/figurative/non-English phrasing is missed, and
+//! bare proximity ("assassination" merely near the name without a
+//! prosecution or noun construction) stays unclear rather than guessing.
 //!
 //! ## Queries (verified live 2026-11-01)
 //!
@@ -103,7 +149,7 @@ use crate::{
 /// accused of making a threat. Coverage is English-language sources only.
 /// This is protective monitoring of public discourse, not a targeting
 /// system.
-pub const DISCLAIMER: &str = "KEYWORD SCAN — NOT VERIFIED THREATS. These are public news and social-media mentions matching threat-related keywords for the named public figure. Every item requires human review: keyword matches include news reporting about threats, condemnations of threats, historical references, and figurative language — not just genuine threats. Nothing here is a verified threat against anyone. ACCOUNT ATTRIBUTION: the accounts listed are public social-media accounts whose posts matched the threat keywords for this figure — that includes journalists quoting threats, people condemning them, and figurative or political-rhetoric uses. This is not a list of threat actors, and no account listed is accused of making a threat. Coverage is English-language sources only. This is protective monitoring of public discourse, not a targeting system.";
+pub const DISCLAIMER: &str = "KEYWORD SCAN — NOT VERIFIED THREATS. These are public news and social-media mentions matching threat-related keywords for the named public figure. Every item requires human review: keyword matches include news reporting about threats, condemnations of threats, historical references, and figurative language — not just genuine threats. Nothing here is a verified threat against anyone. ACCOUNT ATTRIBUTION: the accounts listed are public social-media accounts whose posts matched the threat keywords for this figure — that includes journalists quoting threats, people condemning them, and figurative or political-rhetoric uses. This is not a list of threat actors, and no account listed is accused of making a threat. DIRECTIONALITY: each item is labeled against (the figure is the target of the threatening language, e.g. 'threats against Macron'), by (the figure is the one making the threat, e.g. 'Trump threatens Iran'), or unclear (the rule-based patterns could not determine direction). The direction classifier is pattern-based and English-only: it misses sarcasm, figurative uses, and non-English phrasing, and unclear items may still describe genuine threats — use direction=all to review everything. Coverage is English-language sources only. This is protective monitoring of public discourse, not a targeting system.";
 
 static POLITICIANS_JSON: &str = include_str!("../data/politicians.json");
 
@@ -228,6 +274,276 @@ fn classify(text: &str, name_terms: &[String]) -> Option<(Severity, Vec<String>)
 }
 
 // ---------------------------------------------------------------------------
+// Threat direction: is the figure the TARGET or the SOURCE of the
+// threatening language? (pure, unit-tested)
+// ---------------------------------------------------------------------------
+
+/// Which side of the threatening language the figure is on.
+///
+/// Rule-based and English-only: it looks at the words immediately around
+/// each mention of the figure's name/alias and decides whether the figure
+/// is the grammatical target ("threats against Macron") or the source
+/// ("Trump threatens Iran"). Anything ambiguous is [`Direction::Unclear`];
+/// human review still applies to every item. Orthogonal to [`Severity`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Direction {
+    /// The figure is the target of the threatening language.
+    Against,
+    /// The figure is the one making the threat.
+    By,
+    /// Direction could not be determined from the text.
+    Unclear,
+}
+
+impl Direction {
+    fn as_str(self) -> &'static str {
+        match self {
+            Direction::Against => "against",
+            Direction::By => "by",
+            Direction::Unclear => "unclear",
+        }
+    }
+}
+
+/// Collapse whitespace and lowercase for stable positional matching.
+fn norm_text(s: &str) -> String {
+    s.to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Byte spans of every name-term occurrence, longest terms first so
+/// "donald j. trump" claims its span before "trump" can overlap it.
+fn name_spans(t: &str, terms: &[String]) -> Vec<(usize, usize)> {
+    let mut terms: Vec<&str> = terms.iter().map(|s| s.as_str()).collect();
+    terms.sort_by_key(|a| std::cmp::Reverse(a.len()));
+    terms.dedup();
+    let mut spans: Vec<(usize, usize)> = Vec::new();
+    for term in terms {
+        if term.is_empty() {
+            continue;
+        }
+        let mut start = 0;
+        while let Some(i) = t[start..].find(term) {
+            let s = start + i;
+            let e = s + term.len();
+            if !spans.iter().any(|&(a, b)| s < b && e > a) {
+                spans.push((s, e));
+            }
+            start = e;
+        }
+    }
+    spans.sort_unstable_by_key(|&(s, _)| s);
+    spans
+}
+
+/// Title words that may sit between a threat verb and the figure's name
+/// ("threatened to kill President Trump"); stripped from the end of the
+/// left context before suffix matching.
+const TITLE_WORDS: &[&str] = &[
+    "the",
+    "a",
+    "an",
+    "president",
+    "former",
+    "vice",
+    "prime",
+    "minister",
+    "pm",
+    "king",
+    "queen",
+    "chancellor",
+    "senator",
+    "sen",
+    "rep",
+    "representative",
+    "governor",
+    "mayor",
+    "leader",
+    "dr",
+    "mr",
+    "ms",
+    "mrs",
+];
+
+/// Left context with trailing title words removed and exactly one
+/// trailing space, so suffix checks are uniform.
+fn left_norm(left: &str) -> String {
+    let mut l = left.trim_end();
+    while let Some(pos) = l.rfind(' ') {
+        let word = l[pos + 1..].trim_matches(|c: char| !c.is_alphanumeric());
+        if word.is_empty() || !TITLE_WORDS.contains(&word) {
+            break;
+        }
+        l = l[..pos].trim_end();
+    }
+    format!("{} ", l.trim_end())
+}
+
+/// Right context: leading whitespace and a possessive "'s" removed
+/// ("Macron's life" → "life").
+fn right_norm(right: &str) -> &str {
+    let r = right.trim_start();
+    r.strip_prefix("'s ")
+        .or_else(|| r.strip_prefix("' "))
+        .unwrap_or(r)
+}
+
+/// `true` when `s` starts with `stem` as a whole word
+/// ("threatens iran" matches "threaten"; "threateningly" does not).
+fn starts_word(s: &str, stem: &str) -> bool {
+    match s.strip_prefix(stem) {
+        None => false,
+        Some(rest) => rest.is_empty() || !rest.chars().next().is_some_and(|c| c.is_alphanumeric()),
+    }
+}
+
+/// Suffixes of the (title-stripped) left context marking the figure as
+/// the threat's target. Classes, in order:
+/// - threat-noun + preposition ("threats against Macron")
+/// - death-threat noun phrases ("death threats against Macron")
+/// - assassination/attempt/plot nouns ("assassination attempt on Trump")
+/// - threat verb applied to the figure ("X threatened Trump")
+/// - kill-verbs with the figure as grammatical object ("plot to kill Trump")
+const AGAINST_BEFORE: &[&str] = &[
+    "threat against ",
+    "threats against ",
+    "threat to ",
+    "threats to ",
+    "threat on ",
+    "threats on ",
+    "threat toward ",
+    "threat towards ",
+    "threats toward ",
+    "threats towards ",
+    "threat targeting ",
+    "threats targeting ",
+    "death threat against ",
+    "death threats against ",
+    "death threat to ",
+    "death threats to ",
+    "death threats targeting ",
+    "death threat targeting ",
+    "death threats received by ",
+    "death threat received by ",
+    "death threats for ",
+    "death threat for ",
+    "assassination of ",
+    "assassination attempt on ",
+    "assassination attempt against ",
+    "assassination plot against ",
+    "assassination plot to kill ",
+    "attempt on ",
+    "plot against ",
+    "attack on ",
+    "shooting of ",
+    "murder of ",
+    "killing of ",
+    "threaten ",
+    "threatens ",
+    "threatened ",
+    "threatening ",
+    "to kill ",
+    "to murder ",
+    "to shoot ",
+    "to attack ",
+    "to harm ",
+    "to assassinate ",
+    "assassinate ",
+    "kill ",
+    "murder ",
+    "shot ",
+    "targeted ",
+];
+
+/// Prefixes of the right context marking the figure as the target:
+/// the figure receives the threat, is acted on passively, or is
+/// directly followed by the assassination noun ("Trump assassination
+/// attempt" — the compound is always target-reading).
+const AGAINST_AFTER: &[&str] = &[
+    "received death threat",
+    "receives death threat",
+    "got death threat",
+    "gets death threat",
+    "faces death threat",
+    "faced death threat",
+    "was threatened",
+    "was attacked",
+    "was shot",
+    "was targeted",
+    "has been threatened",
+    "had been threatened",
+    "assassination",
+];
+
+/// Prefixes of the right context (whole-word) marking the figure as the
+/// threatener: "Trump threatens Iran", "Trump vows to strike Iran",
+/// "demands Trump kill the diesel deal" (the figurative "kill <policy>"
+/// case — the figure is the subject of the verb, and it is not a threat
+/// against them).
+const BY_AFTER: &[&str] = &[
+    "threaten",
+    "threatens",
+    "threatened",
+    "threatening",
+    "vow",
+    "vows",
+    "vowed",
+    "kill",
+];
+
+/// Prosecuted-threat construction: someone was charged/arrested AND a
+/// threat noun appears nearby after the figure's name — e.g. "Trump
+/// rally threats: Kansas man charged after assassination threat". The
+/// figure is the implied target of the prosecuted threat.
+fn against_by_prosecution(right: &str) -> bool {
+    const WINDOW: usize = 140;
+    let w: String = right.chars().take(WINDOW).collect();
+    const PROSECUTED: &[&str] = &[
+        "arrested",
+        "charged",
+        "convicted",
+        "sentenced",
+        "indicted",
+        "detained",
+    ];
+    let prosecuted = PROSECUTED.iter().any(|p| w.contains(p));
+    let threat_noun = w.contains("assassinat") || w.contains("death threat");
+    prosecuted && threat_noun
+}
+
+/// Classify which side of the threatening language the figure is on.
+///
+/// Every name/alias occurrence is examined positionally: an explicit
+/// against-pattern at ANY occurrence wins over by-patterns; a by-pattern
+/// with no against-pattern anywhere yields [`Direction::By`]; otherwise
+/// [`Direction::Unclear`].
+pub(crate) fn classify_direction(text: &str, name_terms: &[String]) -> Direction {
+    let t = norm_text(text);
+    let spans = name_spans(&t, name_terms);
+    let mut by_hit = false;
+    for (s, e) in &spans {
+        let left = left_norm(&t[..*s]);
+        let right = right_norm(&t[*e..]);
+        if AGAINST_BEFORE.iter().any(|p| left.ends_with(p))
+            || AGAINST_AFTER.iter().any(|p| right.starts_with(p))
+            || against_by_prosecution(right)
+        {
+            return Direction::Against;
+        }
+        if BY_AFTER.iter().any(|p| starts_word(right, p)) {
+            by_hit = true;
+        }
+    }
+    if by_hit {
+        Direction::By
+    } else {
+        Direction::Unclear
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Response shapes
 // ---------------------------------------------------------------------------
 
@@ -249,6 +565,10 @@ pub struct ThreatItem {
     published: Option<String>,
     severity: String,
     matched_keywords: Vec<String>,
+    /// "against" | "by" | "unclear" — which side of the threatening
+    /// language the figure is on (rule-based; see `classify_direction`).
+    /// Orthogonal to `severity`.
+    direction: String,
     /// Social attribution: Bluesky handle (bare, e.g. "user.bsky.social")
     /// or Telegram channel name. `None` for news outlets.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -513,6 +833,7 @@ async fn scan_gnews(
             for a in r.items {
                 let text = format!("{} {}", a.title, a.summary.as_deref().unwrap_or(""));
                 if let Some((sev, kws)) = classify(&text, terms) {
+                    let dir = classify_direction(&text, terms);
                     out.push(ThreatItem {
                         source: "gnews".into(),
                         title: a.title.clone(),
@@ -521,6 +842,7 @@ async fn scan_gnews(
                         published: a.published.clone(),
                         severity: sev.as_str().into(),
                         matched_keywords: kws,
+                        direction: dir.as_str().into(),
                         // News outlets are not social accounts — no attribution.
                         author: None,
                         author_display: None,
@@ -568,6 +890,7 @@ async fn scan_bluesky(
             });
             for p in r.posts {
                 if let Some((sev, kws)) = classify(&p.text, terms) {
+                    let dir = classify_direction(&p.text, terms);
                     out.push(ThreatItem {
                         source: "bluesky".into(),
                         title: format!(
@@ -583,6 +906,7 @@ async fn scan_bluesky(
                         published: Some(p.created_at.clone()),
                         severity: sev.as_str().into(),
                         matched_keywords: kws,
+                        direction: dir.as_str().into(),
                         author: Some(p.author_handle.clone()),
                         author_display: p.author_display.clone(),
                         author_url: Some(format!("https://bsky.app/profile/{}", p.author_handle)),
@@ -647,6 +971,7 @@ async fn scan_telegram(
                         continue;
                     }
                     if let Some((sev, kws)) = classify(&m.text, terms) {
+                        let dir = classify_direction(&m.text, terms);
                         out.push(ThreatItem {
                             source: "telegram".into(),
                             title: format!("Post in @{channel}"),
@@ -655,6 +980,7 @@ async fn scan_telegram(
                             published: Some(m.date.clone()),
                             severity: sev.as_str().into(),
                             matched_keywords: kws,
+                            direction: dir.as_str().into(),
                             author: Some(channel.clone()),
                             author_display: None,
                             author_url: Some(format!("https://t.me/s/{channel}")),
@@ -727,9 +1053,13 @@ pub struct PoliticiansResponse {
 pub struct ScanQuery {
     pub name: Option<String>,
     pub severity: Option<String>,
+    pub direction: Option<String>,
 }
 
-/// `GET /api/threats/scan?name=<name|alias>&severity=all|critical|high|medium`.
+/// `GET /api/threats/scan?name=<name|alias>&severity=all|critical|high|medium&direction=against|by|unclear|all`.
+/// `direction` defaults to `against` so the scan surfaces threats made
+/// against the figure; use `direction=all` to restore the unfiltered
+/// keyword behavior.
 pub async fn scan(
     State(state): State<AppState>,
     Query(q): Query<ScanQuery>,
@@ -752,6 +1082,13 @@ pub async fn scan(
             "severity must be one of: all, critical, high, medium",
         ));
     }
+    let direction_filter = q.direction.as_deref().unwrap_or("against").to_lowercase();
+    if !["against", "by", "unclear", "all"].contains(&direction_filter.as_str()) {
+        return Err(ApiError::bad_request(
+            "bad direction",
+            "direction must be one of: against, by, unclear, all",
+        ));
+    }
     let fig = find_figure(name).ok_or_else(|| {
         ApiError::not_found(
             "unknown figure",
@@ -764,7 +1101,7 @@ pub async fn scan(
     // The assembled scan is cached too (sources are cached under their own
     // feed key formats, so this is a cheap second layer).
     let skey = format!(
-        "threats:scan:name={}:severity={severity_filter}",
+        "threats:scan:name={}:severity={severity_filter}:direction={direction_filter}",
         fig.name.to_lowercase()
     );
     if let Some(body) = state.cache.get(&skey) {
@@ -781,8 +1118,13 @@ pub async fn scan(
     if severity_filter != "all" {
         items.retain(|i| i.severity == severity_filter);
     }
+    if direction_filter != "all" {
+        items.retain(|i| i.direction == direction_filter);
+    }
     sort_items(&mut items);
     items.truncate(SCAN_LIMIT as usize);
+    // Accounts roll up from the direction-filtered items, so under the
+    // default filter they show who posts against-figure content.
     let accounts = group_accounts(&items);
 
     let resp = ScanResponse {
@@ -897,6 +1239,143 @@ mod tests {
         assert_eq!(s, Severity::Critical);
     }
 
+    fn trump_terms() -> Vec<String> {
+        vec![
+            "donald trump".into(),
+            "trump".into(),
+            "donald j. trump".into(),
+        ]
+    }
+
+    #[test]
+    fn direction_against_cases() {
+        let t = trump_terms();
+        // Threat verb + figure as object (title word "President" skipped).
+        assert_eq!(
+            classify_direction(
+                "Michigan man threatened to kill President Trump, feds say",
+                &t
+            ),
+            Direction::Against
+        );
+        // Threat-noun + preposition.
+        assert_eq!(
+            classify_direction("Death threats against Donald Trump condemned", &t),
+            Direction::Against
+        );
+        // Figure directly followed by the assassination noun.
+        assert_eq!(
+            classify_direction(
+                "Man shot during Trump assassination attempt in Butler dies",
+                &t
+            ),
+            Direction::Against
+        );
+        // Threat verb applied directly to the figure.
+        assert_eq!(
+            classify_direction("The president threatened Trump over the policy", &t),
+            Direction::Against
+        );
+        // Prosecuted-threat construction.
+        assert_eq!(
+            classify_direction(
+                "Trump rally threats: Kansas man charged after assassination threat",
+                &t
+            ),
+            Direction::Against
+        );
+        // Passive receipt.
+        assert_eq!(
+            classify_direction("Trump was threatened in anonymous letters", &t),
+            Direction::Against
+        );
+        // Plot + kill-verb + alias.
+        let mbs = vec!["mohammed bin salman".into(), "mbs".into()];
+        assert_eq!(
+            classify_direction("Plot to kill MBS uncovered by police", &mbs),
+            Direction::Against
+        );
+        // Attempt-on possessive.
+        let mac = vec!["emmanuel macron".into(), "macron".into()];
+        assert_eq!(
+            classify_direction("Assassination attempt on Macron's life foiled", &mac),
+            Direction::Against
+        );
+    }
+
+    #[test]
+    fn direction_by_cases() {
+        let t = trump_terms();
+        // Figure as the threatener.
+        assert_eq!(
+            classify_direction("Trump threatens Iran ahead of midterms", &t),
+            Direction::By
+        );
+        assert_eq!(
+            classify_direction("Trump threatened to jail critics of the court", &t),
+            Direction::By
+        );
+        // Figure as subject of a figurative "kill <policy>".
+        assert_eq!(
+            classify_direction("Demands Trump kill the diesel deal", &t),
+            Direction::By
+        );
+        assert_eq!(
+            classify_direction("Trump vows to strike Iranian sites", &t),
+            Direction::By
+        );
+    }
+
+    #[test]
+    fn direction_unclear_cases() {
+        let t = trump_terms();
+        // Third-party subject: Netanyahu urges, not Trump.
+        assert_eq!(
+            classify_direction("Netanyahu urges Trump to attack Iran after midterms", &t),
+            Direction::Unclear
+        );
+        // Threat noun with no positional link to the figure.
+        let mac = vec!["emmanuel macron".into(), "macron".into()];
+        assert_eq!(
+            classify_direction("Macron comments on threats to democracy", &mac),
+            Direction::Unclear
+        );
+        // Bare proximity without a pattern is not enough to guess.
+        assert_eq!(
+            classify_direction("Trump condemns assassination of Shinzo Abe", &t),
+            Direction::Unclear
+        );
+    }
+
+    #[test]
+    fn direction_against_wins_over_by() {
+        let t = trump_terms();
+        // Both match: the against-pattern at the second occurrence wins.
+        assert_eq!(
+            classify_direction(
+                "After death threats against Trump, Trump threatens Iran",
+                &t
+            ),
+            Direction::Against
+        );
+    }
+
+    #[test]
+    fn direction_no_name_mention_is_unclear() {
+        let t = trump_terms();
+        assert_eq!(
+            classify_direction("Threats against democracy are rising", &t),
+            Direction::Unclear
+        );
+    }
+
+    #[test]
+    fn disclaimer_documents_directionality() {
+        assert!(DISCLAIMER.contains("DIRECTIONALITY"));
+        assert!(DISCLAIMER.contains("unclear"));
+        assert!(DISCLAIMER.contains("direction=all"));
+    }
+
     #[test]
     fn sort_orders_severity_then_recency() {
         fn item(title: &str, severity: &str, published: Option<&str>) -> ThreatItem {
@@ -908,6 +1387,7 @@ mod tests {
                 published: published.map(str::to_string),
                 severity: severity.into(),
                 matched_keywords: vec![],
+                direction: "against".into(),
                 author: None,
                 author_display: None,
                 author_url: None,
@@ -960,6 +1440,7 @@ mod tests {
             published: published.map(str::to_string),
             severity: severity.into(),
             matched_keywords: vec![],
+            direction: "against".into(),
             author: author.map(str::to_string),
             author_display: display.map(str::to_string),
             author_url: author.map(|a| format!("https://example.com/{a}")),
