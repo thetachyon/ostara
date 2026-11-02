@@ -105,6 +105,56 @@
     }
   }
 
+  // ---- Risk & safety (GET /api/risk) ----
+  // Heuristic indicator, never a forecast. Same contract as unrest
+  // signals: score bar, level chip, safety reading, per-family breakdown,
+  // methodology + disclaimer one click away in <details>.
+
+  const RISK_COLORS = { low: "#46a758", moderate: "#ffb224", high: "#f76b15", severe: "#e5484d" };
+
+  function renderRisk(r) {
+    const score = Math.max(0, Math.min(100, Number(r.score) || 0));
+    const color = RISK_COLORS[r.level] || "#888";
+    const compLi = (c) => {
+      const head = `<div class="unrest-comp-head"><strong>${esc(c.source)}</strong>
+        <span class="m">weight ${Number(c.weight).toFixed(2)}</span>
+        ${c.ok ? `<span class="unrest-norm">${Number(c.normalized_0_1).toFixed(3)}</span>`
+               : `<span class="unrest-bad">unavailable</span>`}</div>`;
+      const vals = c.ok
+        ? `<div class="m">recent ${esc(String(c.raw_value))} ${esc(c.raw_unit)} · baseline ${esc(String(c.baseline_value))} ${esc(c.baseline_unit)}</div>`
+        : `<div class="m unrest-bad">${esc(c.error || "feed error")}</div>`;
+      return `<li>${head}<div class="m">${esc(c.signal)}</div>${vals}${c.note ? `<div class="m">note: ${esc(c.note)}</div>` : ""}</li>`;
+    };
+    const fams = (r.families || []).map((f) =>
+      `<li><div class="unrest-comp-head"><strong>${esc(f.family)}</strong>
+        <span class="m">weight ${Number(f.weight).toFixed(2)}</span>
+        <span class="unrest-norm">${Number(f.score_0_100 || 0).toFixed(1)}</span></div>
+        <ul class="insp-list">${(f.components || []).map(compLi).join("")}</ul></li>`
+    ).join("");
+    return `<div class="insp-sec"><h3>Risk &amp; safety <span class="unrest-chip" style="background:${color}">${esc(r.level)}</span>
+      <span class="m">heuristic indicator — not a forecast</span></h3>
+      <div class="unrest-bar"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>
+      <div class="m">risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(r.safety || "—")}</strong>${r.partial ? " · partial (a feed was down, weight redistributed)" : ""}</div>
+      ${r.note ? `<div class="m">${esc(r.note)}</div>` : ""}
+      <ul class="insp-list">${fams}</ul>
+      <details class="unrest-method"><summary>Methodology</summary>
+        <div class="m">${esc(r.methodology)}</div>
+        <div class="unrest-disc">${esc(r.disclaimer)}</div>
+      </details></div>`;
+  }
+
+  async function loadRisk(iso2) {
+    const slot = document.getElementById("insp-risk");
+    if (!slot) return;
+    slot.innerHTML = `<div class="insp-sec"><h3>Risk &amp; safety</h3><div class="empty">loading risk signals…</div></div>`;
+    try {
+      const { data } = await OST.fetchJSON(`/api/risk?place=${encodeURIComponent(iso2)}&kind=country`, { timeout: 120000 });
+      slot.innerHTML = renderRisk(data);
+    } catch (e) {
+      slot.innerHTML = `<div class="insp-sec"><h3>Risk &amp; safety</h3><div class="empty">unavailable — ${esc(e.message || "fetch error")}</div></div>`;
+    }
+  }
+
   function render(data) {
     const body = document.getElementById("insp-body");
     const head = document.getElementById("insp-title");
@@ -135,10 +185,11 @@
       `<li>${link(w.invite_url, w.name)}${w.verified ? " ✓" : ""}<br/><span class="m">${esc(w.category || "")}${w.language ? " · " + esc(w.language) : ""} · directory, not live messages</span></li>`);
     const vessels = feedSection("Vessels", f.vessels || { ok: true, count: 0, items: [] }, (v) =>
       `<li>${esc(v.name || v.mmsi)}${v.vessel_type ? " · " + esc(v.vessel_type) : ""}<br/><span class="m">mmsi ${esc(String(v.mmsi))}${v.speed_knots != null ? " · " + Math.round(v.speed_knots) + " kt" : ""} · ${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}</span></li>`);
-    body.innerHTML = note + osint + `<div id="insp-unrest"></div>` + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
+    body.innerHTML = note + osint + `<div id="insp-unrest"></div><div id="insp-risk"></div>` + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
     loadUnrest(c.iso2);
+    loadRisk(c.iso2);
   }
 
   OST.inspectCountry = async function (lat, lon) {

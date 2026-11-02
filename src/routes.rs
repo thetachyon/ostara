@@ -1181,6 +1181,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::graph::routes())
         .merge(crate::intel::routes())
         .merge(crate::unrest::routes())
+        .merge(crate::risk::routes())
         .merge(crate::threats::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take
         // precedence; anything unmatched falls through to the static bundle.

@@ -19,6 +19,7 @@ pub mod geo;
 pub mod graph;
 pub mod intel;
 pub mod recon;
+pub mod risk;
 pub mod routes;
 pub mod threats;
 pub mod time;

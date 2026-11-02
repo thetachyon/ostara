@@ -505,6 +505,51 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "risk", label: "Risk & safety", health: null,
+      group: "global",
+      note: "heuristic risk & safety score per country or city · not a forecast · not travel advice",
+      timeout: 120000,
+      inputs: [
+        { name: "place", placeholder: "country or city", required: true },
+        { name: "kind", type: "select", options: ["auto", "country", "city"], value: "auto" },
+        { name: "country", placeholder: "country hint (city only, optional)" },
+      ],
+      validate: (p) => (p.place && p.place.trim() ? null : "enter a place name"),
+      url: (p) => `/api/risk?place=${encodeURIComponent(p.place || "")}&kind=${encodeURIComponent(p.kind || "auto")}` +
+        (p.country && p.country.trim() ? `&country=${encodeURIComponent(p.country.trim())}` : ""),
+      render(j, el) {
+        const score = Math.max(0, Math.min(100, Number(j.score) || 0));
+        const colors = { low: "#46a758", moderate: "#ffb224", high: "#f76b15", severe: "#e5484d" };
+        const color = colors[j.level] || "#888";
+        const place = j.place || {};
+        const compLi = (c) =>
+          `<div class="feed-item"><div><strong>${esc(c.source)}</strong>
+            <span class="m">weight ${Number(c.weight).toFixed(2)}</span>
+            ${c.ok ? `<span class="chip" style="color:${color};border:1px solid ${color};border-radius:3px;padding:0 5px;font-size:10px">${Number(c.normalized_0_1).toFixed(3)}</span>`
+                   : `<span class="chip" style="color:var(--bad);border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px">unavailable</span>`}</div>
+            <div class="m">${esc(c.signal)}</div>
+            ${c.ok ? `<div class="m">recent ${esc(String(c.raw_value))} ${esc(c.raw_unit)} · baseline ${esc(String(c.baseline_value))} ${esc(c.baseline_unit)}</div>`
+                   : `<div class="m" style="color:var(--bad)">${esc(c.error || "feed error")}</div>`}
+            ${c.note ? `<div class="m">note: ${esc(c.note)}</div>` : ""}</div>`;
+        const fams = (j.families || []).map((f) =>
+          `<div class="feed-item"><div><strong>${esc(f.family)}</strong>
+            <span class="m">weight ${Number(f.weight).toFixed(2)} · family score ${Number(f.score_0_100 || 0).toFixed(1)}${f.partial ? " · partial" : ""}</span></div>
+            ${(f.components || []).map(compLi).join("")}</div>`
+        ).join("");
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:4px"><b>${esc(place.name || "")}</b>${place.kind ? " · " + esc(place.kind) : ""}${place.country_hint ? " · " + esc(place.country_hint) : ""}</div>` +
+          `<div style="margin-bottom:6px"><span class="chip" style="background:${color};color:#fff;border-radius:3px;padding:1px 8px;font-size:12px">${esc(j.level || "")}</span> ` +
+          `<span class="m">risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(j.safety || "—")}</strong>${j.partial ? " · partial" : ""}</span></div>` +
+          `<div class="unrest-bar" style="margin-bottom:8px"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>` +
+          (j.note ? `<div class="m" style="margin-bottom:6px">${esc(j.note)}</div>` : "") +
+          fams +
+          `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
+          `<div class="m" style="margin-top:4px">${esc(j.methodology || "")}</div>` +
+          `<div class="unrest-disc">${esc(j.disclaimer || "")}</div></details>`;
+        this.count = (j.families || []).length;
+      },
+    },
+    {
       id: "helio", label: "Space Wx", health: "helio",
       group: "global",
       url: () => "/api/space-weather",
@@ -682,7 +727,7 @@ window.OST = window.OST || {};
     lastParams[cat.id] = params;
     out.innerHTML = `<div class="m">loading…</div>`;
     try {
-      const { data } = await OST.fetchJSON(cat.url(params), { timeout: 30000 });
+      const { data } = await OST.fetchJSON(cat.url(params), { timeout: cat.timeout || 30000 });
       cat.render.call(cat, data, out);
     } catch (e) {
       cat.count = null;

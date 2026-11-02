@@ -89,23 +89,23 @@ const SIGNAL_GNEWS: &str = "unrest-keyword article volume (Google News), 7-day r
 const SIGNAL_BLUESKY: &str = "unrest-keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate; weak country attribution";
 
 /// Seconds in the "recent" window.
-const RECENT_SECS: i64 = 7 * 86_400;
+pub(crate) const RECENT_SECS: i64 = 7 * 86_400;
 /// Minimum recent items before a component counts at full strength.
 const EVIDENCE_FLOOR: f64 = 5.0;
 /// Minimum baseline bins for the GDELT leg.
-const MIN_BASELINE_BINS: usize = 7;
+pub(crate) const MIN_BASELINE_BINS: usize = 7;
 
 // ---------------------------------------------------------------------------
 // Pure math (unit-tested below)
 // ---------------------------------------------------------------------------
 
 /// Map a recent/baseline rate ratio to 0..1: at baseline → 0, 5× → 1.
-fn normalize_ratio(ratio: f64) -> f64 {
+pub(crate) fn normalize_ratio(ratio: f64) -> f64 {
     ((ratio - 1.0) / 4.0).clamp(0.0, 1.0)
 }
 
 /// Low-evidence discount: scales 0→1 as the recent count goes 0→5.
-fn evidence_factor(recent_count: f64) -> f64 {
+pub(crate) fn evidence_factor(recent_count: f64) -> f64 {
     (recent_count / EVIDENCE_FLOOR).clamp(0.0, 1.0)
 }
 
@@ -137,7 +137,7 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
 }
 
 /// Epoch seconds → `YYYY-MM-DD` (UTC).
-fn ymd(epoch_secs: i64) -> String {
+pub(crate) fn ymd(epoch_secs: i64) -> String {
     let (y, m, d) = civil_from_days(epoch_secs.div_euclid(86_400));
     format!("{y:04}-{m:02}-{d:02}")
 }
@@ -145,28 +145,28 @@ fn ymd(epoch_secs: i64) -> String {
 /// Day-quantized window boundaries (UTC): `(recent_since, baseline_since)`.
 /// Quantized to whole days so cache keys stay stable for 24h: the recent
 /// window is the last 7 days, the baseline the 83 days before that.
-fn day_windows(now: i64) -> (i64, i64) {
+pub(crate) fn day_windows(now: i64) -> (i64, i64) {
     let today = now - now.rem_euclid(86_400);
     (today - 7 * 86_400, today - 90 * 86_400)
 }
 
 /// Parameters for [`build_component`] — kept as a struct so the builder
 /// stays within clippy's argument limit.
-struct ComponentCounts<'a> {
-    source: &'a str,
-    signal: &'a str,
-    query: &'a str,
-    weight: f64,
-    raw_unit: &'a str,
-    baseline_unit: &'a str,
-    recent_count: f64,
-    baseline_count: f64,
-    baseline_days: f64,
+pub(crate) struct ComponentCounts<'a> {
+    pub(crate) source: &'a str,
+    pub(crate) signal: &'a str,
+    pub(crate) query: &'a str,
+    pub(crate) weight: f64,
+    pub(crate) raw_unit: &'a str,
+    pub(crate) baseline_unit: &'a str,
+    pub(crate) recent_count: f64,
+    pub(crate) baseline_count: f64,
+    pub(crate) baseline_days: f64,
 }
 
 /// Build a component from explicit recent/baseline counts over a known
 /// baseline span. Pure.
-fn build_component(p: ComponentCounts<'_>) -> UnrestComponent {
+pub(crate) fn build_component(p: ComponentCounts<'_>) -> UnrestComponent {
     let baseline_per_day = p.baseline_count / p.baseline_days.max(1.0);
     let normalized = normalize_component(p.recent_count, baseline_per_day);
     let mut notes: Vec<String> = Vec::new();
@@ -197,7 +197,7 @@ fn build_component(p: ComponentCounts<'_>) -> UnrestComponent {
 }
 
 /// Normalize one component from a recent count and a baseline per-day rate.
-fn normalize_component(recent_count: f64, baseline_per_day: f64) -> f64 {
+pub(crate) fn normalize_component(recent_count: f64, baseline_per_day: f64) -> f64 {
     if baseline_per_day <= 0.0 {
         // Baseline silence with recent activity: spike from zero. Scales
         // with evidence rather than claiming an infinite ratio.
@@ -205,6 +205,58 @@ fn normalize_component(recent_count: f64, baseline_per_day: f64) -> f64 {
     }
     let ratio = (recent_count / 7.0) / baseline_per_day;
     normalize_ratio(ratio) * evidence_factor(recent_count)
+}
+
+/// Split GDELT timeline bins into recent/baseline sums. Pure; shared
+/// with the risk scorer.
+pub(crate) fn gdelt_window_sums(
+    bins: &[feeds::news::TimelineBin],
+    now: i64,
+) -> (f64, usize, f64, usize) {
+    let mut sum_r = 0.0f64;
+    let mut n_r = 0usize;
+    let mut sum_b = 0.0f64;
+    let mut n_b = 0usize;
+    for b in bins {
+        if b.epoch_secs >= now - RECENT_SECS {
+            sum_r += b.value;
+            n_r += 1;
+        } else {
+            sum_b += b.value;
+            n_b += 1;
+        }
+    }
+    (sum_r, n_r, sum_b, n_b)
+}
+
+/// Normalize GDELT window sums; returns `(normalized_0_1, note)`. Pure;
+/// shared with the risk scorer.
+pub(crate) fn gdelt_normalize(
+    sum_r: f64,
+    n_r: usize,
+    sum_b: f64,
+    n_b: usize,
+) -> (f64, Option<String>) {
+    let baseline_per_bin = sum_b / n_b.max(1) as f64;
+    let normalized = if baseline_per_bin <= 0.0 {
+        if sum_r <= 0.0 {
+            0.0
+        } else {
+            (sum_r / 25.0).clamp(0.0, 1.0)
+        }
+    } else {
+        let ratio = (sum_r / n_r.max(1) as f64) / baseline_per_bin;
+        normalize_ratio(ratio) * evidence_factor(sum_r)
+    };
+    let note = if baseline_per_bin <= 0.0 && sum_r > 0.0 {
+        Some(
+            "baseline window was silent; scored as a spike from zero, scaled by evidence"
+                .to_string(),
+        )
+    } else {
+        None
+    };
+    (normalized, note)
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +270,7 @@ pub struct UnrestCountry {
     pub iso3: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct UnrestComponent {
     pub source: String,
     pub signal: String,
@@ -237,7 +289,7 @@ pub struct UnrestComponent {
 }
 
 impl UnrestComponent {
-    fn err(source: &str, signal: &str, query: &str, weight: f64, error: String) -> Self {
+    pub(crate) fn err(source: &str, signal: &str, query: &str, weight: f64, error: String) -> Self {
         Self {
             source: source.to_string(),
             signal: signal.to_string(),
@@ -274,7 +326,7 @@ pub struct UnrestResponse {
 // Component builders (each reuses its feed's normal cache path + TTL)
 // ---------------------------------------------------------------------------
 
-fn now_secs() -> i64 {
+pub(crate) fn now_secs() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -284,7 +336,7 @@ fn now_secs() -> i64 {
 /// GDELT's `sourcecountry:` names diverge from Natural Earth in a few
 /// verified cases; multi-word names are always quoted (as in
 /// country_inspect.rs).
-fn gdelt_country_name(name: &str) -> String {
+pub(crate) fn gdelt_country_name(name: &str) -> String {
     match name {
         "United States of America" => "United States".to_string(),
         _ => name.to_string(),
@@ -313,43 +365,13 @@ async fn gdelt_component(state: &AppState, country: &CountryIdentity) -> UnrestC
             Err(e) => return mk_err(e.user_message()),
         };
     let now = now_secs();
-    let mut sum_r = 0.0f64;
-    let mut n_r = 0usize;
-    let mut sum_b = 0.0f64;
-    let mut n_b = 0usize;
-    for b in &bins {
-        if b.epoch_secs >= now - RECENT_SECS {
-            sum_r += b.value;
-            n_r += 1;
-        } else {
-            sum_b += b.value;
-            n_b += 1;
-        }
-    }
+    let (sum_r, n_r, sum_b, n_b) = gdelt_window_sums(&bins, now);
     if n_b < MIN_BASELINE_BINS {
         return mk_err(format!(
             "insufficient baseline history: only {n_b} baseline bins (need {MIN_BASELINE_BINS})"
         ));
     }
-    let baseline_per_bin = sum_b / n_b as f64;
-    let normalized = if baseline_per_bin <= 0.0 {
-        if sum_r <= 0.0 {
-            0.0
-        } else {
-            (sum_r / 25.0).clamp(0.0, 1.0)
-        }
-    } else {
-        let ratio = (sum_r / n_r.max(1) as f64) / baseline_per_bin;
-        normalize_ratio(ratio) * evidence_factor(sum_r)
-    };
-    let note = if baseline_per_bin <= 0.0 && sum_r > 0.0 {
-        Some(
-            "baseline window was silent; scored as a spike from zero, scaled by evidence"
-                .to_string(),
-        )
-    } else {
-        None
-    };
+    let (normalized, note) = gdelt_normalize(sum_r, n_r, sum_b, n_b);
     UnrestComponent {
         source: "gdelt".to_string(),
         signal: SIGNAL_GDELT.to_string(),
@@ -357,7 +379,7 @@ async fn gdelt_component(state: &AppState, country: &CountryIdentity) -> UnrestC
         query: q,
         raw_value: sum_r,
         raw_unit: "articles (last 7 days)".to_string(),
-        baseline_value: (baseline_per_bin * 100.0).round() / 100.0,
+        baseline_value: ((sum_b / n_b.max(1) as f64) * 100.0).round() / 100.0,
         baseline_unit: "articles/day (prior ~83-day baseline)".to_string(),
         normalized_0_1: (normalized * 1000.0).round() / 1000.0,
         weight: WEIGHT_GDELT,
@@ -367,10 +389,11 @@ async fn gdelt_component(state: &AppState, country: &CountryIdentity) -> UnrestC
 }
 
 /// Fetch one date-bounded window for Google News and return its item count.
+/// Shared with the risk scorer (same cache-key format/TTL).
 /// The `after:`/`before:` operators are honored by the RSS endpoint
 /// (verified live 2026-11-01); the full query string is part of the cache
 /// key, so each window is cached independently on the feed's normal TTL.
-async fn gnews_window_count(
+pub(crate) async fn gnews_window_count(
     state: &AppState,
     base_query: &str,
     after: &str,
@@ -429,7 +452,8 @@ async fn gnews_component(state: &AppState, country: &CountryIdentity) -> UnrestC
 }
 
 /// Fetch one time-bounded window from Bluesky and return its post count.
-async fn bluesky_window_count(
+/// Shared with the risk scorer (same cache-key format/TTL).
+pub(crate) async fn bluesky_window_count(
     state: &AppState,
     query: &str,
     since: &str,
@@ -487,7 +511,7 @@ async fn bluesky_component(state: &AppState, country: &CountryIdentity) -> Unres
 }
 
 /// RFC-3339 midnight UTC for a day boundary, e.g. `2026-10-25T00:00:00.000Z`.
-fn rfc3339_day(epoch_secs: i64) -> String {
+pub(crate) fn rfc3339_day(epoch_secs: i64) -> String {
     format!("{}T00:00:00.000Z", ymd(epoch_secs))
 }
 

@@ -1253,3 +1253,192 @@ async fn chokepoints_category_filter() {
         body_preview(&g)
     );
 }
+
+// ---------------------------------------------------------------------------
+// /api/risk contract
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn risk_missing_place_is_400() {
+    let g = get("/api/risk").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn risk_bad_kind_is_400() {
+    let g = get("/api/risk?place=France&kind=planet").await;
+    assert_eq!(
+        g.status,
+        StatusCode::BAD_REQUEST,
+        "got: {}",
+        body_preview(&g)
+    );
+}
+
+#[tokio::test]
+async fn risk_unknown_country_is_404() {
+    let g = get("/api/risk?place=Narnia&kind=country").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND, "got: {}", body_preview(&g));
+}
+
+#[tokio::test]
+async fn risk_shape_for_france() {
+    // Shape contract only: in the sandbox upstreams are flaky, so
+    // components may legitimately be ok:false — the endpoint must still
+    // return 200 with the full transparent shape, never a 502.
+    let g = get("/api/risk?place=FRA").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let b = &g.body;
+    for key in [
+        "place",
+        "score",
+        "level",
+        "safety",
+        "partial",
+        "families",
+        "methodology",
+        "generated_at",
+        "disclaimer",
+    ] {
+        assert!(
+            b.get(key).is_some(),
+            "missing key {key}, got: {}",
+            body_preview(&g)
+        );
+    }
+    let place = b.get("place").expect("place");
+    assert_eq!(place.get("kind").and_then(|v| v.as_str()), Some("country"));
+    assert_eq!(place.get("iso3").and_then(|v| v.as_str()), Some("FRA"));
+    let level = b.get("level").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["low", "moderate", "high", "severe"].contains(&level),
+        "bad level {level}"
+    );
+    let safety = b.get("safety").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["High", "Moderate", "Low", "Very low"].contains(&safety),
+        "bad safety {safety}"
+    );
+    let score = b.get("score").and_then(|v| v.as_f64()).unwrap_or(-1.0);
+    assert!(
+        (0.0..=100.0).contains(&score),
+        "score out of range: {score}"
+    );
+    let fams = b
+        .get("families")
+        .and_then(|v| v.as_array())
+        .expect("families array");
+    assert_eq!(fams.len(), 3, "three signal families");
+    let mut fam_ids: Vec<&str> = fams
+        .iter()
+        .filter_map(|f| f.get("family").and_then(|v| v.as_str()))
+        .collect();
+    fam_ids.sort_unstable();
+    assert_eq!(fam_ids, ["crime_disorder", "unrest", "violent_incidents"]);
+    for f in fams {
+        for key in ["family", "weight", "score_0_100", "partial", "components"] {
+            assert!(f.get(key).is_some(), "family missing {key}: {f}");
+        }
+        let comps = f
+            .get("components")
+            .and_then(|v| v.as_array())
+            .expect("components");
+        assert_eq!(comps.len(), 3, "three feed components per family");
+        for c in comps {
+            for key in [
+                "source",
+                "signal",
+                "ok",
+                "query",
+                "raw_value",
+                "baseline_value",
+                "normalized_0_1",
+                "weight",
+            ] {
+                assert!(c.get(key).is_some(), "component missing {key}: {c}");
+            }
+        }
+    }
+    // The honesty words must be present in the disclaimer.
+    let disclaimer = b.get("disclaimer").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(disclaimer.contains("NOT A FORECAST"));
+    assert!(disclaimer.contains("over-covered"));
+    assert!(disclaimer.contains("not travel advice"));
+    // The disclaimer denies forecasting ("not a forecast") — strip it, then
+    // the remaining response must never claim to predict or forecast.
+    let blob = serde_json::to_string(b).unwrap().to_lowercase();
+    let blob = blob.replacen(&disclaimer.to_lowercase(), "", 1);
+    assert!(
+        !blob.contains("prediction"),
+        "response must never say prediction"
+    );
+    assert!(
+        !blob.contains("forecast"),
+        "response must never say forecast"
+    );
+    assert!(
+        !blob.contains("probability"),
+        "response must never say probability"
+    );
+}
+
+#[tokio::test]
+async fn risk_city_path_marks_gdelt_unavailable_and_partial() {
+    // Deterministic regardless of upstream health: the city path always
+    // degrades the GDELT leg (no city-level coverage).
+    let g = get("/api/risk?place=Paris&kind=city&country=France").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let b = &g.body;
+    let place = b.get("place").expect("place");
+    assert_eq!(place.get("kind").and_then(|v| v.as_str()), Some("city"));
+    assert_eq!(place.get("name").and_then(|v| v.as_str()), Some("Paris"));
+    assert_eq!(
+        place.get("country_hint").and_then(|v| v.as_str()),
+        Some("France")
+    );
+    assert_eq!(b.get("partial").and_then(|v| v.as_bool()), Some(true));
+    let fams = b
+        .get("families")
+        .and_then(|v| v.as_array())
+        .expect("families");
+    for f in fams {
+        let gdelt = f
+            .get("components")
+            .and_then(|v| v.as_array())
+            .expect("components")
+            .iter()
+            .find(|c| c.get("source").and_then(|v| v.as_str()) == Some("gdelt"))
+            .expect("gdelt component present");
+        assert_eq!(gdelt.get("ok").and_then(|v| v.as_bool()), Some(false));
+        let err = gdelt.get("error").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(err.contains("no city-level coverage"), "gdelt error: {err}");
+    }
+}
+
+#[tokio::test]
+async fn risk_kind_auto_detects() {
+    // France resolves to the country path; Paris falls through to city.
+    let g = get("/api/risk?place=France").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body
+            .get("place")
+            .and_then(|p| p.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("country")
+    );
+    let g = get("/api/risk?place=Paris").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body
+            .get("place")
+            .and_then(|p| p.get("kind"))
+            .and_then(|v| v.as_str()),
+        Some("city")
+    );
+}
