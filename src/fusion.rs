@@ -437,7 +437,7 @@ async fn eval_static_input(state: &AppState, inp: &RegistryInput) -> EvaluatedIn
                         score,
                         format!("{score:.1} ({level})"),
                         format!(
-                            "composite risk score for {place}{}{}",
+                            "safety-defined composite risk score for {place}{}{}",
                             if partial {
                                 " · partial (some feeds down)"
                             } else {
@@ -689,7 +689,7 @@ async fn eval_election_indicator(state: &AppState, def: &RegistryIndicator) -> V
                 value: Some(score),
                 evidence_value: format!("{country}: {score:.1} ({level})"),
                 detail: format!(
-                    "risk score for election country {country}{}",
+                    "safety-defined risk score for election country {country}{}",
                     if thin {
                         " · THIN BASIS (<50% of intended signal) — treat as provisional"
                     } else {

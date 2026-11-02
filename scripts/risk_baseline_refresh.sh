@@ -40,7 +40,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --limit) LIMIT="$2"; shift 2 ;;
     --families) FAMILIES_FILTER="$2"; shift 2 ;;
-    *) echo "unknown arg: $1 (usage: $0 [--limit N] [--families unrest,violent_incidents])" >&2; exit 2 ;;
+    *) echo "unknown arg: $1 (usage: $0 [--limit N] [--families violent_crime,terror_conflict])" >&2; exit 2 ;;
   esac
 done
 

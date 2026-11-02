@@ -105,10 +105,11 @@
     }
   }
 
-  // ---- Risk & safety (GET /api/risk) ----
+  // ---- Safety risk (GET /api/risk) ----
   // Heuristic indicator, never a forecast. Same contract as unrest
   // signals: score bar, level chip, safety reading, per-family breakdown,
-  // methodology + disclaimer one click away in <details>.
+  // political-unrest diagnostic as a muted row, methodology + disclaimer
+  // one click away in <details>.
 
   const RISK_COLORS = { low: "#46a758", moderate: "#ffb224", high: "#f76b15", severe: "#e5484d" };
 
@@ -131,12 +132,16 @@
         <span class="unrest-norm">${Number(f.score_0_100 || 0).toFixed(1)}</span></div>
         <ul class="insp-list">${(f.components || []).map(compLi).join("")}</ul></li>`
     ).join("");
-    return `<div class="insp-sec"><h3>Risk &amp; safety <span class="unrest-chip" style="background:${color}">${esc(r.level)}</span>
-      <span class="m">heuristic indicator — not a forecast</span></h3>
+    const pu = r.political_unrest;
+    const puRow = pu ? `<li style="opacity:0.7"><div class="unrest-comp-head"><strong>political unrest</strong>
+        <span class="m">diagnostic — not in the safety score · ${pu.score_0_100 == null ? "unavailable" : `${Number(pu.score_0_100).toFixed(1)} / 100 · ${esc(pu.level)}`}</span></div>
+        <div class="m">broad protest/strike/riot/unrest keywords — political signal for supply-chain / operations exposure</div></li>` : "";
+    return `<div class="insp-sec"><h3>Safety risk <span class="unrest-chip" style="background:${color}">${esc(r.level)}</span>
+      <span class="m">danger to persons — heuristic indicator, not a forecast</span></h3>
       <div class="unrest-bar"><div class="unrest-fill" style="width:${score.toFixed(1)}%;background:${color}"></div></div>
-      <div class="m">risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(r.safety || "—")}</strong>${r.partial ? " · partial (a feed was down, weight redistributed)" : ""}</div>
+      <div class="m">safety risk ${score.toFixed(1)} / 100 · safety: <strong>${esc(r.safety || "—")}</strong>${r.partial ? " · partial (a feed was down, weight redistributed)" : ""}${r.thin_basis ? " · thin basis — treat the level as provisional" : ""}</div>
       ${r.note ? `<div class="m">${esc(r.note)}</div>` : ""}
-      <ul class="insp-list">${fams}</ul>
+      <ul class="insp-list">${fams}${puRow}</ul>
       <details class="unrest-method"><summary>Methodology</summary>
         <div class="m">${esc(r.methodology)}</div>
         <div class="unrest-disc">${esc(r.disclaimer)}</div>
@@ -146,12 +151,12 @@
   async function loadRisk(iso2) {
     const slot = document.getElementById("insp-risk");
     if (!slot) return;
-    slot.innerHTML = `<div class="insp-sec"><h3>Risk &amp; safety</h3><div class="empty">loading risk signals…</div></div>`;
+    slot.innerHTML = `<div class="insp-sec"><h3>Safety risk</h3><div class="empty">loading safety signals…</div></div>`;
     try {
       const { data } = await OST.fetchJSON(`/api/risk?place=${encodeURIComponent(iso2)}&kind=country`, { timeout: 120000 });
       slot.innerHTML = renderRisk(data);
     } catch (e) {
-      slot.innerHTML = `<div class="insp-sec"><h3>Risk &amp; safety</h3><div class="empty">unavailable — ${esc(e.message || "fetch error")}</div></div>`;
+      slot.innerHTML = `<div class="insp-sec"><h3>Safety risk</h3><div class="empty">unavailable — ${esc(e.message || "fetch error")}</div></div>`;
     }
   }
 

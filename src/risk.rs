@@ -1,21 +1,49 @@
 //! Country + city risk & safety score: a transparent, heuristic indicator.
 //!
 //! `GET /api/risk?place=<name>&kind=auto|country|city` returns a 0–100
-//! score built from three signal families — **unrest** (protest/strike/riot
-//! keywords), **violent_incidents** (bombing/shooting/terror-attack
-//! keywords), **crime_disorder** (crime/murder/robbery keywords) — each
-//! baseline-normalized exactly like [`crate::unrest`]: a 7-day recent
-//! window vs the prior 83-day baseline, ratio → `clamp((r-1)/4, 0, 1)`,
-//! low-evidence discount below 5 recent items, spike-from-silence path.
-//! Every number that feeds the score is visible in the response (raw
-//! value, baseline value, normalized value, weight — per component, per
-//! family). This is a heuristic indicator, not a forecast: the words
-//! "forecast", "prediction", and "probability" appear nowhere in the
-//! response or UI by design (a contract test asserts this).
+//! **safety** score: it answers "how physically safe is it to be in this
+//! place?" — danger to persons, nothing else. Three signal families feed
+//! the headline, all person-directed: **violent_crime** (murder / homicide
+//! / stabbing / kidnapping / armed-robbery / assault keywords),
+//! **terror_conflict** (bombing / shooting / terrorist-attack / explosion /
+//! airstrike keywords), **violent_unrest** (riot / violent-protest /
+//! clashes / tear-gas keywords — unrest that threatens bystanders).
+//!
+//! Explicitly OUT of the safety score: fraud, scam, cybercrime, smuggling,
+//! corruption, money laundering (transnational — they don't make streets
+//! unsafe); peaceful protest and strikes (a political signal, not a safety
+//! signal); state crackdowns and arrests (enforcement — arguably
+//! safety-positive). The generic `crime` keyword is banned for the same
+//! reason: the motivating case (2026-11-02) was China scoring 100/severe
+//! because "China executes Myanmar scam-centre bosses", "Taiwan
+//! criminalizes chip smuggling to China", and "$16B laundered by Chinese
+//! crime networks" all matched `China (crime OR …)` — state enforcement
+//! and transnational stories scored as maximum street danger. Person-
+//! directed keywords don't make that mistake.
+//!
+//! Each family is baseline-normalized exactly like [`crate::unrest`]: a
+//! 7-day recent window vs the prior 83-day baseline, ratio →
+//! `clamp((r-1)/4, 0, 1)`, low-evidence discount below 5 recent items,
+//! spike-from-silence path. Every number that feeds the score is visible
+//! in the response (raw value, baseline value, normalized value, weight —
+//! per component, per family). This is a heuristic indicator, not a
+//! forecast: the words "forecast", "prediction", and "probability" appear
+//! nowhere in the response or UI by design (a contract test asserts this).
 //!
 //! The endpoint also returns a `safety` reading ("High"/"Moderate"/"Low"/
 //! "Very low") — risk and safety are two labeled views of the same score,
 //! not independent measurements.
+//!
+//! ## Political unrest (secondary diagnostic, NOT in the score)
+//!
+//! The old broad unrest signal — protest/strike/riot/unrest keywords —
+//! survives as `political_unrest` in the response: a political readout for
+//! supply-chain / operations exposure, computed through the same
+//! saturation/chunked-baseline machinery but never entering the composite
+//! score or the safety reading. `/api/unrest` keeps the same broad
+//! definition as its own endpoint — it is the political-signal endpoint;
+//! the risk diagnostic mirrors it inline (and works for cities, which
+//! `/api/unrest` doesn't cover).
 //!
 //! ## Place handling
 //!
@@ -36,7 +64,8 @@
 //! TTL — the same `gnews:q=…:limit=100` / `bluesky:q=…:limit=100:since=…`
 //! keys and 300s TTLs as `/api/gnews`, `/api/bluesky`, and the unrest
 //! scorer's GDELT `news:timelinevol:q=…` keys. At most 15 upstream calls
-//! per country per TTL window (3 families × 5) and 12 per city (3 × 4).
+//! per country per TTL window (4 query sets × 5: three safety families
+//! plus the political-unrest diagnostic) and 16 per city (4 × 4).
 //! No new upstreams, no new API keys.
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -60,23 +89,27 @@ use crate::{
     },
 };
 
-/// Heuristic indicator, not a forecast. This score summarizes how current
-/// open-source media signals about a place compare to their own recent
-/// baselines. It does not predict whether risk will materialize, when, or
-/// where. News and social coverage reflect what gets reported, not what
-/// happens on the ground: big cities and capitals are systematically
-/// over-covered relative to smaller places, so scores are not comparable
-/// as absolute risk between places of very different media visibility.
-/// Coverage is English-language sources only. This is not travel advice
-/// and not a substitute for official government guidance. Use as one input
-/// among many, never as a sole basis for decisions.
-pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This score summarizes how current open-source media signals about a place compare to their own recent baselines. It does not predict whether risk will materialize, when, or where. News and social coverage reflect what gets reported, not what happens on the ground: big cities and capitals are systematically over-covered relative to smaller places, so scores are not comparable as absolute risk between places of very different media visibility. Coverage is English-language sources only. This is not travel advice and not a substitute for official government guidance. Use as one input among many, never as a sole basis for decisions.";
+/// Heuristic indicator, not a forecast. This SAFETY score summarizes how
+/// current open-source media signals about danger to persons in a place
+/// compare to their own recent baselines: violent crime, terror/conflict,
+/// and violent unrest only. It deliberately excludes fraud, scams,
+/// smuggling, corruption, money laundering, peaceful protest/strikes, and
+/// state enforcement actions — those are not street danger. It does not
+/// predict whether risk will materialize, when, or where. News and social
+/// coverage reflect what gets reported, not what happens on the ground:
+/// big cities and capitals are systematically over-covered relative to
+/// smaller places, so scores are not comparable as absolute risk between
+/// places of very different media visibility. Coverage is English-language
+/// sources only. This is not travel advice and not a substitute for
+/// official government guidance. Use as one input among many, never as a
+/// sole basis for decisions.
+pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This SAFETY score summarizes how current open-source media signals about danger to persons in a place compare to their own recent baselines: violent crime, terror/conflict, and violent unrest only. It deliberately excludes fraud, scams, smuggling, corruption, money laundering, peaceful protest/strikes, and state enforcement actions — those are not street danger. It does not predict whether risk will materialize, when, or where. News and social coverage reflect what gets reported, not what happens on the ground: big cities and capitals are systematically over-covered relative to smaller places, so scores are not comparable as absolute risk between places of very different media visibility. Coverage is English-language sources only. This is not travel advice and not a substitute for official government guidance. Use as one input among many, never as a sole basis for decisions.";
 
-pub const METHODOLOGY: &str = "Per-place risk & safety score (0-100), heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): unrest (weight 0.40) — protest/strike/riot keywords; violent_incidents (weight 0.35) — bombing/shooting/terrorist-attack/explosion keywords; crime_disorder (weight 0.25) — crime/murder/robbery/looting keywords. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. THIN-BASIS RULE: when the surviving signal rests on <50% of intended weight — within a family or across families — the score is kept (it is real) but flagged thin_basis:true, confidence forced to \"low\", and the level capped one step down (severe→high→moderate→low); the note names the live families. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
+pub const METHODOLOGY: &str = "Per-place SAFETY score (0-100): danger to persons, heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): violent_crime (weight 0.40) — murder/homicide/stabbing/kidnapping/armed-robbery/sexual-assault keywords, person-directed violence only (bare \"assault\" excluded: it matches naval \"assault ship\" coverage); terror_conflict (weight 0.35) — bombing/shooting/mass-shooting/terrorist-attack/explosion/airstrike keywords; violent_unrest (weight 0.25) — riot/violent-protest/clashes/tear-gas/Molotov keywords, i.e. unrest that threatens bystanders. EXCLUDED from the safety score by design: the generic 'crime' keyword, fraud/scam/cybercrime/smuggling/corruption/money-laundering (transnational, not street danger), peaceful protest/strikes (political signal), and state crackdowns/arrests (enforcement). A separate political_unrest diagnostic (broad protest/strike/riot/unrest keywords) is reported for supply-chain/operations context but NEVER enters the composite score or safety reading. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. THIN-BASIS RULE: when the surviving signal rests on <50% of intended weight — within a family or across families — the score is kept (it is real) but flagged thin_basis:true, confidence forced to \"low\", and the level capped one step down (severe→high→moderate→low); the note names the live families. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
 
-const W_UNREST: f64 = 0.40;
-const W_VIOLENT: f64 = 0.35;
-const W_CRIME: f64 = 0.25;
+const W_VIOLENT_CRIME: f64 = 0.40;
+const W_TERROR: f64 = 0.35;
+const W_VIOLENT_UNREST: f64 = 0.25;
 
 // Within-family feed weights (same split as the unrest scorer).
 const FW_GDELT: f64 = 0.50;
@@ -128,33 +161,59 @@ struct FamilyDef {
 
 const FAMILIES: [FamilyDef; 3] = [
     FamilyDef {
-        id: "unrest",
-        weight: W_UNREST,
-        gnews_kw: "(protest OR strike OR riot OR unrest)",
-        bluesky_kw: "protest",
-        gdelt_q: "theme:PROTEST",
-        signal_gnews: "unrest-keyword article volume (Google News), 7-day rate vs older-window rate",
-        signal_bluesky: "unrest-keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
+        id: "violent_crime",
+        weight: W_VIOLENT_CRIME,
+        // Person-directed violence ONLY. No generic "crime" (it matched
+        // "China executes scam bosses" and "$16B laundered by Chinese crime
+        // networks" — enforcement and transnational stories, not street
+        // danger), no fraud/scam/theft, no looting alone, and no bare
+        // "assault" (verified 2026-11-02: for China it matched 15+
+        // "amphibious assault ship" naval stories plus figurative "assault
+        // on artistic freedom" — the military sense dominates). Quoted
+        // "sexual assault" is person-directed and stays.
+        gnews_kw: "(murder OR homicide OR stabbing OR stabbed OR kidnapping OR kidnapped OR \"armed robbery\" OR \"sexual assault\")",
+        bluesky_kw: "murder",
+        gdelt_q: "(murder OR homicide OR stabbing OR kidnapping OR \"armed robbery\" OR \"sexual assault\")",
+        signal_gnews: "violent-crime keyword article volume (Google News), 7-day rate vs older-window rate",
+        signal_bluesky: "violent-crime keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
     },
     FamilyDef {
-        id: "violent_incidents",
-        weight: W_VIOLENT,
-        gnews_kw: "(bombing OR shooting OR \"terrorist attack\" OR explosion)",
+        id: "terror_conflict",
+        weight: W_TERROR,
+        gnews_kw: "(bombing OR shooting OR \"mass shooting\" OR \"terrorist attack\" OR explosion OR airstrike)",
         bluesky_kw: "attack",
-        gdelt_q: "(bombing OR shooting OR \"terrorist attack\" OR explosion)",
-        signal_gnews: "violent-incident keyword article volume (Google News), 7-day rate vs older-window rate",
-        signal_bluesky: "violent-incident keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
+        gdelt_q: "(bombing OR shooting OR \"terrorist attack\" OR explosion OR airstrike)",
+        signal_gnews: "terror/conflict keyword article volume (Google News), 7-day rate vs older-window rate",
+        signal_bluesky: "terror/conflict keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
     },
     FamilyDef {
-        id: "crime_disorder",
-        weight: W_CRIME,
-        gnews_kw: "(crime OR murder OR robbery OR looting)",
-        bluesky_kw: "crime",
-        gdelt_q: "(crime OR murder OR robbery OR looting)",
-        signal_gnews: "crime/disorder keyword article volume (Google News), 7-day rate vs older-window rate",
-        signal_bluesky: "crime/disorder keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
+        id: "violent_unrest",
+        weight: W_VIOLENT_UNREST,
+        // Unrest that threatens bystanders. Bare "protest"/"strike"/
+        // "unrest" are a political signal — they live in the
+        // political_unrest diagnostic, not here.
+        gnews_kw: "(riot OR \"violent protest\" OR clashes OR \"tear gas\" OR Molotov)",
+        bluesky_kw: "riot",
+        gdelt_q: "(riot OR \"violent protest\" OR clashes OR \"tear gas\")",
+        signal_gnews: "violent-unrest keyword article volume (Google News), 7-day rate vs older-window rate",
+        signal_bluesky: "violent-unrest keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
     },
 ];
+
+/// The old broad unrest signal (protest/strike/riot/unrest), kept as a
+/// secondary diagnostic for supply-chain / operations exposure. It is
+/// computed through the same saturation/chunked-baseline machinery but is
+/// NEVER part of the composite score or the safety reading — `weight` is
+/// unused and must stay 0.0 (a structural test asserts this).
+const POLITICAL_UNREST: FamilyDef = FamilyDef {
+    id: "political_unrest",
+    weight: 0.0,
+    gnews_kw: "(protest OR strike OR riot OR unrest)",
+    bluesky_kw: "protest",
+    gdelt_q: "theme:PROTEST",
+    signal_gnews: "broad unrest-keyword article volume (Google News) — political signal, not a safety signal",
+    signal_bluesky: "broad unrest-keyword post volume (Bluesky full-text search) — political signal, not a safety signal",
+};
 
 const SIGNAL_GDELT: &str = "incident-keyword coverage by domestic outlets (GDELT DOC timelinevol via sourcecountry), 7-day rate vs prior ~83-day baseline";
 
@@ -191,6 +250,26 @@ pub struct RiskFamily {
     /// (0–1). The denominator the thin-basis rule is judged against.
     pub live_weight: f64,
     pub partial: bool,
+    pub components: Vec<UnrestComponent>,
+}
+
+/// The broad protest/strike/riot/unrest signal as a secondary diagnostic:
+/// a political readout for supply-chain / operations exposure. It is
+/// computed through the same saturation/chunked-baseline machinery as the
+/// safety families but NEVER enters the composite score or the safety
+/// reading.
+#[derive(Debug, Serialize)]
+pub struct PoliticalUnrest {
+    /// 0–100, or null when no leg produced a usable score.
+    pub score_0_100: Option<f64>,
+    /// "low" | "moderate" | "high" | "severe", or "unknown" when null.
+    /// Capped one step down when `thin_basis`.
+    pub level: String,
+    pub thin_basis: bool,
+    pub live_weight: f64,
+    pub partial: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
     pub components: Vec<UnrestComponent>,
 }
 
@@ -233,6 +312,10 @@ pub struct RiskResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
     pub families: Vec<RiskFamily>,
+    /// Broad protest/strike/riot/unrest signal — political readout for
+    /// supply-chain / operations exposure. NOT a safety signal and NOT
+    /// part of the composite score, the level, or the safety reading.
+    pub political_unrest: PoliticalUnrest,
     pub methodology: String,
     pub generated_at: String,
     pub disclaimer: String,
@@ -503,12 +586,14 @@ pub struct RiskQuery {
 }
 
 /// Resolved place: the API response place block, the subject string used
-/// in news/social queries (and chunked-baseline keys), and per-family
-/// GDELT queries (`None` on the city path).
+/// in news/social queries (and chunked-baseline keys), per-family GDELT
+/// queries (`None` on the city path), and the political-unrest diagnostic's
+/// GDELT query (also `None` on the city path).
 struct ResolvedPlace {
     place: RiskPlace,
     subject: String,
     gdelt_queries: Vec<Option<String>>,
+    political_gdelt: Option<String>,
 }
 
 fn resolve_place(
@@ -548,6 +633,11 @@ fn resolve_place(
                     ))
                 })
                 .collect();
+            let political_gdelt = Some(format!(
+                "{} sourcecountry:\"{}\"",
+                POLITICAL_UNREST.gdelt_q,
+                gdelt_country_name(&c.name)
+            ));
             ResolvedPlace {
                 place: RiskPlace {
                     name: c.name.clone(),
@@ -558,6 +648,7 @@ fn resolve_place(
                 },
                 subject,
                 gdelt_queries,
+                political_gdelt,
             }
         }
         Resolved::City(name) => {
@@ -575,6 +666,7 @@ fn resolve_place(
                 },
                 subject,
                 gdelt_queries: vec![None, None, None],
+                political_gdelt: None,
             }
         }
     })
@@ -624,15 +716,45 @@ pub async fn risk(
         place,
         subject,
         gdelt_queries,
+        political_gdelt,
     } = resolve_place(place_raw, &kind, hint)?;
 
     // Concurrent fan-out over families; latency ~= the slowest component.
-    let (f0, f1, f2) = tokio::join!(
+    // The political-unrest diagnostic rides along but NEVER enters the
+    // composite score, the level, or the safety reading.
+    let (f0, f1, f2, fpol) = tokio::join!(
         family_components(&state, &subject, gdelt_queries[0].clone(), &FAMILIES[0]),
         family_components(&state, &subject, gdelt_queries[1].clone(), &FAMILIES[1]),
         family_components(&state, &subject, gdelt_queries[2].clone(), &FAMILIES[2]),
+        family_components(&state, &subject, political_gdelt, &POLITICAL_UNREST),
     );
     let family_comps = [f0, f1, f2];
+
+    let pol_fs = family_score(&fpol);
+    let political_unrest = PoliticalUnrest {
+        score_0_100: if pol_fs.all_down {
+            None
+        } else {
+            Some((pol_fs.score * 10.0).round() / 10.0)
+        },
+        level: if pol_fs.all_down {
+            "unknown".to_string()
+        } else if pol_fs.thin_basis {
+            cap_level_one_step(level_for(pol_fs.score))
+        } else {
+            level_for(pol_fs.score).to_string()
+        },
+        thin_basis: pol_fs.thin_basis,
+        live_weight: (pol_fs.live_weight * 1000.0).round() / 1000.0,
+        partial: pol_fs.partial,
+        note: Some(
+            "Political signal — broad protest/strike/riot/unrest keywords. \
+             Relevant for supply-chain / operations exposure; NOT a safety \
+             signal and NOT part of the composite score."
+                .to_string(),
+        ),
+        components: fpol,
+    };
 
     let mut families: Vec<RiskFamily> = Vec::with_capacity(3);
     let mut fam_scores: Vec<(f64, f64)> = Vec::new(); // (weight, score)
@@ -791,6 +913,7 @@ pub async fn risk(
         partial,
         note,
         families,
+        political_unrest,
         methodology: METHODOLOGY.to_string(),
         generated_at: now_iso8601(),
         disclaimer: DISCLAIMER.to_string(),
@@ -831,7 +954,9 @@ pub struct BaselinePlanResponse {
     pub chunks: Vec<BaselineChunk>,
     /// One entry per (family, leg) — gnews + bluesky only (GDELT's
     /// timelinevol has its own binning and is unreachable from some
-    /// sandboxes; its leg keeps the legacy path).
+    /// sandboxes; its leg keeps the legacy path). The political_unrest
+    /// diagnostic is included so the weekly refresh builds its baselines
+    /// too — chunked-baseline keys are "<subject>|political_unrest|<leg>".
     pub queries: Vec<BaselineQueryDef>,
     pub generated_at: String,
 }
@@ -863,6 +988,7 @@ pub async fn baseline_plan(
         .collect();
     let queries: Vec<BaselineQueryDef> = FAMILIES
         .iter()
+        .chain(std::iter::once(&POLITICAL_UNREST))
         .flat_map(|f| {
             [
                 BaselineQueryDef {
@@ -1137,8 +1263,8 @@ mod tests {
 
     #[test]
     fn qualify_composite_china_case() {
-        // China: unrest + violent_incidents nulled, only crime_disorder
-        // (0.25) live at 100. Live weight 0.25 < 0.5 → thin basis:
+        // China (old scorer): unrest + violent_incidents nulled, only one
+        // family (0.25) live at 100. Live weight 0.25 < 0.5 → thin basis:
         // score kept, level capped severe→high, confidence low.
         let q = qualify_composite(Some(100.0), 0.25, true);
         assert!(q.thin_basis);
@@ -1194,11 +1320,11 @@ mod tests {
     fn thin_basis_note_text() {
         let note = thin_basis_note(
             0.25,
-            &["crime_disorder".to_string()],
-            &["crime_disorder".to_string()],
+            &["violent_crime".to_string()],
+            &["violent_crime".to_string()],
         );
         assert!(
-            note.contains("thin basis: score rests on 25% of intended signal (crime_disorder)"),
+            note.contains("thin basis: score rests on 25% of intended signal (violent_crime)"),
             "note: {note}"
         );
         assert!(
@@ -1206,7 +1332,7 @@ mod tests {
             "note: {note}"
         );
         assert!(
-            note.contains("thin-basis families: crime_disorder"),
+            note.contains("thin-basis families: violent_crime"),
             "note: {note}"
         );
         // No forbidden forecast language in the note.
@@ -1220,8 +1346,8 @@ mod tests {
     fn thin_basis_note_without_thin_families() {
         // Composite thin via all-down families (no family scored thin
         // itself): the family list clause is omitted.
-        let note = thin_basis_note(0.25, &["crime_disorder".to_string()], &[]);
-        assert!(note.contains("25% of intended signal (crime_disorder)"));
+        let note = thin_basis_note(0.25, &["violent_crime".to_string()], &[]);
+        assert!(note.contains("25% of intended signal (violent_crime)"));
         assert!(!note.contains("thin-basis families"));
     }
 
@@ -1255,8 +1381,235 @@ mod tests {
         assert!(DISCLAIMER.contains("English-language"));
         assert!(DISCLAIMER.contains("not travel advice"));
         assert!(DISCLAIMER.contains("official government guidance"));
+        assert!(DISCLAIMER.contains("danger to persons"));
         let low = DISCLAIMER.to_lowercase();
         assert!(!low.contains("prediction"));
         assert!(!low.contains("probability"));
+    }
+
+    // --- safety rebuild ------------------------------------------------
+    // The headline score answers "how physically safe is it to be in this
+    // place?" These tests guard the query definitions: the polluting
+    // keywords that produced China's fake 100 must never come back, and
+    // genuine person-directed violence must keep matching.
+
+    /// Split a parenthesized OR keyword group into lowercase terms.
+    fn or_terms(kw: &str) -> Vec<String> {
+        kw.trim_matches(|c| c == '(' || c == ')')
+            .split(" OR ")
+            .map(|t| t.trim().trim_matches('"').to_lowercase())
+            .collect()
+    }
+
+    /// Simulate upstream keyword matching: case-insensitive, word-boundary
+    /// (multi-word terms match as phrases). Mirrors what the gnews query
+    /// would catch closely enough to validate intent.
+    fn headline_matches(headline: &str, kw: &str) -> bool {
+        let norm: String = headline
+            .to_lowercase()
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { ' ' })
+            .collect();
+        let h = format!(" {norm} ");
+        or_terms(kw).iter().any(|t| h.contains(&format!(" {t} ")))
+    }
+
+    fn fam(id: &str) -> &'static FamilyDef {
+        FAMILIES.iter().find(|f| f.id == id).expect("family id")
+    }
+
+    #[test]
+    fn safety_families_have_expected_ids_and_weights() {
+        let ids: Vec<&str> = FAMILIES.iter().map(|f| f.id).collect();
+        assert_eq!(ids, ["violent_crime", "terror_conflict", "violent_unrest"]);
+        assert!((FAMILIES[0].weight - 0.40).abs() < 1e-9);
+        assert!((FAMILIES[1].weight - 0.35).abs() < 1e-9);
+        assert!((FAMILIES[2].weight - 0.25).abs() < 1e-9);
+        // The political diagnostic is structurally excluded: not in
+        // FAMILIES, zero weight.
+        assert!(!FAMILIES.iter().any(|f| f.id == POLITICAL_UNREST.id));
+        assert_eq!(POLITICAL_UNREST.weight, 0.0);
+        assert_eq!(POLITICAL_UNREST.id, "political_unrest");
+    }
+
+    #[test]
+    fn violent_crime_terms_exclude_polluters() {
+        let terms = or_terms(fam("violent_crime").gnews_kw);
+        // The China-case polluters: generic "crime" matched enforcement
+        // and transnational stories; bare "assault" matched "amphibious
+        // assault ship" naval coverage (verified 2026-11-02). These must
+        // never return.
+        for banned in [
+            "crime",
+            "scam",
+            "fraud",
+            "smuggling",
+            "theft",
+            "looting",
+            "crackdown",
+            "corruption",
+            "laundering",
+            "robbery", // bare "robbery" — only "armed robbery" qualifies
+            "assault", // bare "assault" — only "sexual assault" qualifies
+        ] {
+            assert!(
+                !terms.iter().any(|t| t == banned),
+                "banned term {banned:?} in violent_crime: {terms:?}"
+            );
+        }
+        for required in [
+            "murder",
+            "homicide",
+            "stabbing",
+            "kidnapping",
+            "armed robbery",
+            "sexual assault",
+        ] {
+            assert!(
+                terms.iter().any(|t| t == required),
+                "missing term {required:?} in violent_crime: {terms:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn violent_unrest_terms_exclude_peaceful_protest() {
+        let terms = or_terms(fam("violent_unrest").gnews_kw);
+        // Bare protest/strike/unrest are the political signal — they must
+        // not move the safety score.
+        for banned in ["protest", "strike", "unrest"] {
+            assert!(
+                !terms.iter().any(|t| t == banned),
+                "banned term {banned:?} in violent_unrest: {terms:?}"
+            );
+        }
+        for required in ["riot", "violent protest", "clashes", "tear gas", "molotov"] {
+            assert!(
+                terms.iter().any(|t| t == required),
+                "missing term {required:?} in violent_unrest: {terms:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn terror_conflict_terms_cover_the_core() {
+        let terms = or_terms(fam("terror_conflict").gnews_kw);
+        for required in [
+            "bombing",
+            "shooting",
+            "mass shooting",
+            "terrorist attack",
+            "explosion",
+            "airstrike",
+        ] {
+            assert!(
+                terms.iter().any(|t| t == required),
+                "missing term {required:?} in terror_conflict: {terms:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn polluting_china_headlines_do_not_match_safety_families() {
+        // The actual 2026-11-02 headlines behind China's fake 100 — none
+        // may match any safety family now.
+        let polluters = [
+            "Chinese Scam Networks Shift From Cambodia to Madagascar as Authorities Crack Down",
+            "Taiwan moves to make AI chip smuggling to China a crime",
+            "Chinese organized crime networks moved $16 billion in crypto in 2025, according to report",
+            "China sentences 3 more Myanmar crime bosses to death in scam centre crackdown",
+            "Over 8,200 detained as China launches year-long crackdown on organised crime",
+            "How Chinese criminal networks fuel illicit markets across the Americas",
+        ];
+        for h in polluters {
+            for f in &FAMILIES {
+                assert!(
+                    !headline_matches(h, f.gnews_kw),
+                    "polluter matched {}: {h}",
+                    f.id
+                );
+            }
+        }
+        // The "assault" lesson (2026-11-02): naval "assault ship" coverage
+        // and figurative "assault on X" must not count as violent crime.
+        for h in [
+            "China's GJ-21 stealth drone makes maiden takeoff and landing aboard amphibious assault ship",
+            "China: Maximum sentence for artist Gao Zhen is an assault on artistic freedom",
+            "A deep dive into China's Volt Typhoon suggests it is preparing for an assault on infrastructure",
+        ] {
+            assert!(
+                !headline_matches(h, fam("violent_crime").gnews_kw),
+                "assault-sense polluter matched violent_crime: {h}"
+            );
+        }
+    }
+
+    #[test]
+    fn genuine_safety_headlines_match() {
+        let cases = [
+            (
+                "violent_crime",
+                "Shanghai man stabbed in street attack, police say",
+            ),
+            (
+                "violent_crime",
+                "Kidnapping gang arrested in Lagos after ransom paid",
+            ),
+            (
+                "violent_crime",
+                "Armed robbery at Paris jewelry store leaves guard hurt",
+            ),
+            (
+                "violent_crime",
+                "Homicide detectives investigate Chicago shooting",
+            ), // homicide matches; shooting matches terror too
+            (
+                "terror_conflict",
+                "Bombing in Kyiv kills three, officials say",
+            ),
+            (
+                "terror_conflict",
+                "Airstrike hits Kharkiv outskirts overnight",
+            ),
+            (
+                "terror_conflict",
+                "Mass shooting at Texas mall leaves five dead",
+            ),
+            (
+                "violent_unrest",
+                "Riot police fire tear gas at protesters in Lima",
+            ),
+            (
+                "violent_unrest",
+                "Clashes erupt in Nairobi after opposition rally",
+            ),
+        ];
+        for (id, h) in cases {
+            assert!(
+                headline_matches(h, fam(id).gnews_kw),
+                "genuine headline failed to match {id}: {h}"
+            );
+        }
+    }
+
+    #[test]
+    fn peaceful_protest_is_political_not_safety() {
+        // A general strike is the political signal: it must match the
+        // diagnostic and must NOT match any safety family.
+        let h = "General strike shuts down Paris transport for third day";
+        assert!(
+            headline_matches(h, POLITICAL_UNREST.gnews_kw),
+            "strike must match the political diagnostic"
+        );
+        for f in &FAMILIES {
+            assert!(
+                !headline_matches(h, f.gnews_kw),
+                "political headline matched safety family {}: {h}",
+                f.id
+            );
+        }
+        // "Violent protest" (with the qualifier) is safety-relevant.
+        let h2 = "Violent protest outside parliament leaves dozens injured";
+        assert!(headline_matches(h2, fam("violent_unrest").gnews_kw));
     }
 }

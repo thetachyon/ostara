@@ -490,6 +490,44 @@ gains an "Unrest signals" section (score bar, level chip, per-component
 breakdown, methodology one click away in a `<details>`) between the OSINT
 resources and News sections; existing sections are untouched.
 
+### `GET /api/risk` — safety risk score (danger to persons)
+
+```sh
+curl "http://localhost:3000/api/risk?place=France"
+curl "http://localhost:3000/api/risk?place=Paris&kind=city&country=France"
+```
+
+The headline score answers **"how physically safe is it to be in this
+place?"** — danger to persons, nothing else. Three safety families, each
+baseline-normalized like `/api/unrest` (7-day recent rate vs baseline,
+ratio → `clamp((r-1)/4, 0, 1)`, low-evidence discount):
+
+- `violent_crime` (0.40) — murder/homicide/stabbing/kidnapping/armed-robbery/assault keywords;
+- `terror_conflict` (0.35) — bombing/shooting/mass-shooting/terrorist-attack/explosion/airstrike;
+- `violent_unrest` (0.25) — riot/violent-protest/clashes/tear-gas/Molotov (unrest that threatens bystanders).
+
+**Deliberately excluded from the safety score:** the generic `crime`
+keyword, fraud/scam/cybercrime/smuggling/corruption/money-laundering
+(transnational — they don't make streets unsafe), peaceful protest/strikes
+(a political signal), and state crackdowns/arrests (enforcement). The
+motivating case: China once scored 100/severe because "China executes
+Myanmar scam-centre bosses" and "Taiwan criminalizes chip smuggling to
+China" matched `China (crime OR …)` — enforcement and transnational
+stories scored as maximum street danger. Person-directed keywords don't
+make that mistake.
+
+A separate `political_unrest` diagnostic (broad protest/strike/riot/unrest
+keywords) is reported for supply-chain/operations context but **never
+enters the composite score or the safety reading**. Response also carries
+the `safety` inverse reading (High/Moderate/Low/Very low), thin-basis
+flags (score kept but qualified when <50% of intended signal survives),
+per-leg saturation diagnostics, and baseline-free peer
+percentile/rank vs the 30-place watchlist. `kind=city` drops the GDELT leg
+honestly (no city granularity). Heuristic, not a forecast, not travel
+advice. In the UI the country panel shows a "Safety risk" section (danger
+to persons) with the political-unrest diagnostic as a muted row; the Feeds
+panel "Risk & safety" category renders families plus the diagnostic.
+
 ### `GET /api/threats/*` — threats-against-politicians scanning
 
 **Protective scanning only — not a targeting system.** Public officials

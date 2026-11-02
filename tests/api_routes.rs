@@ -1311,6 +1311,7 @@ async fn risk_shape_for_france() {
         "thin_basis",
         "partial",
         "families",
+        "political_unrest",
         "methodology",
         "generated_at",
         "disclaimer",
@@ -1373,7 +1374,10 @@ async fn risk_shape_for_france() {
         .filter_map(|f| f.get("family").and_then(|v| v.as_str()))
         .collect();
     fam_ids.sort_unstable();
-    assert_eq!(fam_ids, ["crime_disorder", "unrest", "violent_incidents"]);
+    assert_eq!(
+        fam_ids,
+        ["terror_conflict", "violent_crime", "violent_unrest"]
+    );
     for f in fams {
         for key in [
             "family",
@@ -1447,6 +1451,52 @@ async fn risk_shape_for_france() {
     assert!(
         !blob.contains("probability"),
         "response must never say probability"
+    );
+}
+
+/// The political-unrest diagnostic rides along but never enters the
+/// composite: exactly 3 safety families, and a separate political_unrest
+/// object with its own score/level/components.
+#[tokio::test]
+async fn risk_political_unrest_is_diagnostic_only() {
+    let g = get("/api/risk?place=FRA").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    let b = &g.body;
+    let fams = b
+        .get("families")
+        .and_then(|v| v.as_array())
+        .expect("families array");
+    assert_eq!(fams.len(), 3, "composite has exactly the 3 safety families");
+    assert!(
+        !fams
+            .iter()
+            .any(|f| f.get("family").and_then(|v| v.as_str()) == Some("political_unrest")),
+        "political_unrest must not be a composite family"
+    );
+    let pu = b.get("political_unrest").expect("political_unrest object");
+    for key in [
+        "score_0_100",
+        "level",
+        "thin_basis",
+        "partial",
+        "components",
+    ] {
+        assert!(pu.get(key).is_some(), "political_unrest missing key {key}");
+    }
+    let level = pu.get("level").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["low", "moderate", "high", "severe", "unknown"].contains(&level),
+        "bad political_unrest level {level}"
+    );
+    // Safety families must be the renamed set.
+    let mut fam_ids: Vec<&str> = fams
+        .iter()
+        .filter_map(|f| f.get("family").and_then(|v| v.as_str()))
+        .collect();
+    fam_ids.sort_unstable();
+    assert_eq!(
+        fam_ids,
+        ["terror_conflict", "violent_crime", "violent_unrest"]
     );
 }
 
@@ -1531,8 +1581,26 @@ async fn risk_baseline_plan_shape() {
         .get("queries")
         .and_then(|v| v.as_array())
         .expect("queries");
-    // 3 families × 2 legs (gnews + bluesky; GDELT keeps its own path).
-    assert_eq!(queries.len(), 6, "got: {}", body_preview(&g));
+    // 4 query sets × 2 legs (gnews + bluesky; GDELT keeps its own path):
+    // the 3 safety families plus the political-unrest diagnostic.
+    assert_eq!(queries.len(), 8, "got: {}", body_preview(&g));
+    let mut qfams: Vec<&str> = queries
+        .iter()
+        .filter_map(|q| q.get("family").and_then(|v| v.as_str()))
+        .collect();
+    qfams.sort_unstable();
+    qfams.dedup();
+    assert_eq!(
+        qfams,
+        [
+            "political_unrest",
+            "terror_conflict",
+            "violent_crime",
+            "violent_unrest"
+        ],
+        "got: {}",
+        body_preview(&g)
+    );
     for qd in queries {
         let leg = qd.get("leg").and_then(|v| v.as_str()).unwrap_or("");
         assert!(["gnews", "bluesky"].contains(&leg), "bad leg {leg}");

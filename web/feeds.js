@@ -739,7 +739,7 @@ window.OST = window.OST || {};
     {
       id: "risk", label: "Risk & safety", health: null,
       group: "global",
-      note: "heuristic risk & safety score per country or city · not a forecast · not travel advice",
+      note: "heuristic SAFETY score per country or city — danger to persons (violent crime, terror/conflict, violent unrest) · not a forecast · not travel advice",
       timeout: 120000,
       inputs: [
         { name: "place", placeholder: "country or city", required: true },
@@ -795,6 +795,18 @@ window.OST = window.OST || {};
           (j.note ? `<div class="m" style="margin-bottom:6px">${esc(j.note)}</div>` : "") +
           (j.score_basis ? `<div class="m" style="margin-bottom:6px">score basis: ${esc(j.score_basis)}</div>` : "") +
           fams +
+          (j.political_unrest ? (() => {
+            const pu = j.political_unrest;
+            const puScore = pu.score_0_100 == null ? null : Number(pu.score_0_100);
+            const puColor = colors[pu.level] || "#888";
+            return `<div class="feed-item" style="opacity:0.75"><div><strong>political unrest</strong>
+              <span class="m">diagnostic — not in the safety score</span>
+              ${puScore == null
+                ? `<span class="m">unavailable</span>`
+                : `<span class="chip" style="color:${puColor};border:1px solid ${puColor};border-radius:3px;padding:0 5px;font-size:10px">${esc(pu.level)}</span>
+                   <span class="m">${puScore.toFixed(1)} / 100${pu.thin_basis ? " · thin basis" : ""}${pu.partial ? " · partial" : ""}</span>`}</div>
+              <div class="m">broad protest/strike/riot/unrest keywords — political signal for supply-chain / operations exposure, not a safety signal</div></div>`;
+          })() : "") +
           `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
           `<div class="m" style="margin-top:4px">${esc(j.methodology || "")}</div>` +
           `<div class="unrest-disc">${esc(j.disclaimer || "")}</div></details>`;
