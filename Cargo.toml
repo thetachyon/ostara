@@ -27,6 +27,10 @@ hickory-resolver = { version = "0.24", features = ["tokio"] }
 tower-http = { version = "0.6", features = ["fs"] }
 tokio-stream = { version = "0.1.19", features = ["time"] }
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+tokio-rustls = "0.26"
+rustls = { version = "0.23", features = ["ring"] }
+webpki-roots = "0.26"
+base64 = "0.22"
 futures-util = "0.3"
 feed-rs = "2"
 

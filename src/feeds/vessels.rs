@@ -405,12 +405,146 @@ fn apply_envelope(inner: &mut StreamInner, text: &str, now: Instant) {
     }
 }
 
+type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_rustls::client::TlsStream<tokio::net::TcpStream>>;
+
+/// WebSocket connect with optional egress-proxy support.
+///
+/// `tokio-tungstenite` does not honor proxy env vars, and some sandboxed /
+/// corporate networks only allow outbound WebSocket upgrades through an
+/// HTTP proxy (plain `CONNECT` tunneling). When `HTTPS_PROXY` (or
+/// `https_proxy`) is set we tunnel through it: TCP to the proxy, `CONNECT
+/// stream.aisstream.io:443`, then TLS over the tunnel, then the WebSocket
+/// handshake. Without a proxy env var this is a plain direct TLS connect —
+/// identical behavior to the old `connect_async` path.
+async fn ws_connect() -> Result<WsStream, String> {
+    let target_host = "stream.aisstream.io";
+    let target_port = 443u16;
+
+    let tcp = match std::env::var("HTTPS_PROXY")
+        .or_else(|_| std::env::var("https_proxy"))
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+    {
+        Some(proxy_url) => connect_via_proxy(&proxy_url, target_host, target_port).await?,
+        None => tokio::net::TcpStream::connect((target_host, target_port))
+            .await
+            .map_err(|e| format!("tcp connect failed: {e}"))?,
+    };
+
+    // rustls needs a process-wide crypto provider; install ring's once.
+    // (tokio-tungstenite's own connect path does this internally via its
+    // feature flags, but our manual TLS-over-proxy path must do it.)
+    static CRYPTO_INIT: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    CRYPTO_INIT.get_or_init(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+
+    let mut roots = rustls::RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let tls_config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    let connector = tokio_rustls::TlsConnector::from(std::sync::Arc::new(tls_config));
+    let server_name = rustls::pki_types::ServerName::try_from(target_host)
+        .map_err(|e| format!("bad tls server name: {e}"))?;
+    let tls = connector
+        .connect(server_name, tcp)
+        .await
+        .map_err(|e| format!("tls handshake failed: {e}"))?;
+
+    let (ws, _) = tokio_tungstenite::client_async(WS_URL, tls)
+        .await
+        .map_err(|e| format!("websocket handshake failed: {e}"))?;
+    Ok(ws)
+}
+
+/// Open a `CONNECT` tunnel through an HTTP proxy and return the raw TCP
+/// stream positioned after the proxy's response headers.
+async fn connect_via_proxy(
+    proxy_url: &str,
+    target_host: &str,
+    target_port: u16,
+) -> Result<tokio::net::TcpStream, String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    // Minimal proxy-URL parse: scheme://[user[:pass]@]host[:port]
+    let without_scheme = proxy_url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(proxy_url);
+    let (userinfo, hostport) = match without_scheme.rsplit_once('@') {
+        Some((u, h)) => (Some(u), h),
+        None => (None, without_scheme),
+    };
+    let (proxy_host, proxy_port) = match hostport.rsplit_once(':') {
+        Some((h, p)) => (
+            h,
+            p.parse::<u16>().map_err(|_| "bad proxy port".to_string())?,
+        ),
+        None => (hostport, 8080),
+    };
+    if proxy_host.is_empty() {
+        return Err("empty proxy host".to_string());
+    }
+
+    let mut stream = tokio::net::TcpStream::connect((proxy_host, proxy_port))
+        .await
+        .map_err(|e| format!("proxy tcp connect failed: {e}"))?;
+
+    let mut req = format!(
+        "CONNECT {target_host}:{target_port} HTTP/1.1\r\nHost: {target_host}:{target_port}\r\n"
+    );
+    if let Some(ui) = userinfo.filter(|u| !u.is_empty()) {
+        let creds = match ui.split_once(':') {
+            Some((u, p)) => format!("{u}:{p}"),
+            None => format!("{ui}:"),
+        };
+        req.push_str(&format!(
+            "Proxy-Authorization: Basic {}\r\n",
+            base64::engine::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                creds.as_bytes()
+            )
+        ));
+    }
+    req.push_str("\r\n");
+    stream
+        .write_all(req.as_bytes())
+        .await
+        .map_err(|e| format!("proxy connect write failed: {e}"))?;
+
+    // Read response headers (bounded).
+    let mut buf = Vec::with_capacity(512);
+    let mut tmp = [0u8; 256];
+    loop {
+        let n = stream
+            .read(&mut tmp)
+            .await
+            .map_err(|e| format!("proxy connect read failed: {e}"))?;
+        if n == 0 {
+            return Err("proxy closed connection during CONNECT".to_string());
+        }
+        buf.extend_from_slice(&tmp[..n]);
+        if buf.len() > 8192 {
+            return Err("proxy CONNECT response too large".to_string());
+        }
+        if buf.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+    }
+    let head = String::from_utf8_lossy(&buf);
+    let status_line = head.lines().next().unwrap_or("");
+    if !(status_line.starts_with("HTTP/1.1 200") || status_line.starts_with("HTTP/1.0 200")) {
+        return Err(format!("proxy CONNECT rejected: {status_line}"));
+    }
+    Ok(stream)
+}
+
 /// Connect, subscribe, and consume until the stream ends. Returns on clean
 /// close or any failure; the caller reconnects with backoff.
 async fn connect_and_consume(api_key: &str, stream: &VesselStream) -> Result<(), String> {
-    let (ws, _) = tokio_tungstenite::connect_async(WS_URL)
-        .await
-        .map_err(|e| format!("websocket connect failed: {e}"))?;
+    let ws = ws_connect().await?;
     let (mut sink, mut source) = ws.split();
     // The subscription must arrive within 3s of connect (provider rule).
     sink.send(tokio_tungstenite::tungstenite::Message::Text(
