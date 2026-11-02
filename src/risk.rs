@@ -5,8 +5,10 @@
 //! place?" — danger to persons, nothing else. Three signal families feed
 //! the headline, all person-directed: **violent_crime** (murder / homicide
 //! / stabbing / kidnapping / armed-robbery / assault keywords),
-//! **terror_conflict** (bombing / shooting / terrorist-attack / explosion /
-//! airstrike keywords), **violent_unrest** (riot / violent-protest /
+//! **terror_conflict** (bombing / shooting / terrorist-attack /
+//! airstrike — bare "explosion" excluded: it matches industrial accidents
+//! like mine gas explosions and fireworks factory blasts, a different
+//! risk class from terror/conflict), **violent_unrest** (riot / violent-protest /
 //! clashes / tear-gas keywords — unrest that threatens bystanders).
 //!
 //! Explicitly OUT of the safety score: fraud, scam, cybercrime, smuggling,
@@ -105,7 +107,7 @@ use crate::{
 /// sole basis for decisions.
 pub const DISCLAIMER: &str = "HEURISTIC INDICATOR — NOT A FORECAST. This SAFETY score summarizes how current open-source media signals about danger to persons in a place compare to their own recent baselines: violent crime, terror/conflict, and violent unrest only. It deliberately excludes fraud, scams, smuggling, corruption, money laundering, peaceful protest/strikes, and state enforcement actions — those are not street danger. It does not predict whether risk will materialize, when, or where. News and social coverage reflect what gets reported, not what happens on the ground: big cities and capitals are systematically over-covered relative to smaller places, so scores are not comparable as absolute risk between places of very different media visibility. Coverage is English-language sources only. This is not travel advice and not a substitute for official government guidance. Use as one input among many, never as a sole basis for decisions.";
 
-pub const METHODOLOGY: &str = "Per-place SAFETY score (0-100): danger to persons, heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): violent_crime (weight 0.40) — murder/homicide/stabbing/kidnapping/armed-robbery/sexual-assault keywords, person-directed violence only (bare \"assault\" excluded: it matches naval \"assault ship\" coverage); terror_conflict (weight 0.35) — bombing/shooting/mass-shooting/terrorist-attack/explosion/airstrike keywords; violent_unrest (weight 0.25) — riot/violent-protest/clashes/tear-gas/Molotov keywords, i.e. unrest that threatens bystanders. EXCLUDED from the safety score by design: the generic 'crime' keyword, fraud/scam/cybercrime/smuggling/corruption/money-laundering (transnational, not street danger), peaceful protest/strikes (political signal), and state crackdowns/arrests (enforcement). A separate political_unrest diagnostic (broad protest/strike/riot/unrest keywords) is reported for supply-chain/operations context but NEVER enters the composite score or safety reading. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. THIN-BASIS RULE: when the surviving signal rests on <50% of intended weight — within a family or across families — the score is kept (it is real) but flagged thin_basis:true, confidence forced to \"low\", and the level capped one step down (severe→high→moderate→low); the note names the live families. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
+pub const METHODOLOGY: &str = "Per-place SAFETY score (0-100): danger to persons, heuristic only. Three signal families, each built from baseline-normalized components (7-day recent rate vs baseline; ratio r maps to clamp((r-1)/4,0,1); low-evidence discount below 5 recent items): violent_crime (weight 0.40) — murder/homicide/stabbing/kidnapping/armed-robbery/sexual-assault keywords, person-directed violence only (bare \"assault\" excluded: it matches naval \"assault ship\" coverage); terror_conflict (weight 0.35) — bombing/shooting/mass-shooting/terrorist-attack/airstrike keywords (bare \"explosion\" excluded: industrial accidents are a different risk class); violent_unrest (weight 0.25) — riot/violent-protest/clashes/tear-gas/Molotov keywords, i.e. unrest that threatens bystanders. EXCLUDED from the safety score by design: the generic 'crime' keyword, fraud/scam/cybercrime/smuggling/corruption/money-laundering (transnational, not street danger), peaceful protest/strikes (political signal), and state crackdowns/arrests (enforcement). A separate political_unrest diagnostic (broad protest/strike/riot/unrest keywords) is reported for supply-chain/operations context but NEVER enters the composite score or safety reading. Each family fans out over GDELT timelinevol (country path only; weight 0.50 within family), Google News date-bounded queries (0.35), and Bluesky windowed searches (0.15). ANTI-SATURATION: upstreams cap windows at 100 items, understating single-query 83-day baselines for high-coverage places. News/social baselines come from a weekly chunked refresh (6x14-day chunks summed) when fresh (<10d), else a legacy 83-day query; a saturated baseline nulls the leg with saturated_baseline instead of scoring (weights redistribute; score null/level unknown when nothing is usable). Per-leg diagnostics: saturated, baseline_source (chunked|legacy|unknown), cap_fill_hours/intensity. THIN-BASIS RULE: when the surviving signal rests on <50% of intended weight — within a family or across families — the score is kept (it is real) but flagged thin_basis:true, confidence forced to \"low\", and the level capped one step down (severe→high→moderate→low); the note names the live families. City path: GDELT has no city granularity — its leg reports ok:false and family weights redistribute. score_basis documents the time-ratio score; percentile/rank give the baseline-free peer rank vs the 30-place weekly watchlist (rank 1 = hottest; percentile = 100*(n-rank)/(n-1)). When a component or family is unavailable its weight redistributes proportionally and the score is marked partial. Levels: <25 low, <50 moderate, <75 high, >=75 severe. Safety is the inverse reading of the same score: High (<25), Moderate (<50), Low (<75), Very low (>=75).";
 
 const W_VIOLENT_CRIME: f64 = 0.40;
 const W_TERROR: f64 = 0.35;
@@ -180,9 +182,9 @@ const FAMILIES: [FamilyDef; 3] = [
     FamilyDef {
         id: "terror_conflict",
         weight: W_TERROR,
-        gnews_kw: "(bombing OR shooting OR \"mass shooting\" OR \"terrorist attack\" OR explosion OR airstrike)",
+        gnews_kw: "(bombing OR shooting OR \"mass shooting\" OR \"terrorist attack\" OR airstrike)",
         bluesky_kw: "attack",
-        gdelt_q: "(bombing OR shooting OR \"terrorist attack\" OR explosion OR airstrike)",
+        gdelt_q: "(bombing OR shooting OR \"terrorist attack\" OR airstrike)",
         signal_gnews: "terror/conflict keyword article volume (Google News), 7-day rate vs older-window rate",
         signal_bluesky: "terror/conflict keyword post volume (Bluesky full-text search), 7-day rate vs older-window rate",
     },
@@ -1499,13 +1501,30 @@ mod tests {
             "shooting",
             "mass shooting",
             "terrorist attack",
-            "explosion",
             "airstrike",
         ] {
             assert!(
                 terms.iter().any(|t| t == required),
                 "missing term {required:?} in terror_conflict: {terms:?}"
             );
+        }
+        // Bare "explosion" is banned: it matches industrial accidents
+        // (mine gas explosions, fireworks factory blasts), not terror.
+        assert!(
+            !terms.iter().any(|t| t == "explosion"),
+            "bare 'explosion' must not be in terror_conflict: {terms:?}"
+        );
+        for headline in [
+            "Coal-mine gas explosion kills 90 in Shanxi",
+            "Fireworks factory explosion kills 26, injures dozens",
+        ] {
+            for f in &FAMILIES {
+                assert!(
+                    !headline_matches(headline, f.gnews_kw),
+                    "industrial accident matched {}: {headline:?}",
+                    f.id
+                );
+            }
         }
     }
 
