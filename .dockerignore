@@ -1,0 +1,10 @@
+# Never bake secrets or local-only state into the image.
+.env
+*.muse-github-snapshot-sync.json
+# Build artifacts and VCS metadata.
+target/
+.git/
+# The weekly cron refreshes these at runtime via the API; the baked copies
+# are only a bootstrap. (Uncomment to start with an empty store instead.)
+# data/risk_snapshots/
+# data/risk_baselines.json

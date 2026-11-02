@@ -43,11 +43,20 @@ fn env_u64(name: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
-fn env_u16(name: &str, default: u16) -> u16 {
-    std::env::var(name)
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
-        .unwrap_or(default)
+/// Listen port: container hosts (fly.io, Railway, Render) inject `PORT`.
+/// It takes precedence; `OSIRIS_PORT` remains the explicit override for
+/// self-hosted runs; default 3000. A value of 0 or an unparsable value
+/// falls through to the next source.
+fn port_from_env() -> u16 {
+    for name in ["PORT", "OSIRIS_PORT"] {
+        if let Ok(v) = std::env::var(name)
+            && let Ok(p) = v.trim().parse::<u16>()
+            && p != 0
+        {
+            return p;
+        }
+    }
+    3000
 }
 
 fn env_list(name: &str) -> Vec<String> {
@@ -131,7 +140,7 @@ impl Config {
             port_scan_timeout_ms: env_u64("PORT_SCAN_TIMEOUT_MS", 1500),
             port_scan_max_ports: env_usize("PORT_SCAN_MAX_PORTS", 1000),
             sdk_ingest_key: env_opt("SDK_INGEST_KEY"),
-            port: env_u16("OSIRIS_PORT", 3000),
+            port: port_from_env(),
         }
     }
 
@@ -194,6 +203,31 @@ mod tests {
             std::env::remove_var("FIRMS_API_KEY");
             std::env::remove_var("RECON_ENABLED");
         }
+    }
+
+    #[test]
+    fn port_prefers_port_env_over_osiris_port() {
+        let _guard = env_lock().lock().unwrap();
+        // SAFETY: single-threaded test manipulating process env for its own
+        // assertions; no other test reads these vars concurrently.
+        unsafe {
+            std::env::set_var("PORT", "8080");
+            std::env::set_var("OSIRIS_PORT", "9000");
+        }
+        assert_eq!(Config::from_env().port, 8080);
+        unsafe {
+            std::env::remove_var("PORT");
+        }
+        assert_eq!(Config::from_env().port, 9000);
+        unsafe {
+            std::env::set_var("PORT", "not-a-port");
+        }
+        assert_eq!(Config::from_env().port, 9000);
+        unsafe {
+            std::env::remove_var("PORT");
+            std::env::remove_var("OSIRIS_PORT");
+        }
+        assert_eq!(Config::from_env().port, 3000);
     }
 
     #[test]
