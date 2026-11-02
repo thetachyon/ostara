@@ -283,7 +283,19 @@ fn sort_items(items: &mut [ThreatItem]) {
 }
 
 fn snippet(s: &str, max: usize) -> String {
-    let s = s.trim().replace(|c: char| c.is_whitespace(), " ");
+    // Google News descriptions embed raw HTML (e.g. <a href=...> links);
+    // strip tags so the UI doesn't render literal markup as escaped text.
+    let mut out = String::with_capacity(s.len());
+    let mut in_tag = false;
+    for c in s.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    let s = out.trim().replace(|c: char| c.is_whitespace(), " ");
     if s.len() <= max {
         s
     } else {
@@ -668,5 +680,14 @@ mod tests {
         assert!(DISCLAIMER.contains("human review"));
         assert!(DISCLAIMER.contains("English-language"));
         assert!(DISCLAIMER.contains("not a targeting system"));
+    }
+
+    #[test]
+    fn snippet_strips_html_tags() {
+        let s = snippet(
+            r#"<a href="https://news.google.com/rss/xyz" target="_blank">Far-right militants</a> go on trial"#,
+            280,
+        );
+        assert_eq!(s, "Far-right militants go on trial");
     }
 }
