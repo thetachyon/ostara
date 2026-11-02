@@ -13,9 +13,13 @@
 //!   G20 heads of state/government, US president/VP/cabinet/congressional
 //!   leadership, EU institutional leadership, other major world leaders).
 //! - `GET /api/threats/scan?name=<name|alias>&severity=` — scans Google
-//!   News and Bluesky through their normal cache paths and TTLs (no new
-//!   upstreams, no new keys), classifies each returned item into severity
-//!   tiers, and returns items sorted by severity then recency, capped at 50.
+//!   News, Bluesky, and the configured Telegram channels (TELEGRAM_CHANNELS)
+//!   through their normal cache paths and TTLs (no new upstreams, no new
+//!   keys), classifies each returned item into severity tiers, and returns
+//!   items sorted by severity then recency, capped at 50 — plus an
+//!   `accounts` array rolling social items up by (platform, author) with
+//!   per-tier counts and sample posts. News outlets are excluded from
+//!   `accounts`.
 //!
 //! ## Keyword tiers (English-first — documented limitation)
 //!
@@ -58,7 +62,18 @@
 //! calls per figure per TTL window. A failed source is recorded in
 //! `sources[]` as `ok: false` with a human-readable detail — never silently
 //! dropped, and the scan still returns 200 with whatever the other source
-//! produced.
+//! produced. An empty TELEGRAM_CHANNELS allowlist is reported honestly
+//! (`telegram` source `ok: false`, "not configured").
+//
+//! ## Account attribution
+//!
+//! Social items carry `author`, `author_display`, `author_url`, and
+//! `post_url`; the response's `accounts` array groups them by (platform,
+//! author) with per-tier counts and up to 3 sample posts. These are public
+//! accounts whose posts matched threat keywords — they include journalists
+//! quoting threats, people condemning threats, and figurative language.
+//! They are NEVER "threat actors" and no account is accused of making a
+//! threat; the disclaimer says so on every response.
 
 use std::sync::OnceLock;
 
@@ -80,10 +95,15 @@ use crate::{
 /// public figure. Every item requires human review: keyword matches include
 /// news reporting about threats, condemnations of threats, historical
 /// references, and figurative language — not just genuine threats. Nothing
-/// here is a verified threat against anyone. Coverage is English-language
-/// sources only. This is protective monitoring of public discourse, not a
-/// targeting system.
-pub const DISCLAIMER: &str = "KEYWORD SCAN — NOT VERIFIED THREATS. These are public news and social-media mentions matching threat-related keywords for the named public figure. Every item requires human review: keyword matches include news reporting about threats, condemnations of threats, historical references, and figurative language — not just genuine threats. Nothing here is a verified threat against anyone. Coverage is English-language sources only. This is protective monitoring of public discourse, not a targeting system.";
+/// here is a verified threat against anyone. ACCOUNT ATTRIBUTION: the
+/// accounts listed are public social-media accounts whose posts matched the
+/// threat keywords for this figure — that includes journalists quoting
+/// threats, people condemning them, and figurative or political-rhetoric
+/// uses. This is not a list of threat actors, and no account listed is
+/// accused of making a threat. Coverage is English-language sources only.
+/// This is protective monitoring of public discourse, not a targeting
+/// system.
+pub const DISCLAIMER: &str = "KEYWORD SCAN — NOT VERIFIED THREATS. These are public news and social-media mentions matching threat-related keywords for the named public figure. Every item requires human review: keyword matches include news reporting about threats, condemnations of threats, historical references, and figurative language — not just genuine threats. Nothing here is a verified threat against anyone. ACCOUNT ATTRIBUTION: the accounts listed are public social-media accounts whose posts matched the threat keywords for this figure — that includes journalists quoting threats, people condemning them, and figurative or political-rhetoric uses. This is not a list of threat actors, and no account listed is accused of making a threat. Coverage is English-language sources only. This is protective monitoring of public discourse, not a targeting system.";
 
 static POLITICIANS_JSON: &str = include_str!("../data/politicians.json");
 
@@ -229,6 +249,58 @@ pub struct ThreatItem {
     published: Option<String>,
     severity: String,
     matched_keywords: Vec<String>,
+    /// Social attribution: Bluesky handle (bare, e.g. "user.bsky.social")
+    /// or Telegram channel name. `None` for news outlets.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author: Option<String>,
+    /// Bluesky display name, when the upstream provides one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author_display: Option<String>,
+    /// https://bsky.app/profile/<handle> or https://t.me/s/<channel>.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author_url: Option<String>,
+    /// Direct link to the post (bsky.app post URL / t.me message URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    post_url: Option<String>,
+}
+
+/// One sample post inside an account rollup.
+#[derive(Debug, Serialize)]
+pub struct AccountSample {
+    title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    post_url: Option<String>,
+    severity: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    published: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SeverityCounts {
+    critical: usize,
+    high: usize,
+    medium: usize,
+}
+
+/// One public social account whose posts matched the scan's threat
+/// keywords. Named deliberately: this is an account with flagged posts,
+/// NOT a threat actor — the disclaimer states this on every response.
+#[derive(Debug, Serialize)]
+pub struct AccountSummary {
+    platform: String,
+    handle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    display_name: Option<String>,
+    profile_url: String,
+    post_count: usize,
+    max_severity: String,
+    severities: SeverityCounts,
+    /// Up to 3 sample posts, sorted by severity then recency.
+    sample: Vec<AccountSample>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_seen: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_seen: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -244,6 +316,9 @@ pub struct ScanResponse {
     figure: FigureSummary,
     count: usize,
     items: Vec<ThreatItem>,
+    /// Public social accounts with flagged posts, rolled up from `items`.
+    /// News outlets are excluded. Never label these "threat actors".
+    accounts: Vec<AccountSummary>,
     sources: Vec<SourceStatus>,
     scanned_at: String,
     disclaimer: String,
@@ -259,8 +334,8 @@ fn name_terms(fig: &Figure) -> Vec<String> {
     terms
 }
 
-fn rank(item: &ThreatItem) -> u8 {
-    match item.severity.as_str() {
+fn rank(severity: &str) -> u8 {
+    match severity {
         "critical" => 0,
         "high" => 1,
         _ => 2,
@@ -271,8 +346,8 @@ fn rank(item: &ThreatItem) -> u8 {
 /// lexicographically; items without dates go last).
 fn sort_items(items: &mut [ThreatItem]) {
     items.sort_by(|a, b| {
-        rank(a)
-            .cmp(&rank(b))
+        rank(a.severity.as_str())
+            .cmp(&rank(b.severity.as_str()))
             .then_with(|| match (&b.published, &a.published) {
                 (Some(pb), Some(pa)) => pb.cmp(pa),
                 (Some(_), None) => std::cmp::Ordering::Greater,
@@ -280,6 +355,109 @@ fn sort_items(items: &mut [ThreatItem]) {
                 (None, None) => std::cmp::Ordering::Equal,
             })
     });
+}
+
+/// Roll social items up by (platform, author) into account summaries.
+/// News-outlet items (`author: None`) are excluded. Sorted by max
+/// severity (critical first), then post count descending, then handle.
+fn group_accounts(items: &[ThreatItem]) -> Vec<AccountSummary> {
+    use std::collections::BTreeMap;
+    let mut groups: BTreeMap<(String, String), Vec<&ThreatItem>> = BTreeMap::new();
+    for it in items {
+        if let Some(author) = it.author.as_deref() {
+            groups
+                .entry((it.source.clone(), author.to_string()))
+                .or_default()
+                .push(it);
+        }
+    }
+    let mut out: Vec<AccountSummary> = groups
+        .into_iter()
+        .map(|((platform, handle), posts)| {
+            let mut counts = SeverityCounts {
+                critical: 0,
+                high: 0,
+                medium: 0,
+            };
+            let mut best_rank = 2u8;
+            let mut display_name: Option<String> = None;
+            let mut profile_url: Option<String> = None;
+            let mut first_seen: Option<String> = None;
+            let mut last_seen: Option<String> = None;
+            for p in &posts {
+                let r = rank(p.severity.as_str());
+                if r < best_rank {
+                    best_rank = r;
+                }
+                match r {
+                    0 => counts.critical += 1,
+                    1 => counts.high += 1,
+                    _ => counts.medium += 1,
+                }
+                if display_name.is_none() {
+                    display_name.clone_from(&p.author_display);
+                }
+                if profile_url.is_none() {
+                    profile_url.clone_from(&p.author_url);
+                }
+                if let Some(pubd) = p.published.as_deref() {
+                    if first_seen.as_deref().is_none_or(|f| pubd < f) {
+                        first_seen = Some(pubd.to_string());
+                    }
+                    if last_seen.as_deref().is_none_or(|l| pubd > l) {
+                        last_seen = Some(pubd.to_string());
+                    }
+                }
+            }
+            // Sample: best severity first, then most recent, capped at 3.
+            let mut sample_src: Vec<&ThreatItem> = posts.clone();
+            sample_src.sort_by(|a, b| {
+                rank(a.severity.as_str())
+                    .cmp(&rank(b.severity.as_str()))
+                    .then_with(|| {
+                        b.published
+                            .as_deref()
+                            .unwrap_or("")
+                            .cmp(a.published.as_deref().unwrap_or(""))
+                    })
+            });
+            let sample = sample_src
+                .into_iter()
+                .take(3)
+                .map(|p| AccountSample {
+                    title: p.title.clone(),
+                    post_url: p.post_url.clone(),
+                    severity: p.severity.clone(),
+                    published: p.published.clone(),
+                })
+                .collect();
+            let max_severity = match best_rank {
+                0 => "critical",
+                1 => "high",
+                _ => "medium",
+            }
+            .to_string();
+            AccountSummary {
+                profile_url: profile_url.unwrap_or_default(),
+                platform,
+                handle,
+                display_name,
+                post_count: posts.len(),
+                max_severity,
+                severities: counts,
+                sample,
+                first_seen,
+                last_seen,
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        rank(a.max_severity.as_str())
+            .cmp(&rank(b.max_severity.as_str()))
+            .then_with(|| b.post_count.cmp(&a.post_count))
+            .then_with(|| a.handle.cmp(&b.handle))
+    });
+    out
 }
 
 fn snippet(s: &str, max: usize) -> String {
@@ -343,6 +521,11 @@ async fn scan_gnews(
                         published: a.published.clone(),
                         severity: sev.as_str().into(),
                         matched_keywords: kws,
+                        // News outlets are not social accounts — no attribution.
+                        author: None,
+                        author_display: None,
+                        author_url: None,
+                        post_url: None,
                     });
                 }
             }
@@ -400,6 +583,10 @@ async fn scan_bluesky(
                         published: Some(p.created_at.clone()),
                         severity: sev.as_str().into(),
                         matched_keywords: kws,
+                        author: Some(p.author_handle.clone()),
+                        author_display: p.author_display.clone(),
+                        author_url: Some(format!("https://bsky.app/profile/{}", p.author_handle)),
+                        post_url: Some(p.url.clone()),
                     });
                 }
             }
@@ -410,6 +597,84 @@ async fn scan_bluesky(
             detail: Some(e.user_message()),
         }),
     }
+}
+
+/// Scan the configured Telegram channels (TELEGRAM_CHANNELS) for
+/// figure mentions, then classify. Each channel's snapshot is cached
+/// under the same `telegram:{channel}` key the /api/telegram handler
+/// uses, so scans share cache entries with the normal endpoint.
+async fn scan_telegram(
+    state: &AppState,
+    terms: &[String],
+    sources: &mut Vec<SourceStatus>,
+    out: &mut Vec<ThreatItem>,
+) {
+    let channels: Vec<String> = state.config.telegram_channels.clone();
+    if channels.is_empty() {
+        sources.push(SourceStatus {
+            source: "telegram".into(),
+            ok: false,
+            detail: Some(
+                "not configured — set TELEGRAM_CHANNELS to public channel names to enable Telegram monitoring"
+                    .into(),
+            ),
+        });
+        return;
+    }
+    let mut any_ok = false;
+    let mut failures: Vec<String> = Vec::new();
+    for channel in &channels {
+        let key = format!("telegram:{channel}");
+        let client = state.client.clone();
+        let ch = channel.clone();
+        let res: Result<feeds::telegram::TelegramResponse, ApiError> = async {
+            let (body, _) = cached_bytes(state, &key, feeds::telegram::TTL, || {
+                feeds::telegram::fetch(&client, &ch)
+            })
+            .await?;
+            serde_json::from_slice(&body)
+                .map_err(|e| ApiError::bad_gateway("telegram decode failed", e.to_string()))
+        }
+        .await;
+        match res {
+            Ok(r) => {
+                any_ok = true;
+                for m in r.messages {
+                    // Channel-wide scan: only messages that actually name
+                    // the figure are candidates.
+                    let mt = m.text.to_lowercase();
+                    if !terms.iter().any(|t| mt.contains(t.as_str())) {
+                        continue;
+                    }
+                    if let Some((sev, kws)) = classify(&m.text, terms) {
+                        out.push(ThreatItem {
+                            source: "telegram".into(),
+                            title: format!("Post in @{channel}"),
+                            text_snippet: snippet(&m.text, 280),
+                            url: m.url.clone(),
+                            published: Some(m.date.clone()),
+                            severity: sev.as_str().into(),
+                            matched_keywords: kws,
+                            author: Some(channel.clone()),
+                            author_display: None,
+                            author_url: Some(format!("https://t.me/s/{channel}")),
+                            post_url: Some(m.url.clone()),
+                        });
+                    }
+                }
+            }
+            Err(e) => failures.push(format!("{channel}: {}", e.user_message())),
+        }
+    }
+    sources.push(SourceStatus {
+        source: "telegram".into(),
+        ok: any_ok,
+        detail: if failures.is_empty() {
+            None
+        } else {
+            Some(failures.join("; "))
+        },
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -507,16 +772,18 @@ pub async fn scan(
     }
 
     let terms = name_terms(fig);
-    let mut sources = Vec::with_capacity(2);
+    let mut sources = Vec::with_capacity(3);
     let mut items: Vec<ThreatItem> = Vec::new();
     scan_gnews(&state, fig, &terms, &mut sources, &mut items).await;
     scan_bluesky(&state, fig, &terms, &mut sources, &mut items).await;
+    scan_telegram(&state, &terms, &mut sources, &mut items).await;
 
     if severity_filter != "all" {
         items.retain(|i| i.severity == severity_filter);
     }
     sort_items(&mut items);
     items.truncate(SCAN_LIMIT as usize);
+    let accounts = group_accounts(&items);
 
     let resp = ScanResponse {
         figure: FigureSummary {
@@ -528,6 +795,7 @@ pub async fn scan(
         },
         count: items.len(),
         items,
+        accounts,
         sources,
         scanned_at: now_iso8601(),
         disclaimer: DISCLAIMER.into(),
@@ -631,43 +899,26 @@ mod tests {
 
     #[test]
     fn sort_orders_severity_then_recency() {
+        fn item(title: &str, severity: &str, published: Option<&str>) -> ThreatItem {
+            ThreatItem {
+                source: "gnews".into(),
+                title: title.into(),
+                text_snippet: "".into(),
+                url: "".into(),
+                published: published.map(str::to_string),
+                severity: severity.into(),
+                matched_keywords: vec![],
+                author: None,
+                author_display: None,
+                author_url: None,
+                post_url: None,
+            }
+        }
         let mut items = vec![
-            ThreatItem {
-                source: "gnews".into(),
-                title: "m".into(),
-                text_snippet: "".into(),
-                url: "".into(),
-                published: Some("2026-11-01T10:00:00Z".into()),
-                severity: "medium".into(),
-                matched_keywords: vec![],
-            },
-            ThreatItem {
-                source: "gnews".into(),
-                title: "c-old".into(),
-                text_snippet: "".into(),
-                url: "".into(),
-                published: Some("2026-10-01T10:00:00Z".into()),
-                severity: "critical".into(),
-                matched_keywords: vec![],
-            },
-            ThreatItem {
-                source: "bluesky".into(),
-                title: "c-new".into(),
-                text_snippet: "".into(),
-                url: "".into(),
-                published: Some("2026-11-01T12:00:00Z".into()),
-                severity: "critical".into(),
-                matched_keywords: vec![],
-            },
-            ThreatItem {
-                source: "bluesky".into(),
-                title: "c-nodate".into(),
-                text_snippet: "".into(),
-                url: "".into(),
-                published: None,
-                severity: "critical".into(),
-                matched_keywords: vec![],
-            },
+            item("m", "medium", Some("2026-11-01T10:00:00Z")),
+            item("c-old", "critical", Some("2026-10-01T10:00:00Z")),
+            item("c-new", "critical", Some("2026-11-01T12:00:00Z")),
+            item("c-nodate", "critical", None),
         ];
         sort_items(&mut items);
         let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
@@ -680,6 +931,9 @@ mod tests {
         assert!(DISCLAIMER.contains("human review"));
         assert!(DISCLAIMER.contains("English-language"));
         assert!(DISCLAIMER.contains("not a targeting system"));
+        assert!(DISCLAIMER.contains("ACCOUNT ATTRIBUTION"));
+        assert!(DISCLAIMER.contains("not a list of threat actors"));
+        assert!(DISCLAIMER.contains("no account listed is accused of making a threat"));
     }
 
     #[test]
@@ -689,5 +943,162 @@ mod tests {
             280,
         );
         assert_eq!(s, "Far-right militants go on trial");
+    }
+
+    fn social_item(
+        source: &str,
+        author: Option<&str>,
+        severity: &str,
+        published: Option<&str>,
+        display: Option<&str>,
+    ) -> ThreatItem {
+        ThreatItem {
+            source: source.into(),
+            title: format!("post {severity}"),
+            text_snippet: "".into(),
+            url: "https://example.com/post".into(),
+            published: published.map(str::to_string),
+            severity: severity.into(),
+            matched_keywords: vec![],
+            author: author.map(str::to_string),
+            author_display: display.map(str::to_string),
+            author_url: author.map(|a| format!("https://example.com/{a}")),
+            post_url: Some("https://example.com/post".into()),
+        }
+    }
+
+    #[test]
+    fn group_accounts_groups_and_rolls_up() {
+        let items = vec![
+            social_item(
+                "bluesky",
+                Some("alice.bsky.social"),
+                "high",
+                Some("2026-11-02T10:00:00Z"),
+                Some("Alice"),
+            ),
+            social_item(
+                "bluesky",
+                Some("alice.bsky.social"),
+                "critical",
+                Some("2026-11-02T12:00:00Z"),
+                None,
+            ),
+            social_item(
+                "bluesky",
+                Some("alice.bsky.social"),
+                "medium",
+                Some("2026-11-01T10:00:00Z"),
+                None,
+            ),
+            social_item(
+                "telegram",
+                Some("newschannel"),
+                "medium",
+                Some("2026-11-02T09:00:00Z"),
+                None,
+            ),
+            // News outlets have no author: excluded.
+            social_item(
+                "gnews",
+                None,
+                "critical",
+                Some("2026-11-02T08:00:00Z"),
+                None,
+            ),
+        ];
+        let accs = group_accounts(&items);
+        assert_eq!(accs.len(), 2, "gnews item excluded, two social accounts");
+        let alice = &accs[0];
+        assert_eq!(alice.platform, "bluesky");
+        assert_eq!(alice.handle, "alice.bsky.social");
+        assert_eq!(alice.display_name.as_deref(), Some("Alice"));
+        assert_eq!(alice.post_count, 3);
+        assert_eq!(alice.max_severity, "critical");
+        assert_eq!(alice.severities.critical, 1);
+        assert_eq!(alice.severities.high, 1);
+        assert_eq!(alice.severities.medium, 1);
+        // Sample: severity then recency, capped at 3.
+        assert_eq!(alice.sample.len(), 3);
+        assert_eq!(alice.sample[0].severity, "critical");
+        assert_eq!(alice.first_seen.as_deref(), Some("2026-11-01T10:00:00Z"));
+        assert_eq!(alice.last_seen.as_deref(), Some("2026-11-02T12:00:00Z"));
+        // Critical account sorts before the medium-only one.
+        assert_eq!(accs[1].handle, "newschannel");
+        assert_eq!(accs[1].max_severity, "medium");
+    }
+
+    #[test]
+    fn group_accounts_separates_platforms_and_sorts_by_count() {
+        let items = vec![
+            social_item(
+                "bluesky",
+                Some("same"),
+                "high",
+                Some("2026-11-02T10:00:00Z"),
+                None,
+            ),
+            social_item(
+                "bluesky",
+                Some("same"),
+                "high",
+                Some("2026-11-02T11:00:00Z"),
+                None,
+            ),
+            social_item(
+                "telegram",
+                Some("same"),
+                "high",
+                Some("2026-11-02T10:00:00Z"),
+                None,
+            ),
+            social_item(
+                "bluesky",
+                Some("zz-top"),
+                "high",
+                Some("2026-11-02T10:00:00Z"),
+                None,
+            ),
+        ];
+        let accs = group_accounts(&items);
+        assert_eq!(accs.len(), 3, "same handle on two platforms = two accounts");
+        // Same max severity: higher post count first, then handle alpha.
+        assert_eq!(accs[0].platform, "bluesky");
+        assert_eq!(accs[0].handle, "same");
+        assert_eq!(accs[0].post_count, 2);
+        assert_eq!(accs[1].handle, "same");
+        assert_eq!(accs[1].platform, "telegram");
+        assert_eq!(accs[2].handle, "zz-top");
+    }
+
+    #[test]
+    fn group_accounts_sample_capped_at_three() {
+        let items: Vec<ThreatItem> = (0..6)
+            .map(|i| {
+                social_item(
+                    "bluesky",
+                    Some("prolific.bsky.social"),
+                    "medium",
+                    Some(&format!("2026-11-02T{i:02}:00:00Z")),
+                    None,
+                )
+            })
+            .collect();
+        let accs = group_accounts(&items);
+        assert_eq!(accs.len(), 1);
+        assert_eq!(accs[0].post_count, 6);
+        assert_eq!(accs[0].sample.len(), 3, "sample capped at 3");
+        // Most recent first within the same tier.
+        assert_eq!(
+            accs[0].sample[0].published.as_deref(),
+            Some("2026-11-02T05:00:00Z")
+        );
+    }
+
+    #[test]
+    fn group_accounts_empty_for_news_only() {
+        let items = vec![social_item("gnews", None, "critical", None, None)];
+        assert!(group_accounts(&items).is_empty());
+        assert!(group_accounts(&[]).is_empty());
     }
 }

@@ -1074,6 +1074,25 @@ async fn threats_scan_shape() {
     );
     assert!(g.body.get("items").and_then(|v| v.as_array()).is_some());
     assert!(g.body.get("sources").and_then(|v| v.as_array()).is_some());
+    let accounts = g.body.get("accounts").and_then(|v| v.as_array());
+    assert!(accounts.is_some(), "accounts array present");
+    for a in accounts.unwrap() {
+        let plat = a.get("platform").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["bluesky", "telegram"].contains(&plat),
+            "bad platform {plat}"
+        );
+        assert!(a.get("handle").and_then(|v| v.as_str()).is_some());
+        assert!(a.get("profile_url").and_then(|v| v.as_str()).is_some());
+        assert!(a.get("post_count").and_then(|v| v.as_u64()).is_some());
+        assert!(a.get("severities").and_then(|v| v.as_object()).is_some());
+        assert!(a.get("sample").and_then(|v| v.as_array()).is_some());
+        let sev = a.get("max_severity").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(
+            ["critical", "high", "medium"].contains(&sev),
+            "bad max_severity {sev}"
+        );
+    }
     let disc = g
         .body
         .get("disclaimer")
@@ -1083,6 +1102,14 @@ async fn threats_scan_shape() {
     assert!(
         disc.contains("human review"),
         "disclaimer mentions human review"
+    );
+    assert!(
+        disc.contains("ACCOUNT ATTRIBUTION"),
+        "disclaimer covers account attribution"
+    );
+    assert!(
+        disc.contains("not a list of threat actors"),
+        "disclaimer disavows threat-actor labeling"
     );
     for it in g.body.get("items").and_then(|v| v.as_array()).unwrap() {
         let sev = it.get("severity").and_then(|v| v.as_str()).unwrap_or("");

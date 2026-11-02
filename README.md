@@ -482,17 +482,25 @@ as a verified threat.
   role, country + ISO codes), filterable by country name/ISO2/ISO3.
 - `GET /api/threats/scan?name=<name|alias>&severity=all|critical|high|medium`
   — scans Google News (`"<name>" (assassination OR assassinate OR "death
-  threat" OR threaten OR threat OR attack OR kill)`) and Bluesky (`"<name>"
-  threat`) through their normal cache paths/TTLs (no new upstreams, no new
-  keys; at most 2 upstream calls per figure per TTL, plus a cached assembled
-  response). Each item is classified into severity tiers — **critical**
-  (`assassinat*`, `death threat`, `kill` + the figure named), **high**
-  (`threaten`, `threat against`, `attack`), **medium** (`harm`, `violence
-  against`, `plot against`) — case-insensitive, word boundaries on the
-  generic single words, first matching tier wins. Items sort by severity
-  then recency, capped at 50. Every response carries the keyword-scan
-  disclaimer and per-source ok/detail statuses; a failed source degrades
-  honestly, never silently.
+  threat" OR threaten OR threat OR attack OR kill)`), Bluesky (`"<name>"
+  threat`), and the configured `TELEGRAM_CHANNELS` channels (figure-mention
+  filter over channel snapshots) through their normal cache paths/TTLs (no
+  new upstreams, no new keys; at most 2 upstream calls per figure per TTL
+  for the query sources, plus one per Telegram channel, plus a cached
+  assembled response). Each item is classified into severity tiers —
+  **critical** (`assassinat*`, `death threat`, `kill` + the figure named),
+  **high** (`threaten`, `threat against`, `attack`), **medium** (`harm`,
+  `violence against`, `plot against`) — case-insensitive, word boundaries
+  on the generic single words, first matching tier wins. Items sort by
+  severity then recency, capped at 50. The response also carries an
+  `accounts` array: social items (Bluesky handle / Telegram channel, with
+  profile and post URLs) rolled up by (platform, author) with per-tier
+  counts and up to 3 sample posts; news outlets are excluded. Account
+  attribution means public accounts whose posts matched the keywords —
+  including quoting, condemnation, and figurative use — never "threat
+  actors". Every response carries the keyword-scan disclaimer and
+  per-source ok/detail statuses; a failed source (or an unconfigured
+  Telegram allowlist) degrades honestly, never silently.
 
 **Deliberately excluded:** GDELT (no threat-relevant `theme:` value could
 be verified — the DOC API and the GKG theme taxonomy lookup are

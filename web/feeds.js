@@ -445,25 +445,60 @@ window.OST = window.OST || {};
       },
       render(j, el) {
         const items = j.items || [];
+        const accounts = j.accounts || [];
         const sevStyle = (s) => s === "critical"
           ? "color:var(--bad);border-color:var(--bad)"
           : s === "high" ? "color:var(--warn);border-color:var(--warn)" : "color:var(--accent,#7aa2f7);border-color:var(--accent,#7aa2f7)";
         const srcs = (j.sources || []).map((s) =>
           `${esc(s.source)}: ${s.ok ? "ok" : "unavailable" + (s.detail ? " — " + esc(s.detail) : "")}`).join(" · ");
         const fig = j.figure || {};
-        el.innerHTML =
-          `<div class="m" style="margin-bottom:4px"><b>${esc(fig.name || "")}</b>${fig.role ? " · " + esc(fig.role) : ""}${fig.country ? " · " + esc(fig.country) : ""}</div>` +
-          `<div class="m" style="margin-bottom:6px">${items.length} flagged item${items.length === 1 ? "" : "s"} · ${esc(srcs)}</div>` +
-          `<details style="margin-bottom:8px"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
-          `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
-          items.slice(0, ROW_CAP).map((it) =>
+        const platBadge = (p) => p === "telegram"
+          ? `<span class="chip" style="color:#5ac8fa;border:1px solid #5ac8fa;border-radius:3px;padding:0 5px;font-size:10px">telegram</span>`
+          : `<span class="chip" style="color:#4c9aff;border:1px solid #4c9aff;border-radius:3px;padding:0 5px;font-size:10px">bluesky</span>`;
+        const renderMentions = () => items.slice(0, ROW_CAP).map((it) =>
             `<div class="feed-item"><div><span class="chip" style="${sevStyle(it.severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(it.severity || "")}</span> ` +
             `<a href="${esc(it.url || "#")}" target="_blank" rel="noopener">${esc(it.title || "(untitled)")}</a></div>` +
             `<div class="m">${esc(it.source || "")} · ${esc((it.published || "").slice(0, 16).replace("T", " "))}</div>` +
             (it.text_snippet ? `<div>${esc(it.text_snippet.slice(0, 260))}${it.text_snippet.length > 260 ? "…" : ""}</div>` : "") +
             (it.matched_keywords && it.matched_keywords.length ? `<div class="m">matched: ${it.matched_keywords.map(esc).join(", ")}</div>` : "") +
             `</div>`
-          ).join("") + genLine(j);
+          ).join("") || `<div class="m">no flagged mentions</div>`;
+        const renderAccounts = () => accounts.map((a) => {
+            const counts = [a.severities && a.severities.critical ? `<span class="chip" style="${sevStyle("critical")};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">critical ${a.severities.critical}</span>` : "",
+              a.severities && a.severities.high ? `<span class="chip" style="${sevStyle("high")};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">high ${a.severities.high}</span>` : "",
+              a.severities && a.severities.medium ? `<span class="chip" style="${sevStyle("medium")};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">medium ${a.severities.medium}</span>` : ""]
+              .filter(Boolean).join(" ");
+            const samples = (a.sample || []).map((s) =>
+              `<div style="margin-top:4px"><span class="chip" style="${sevStyle(s.severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(s.severity || "")}</span> ` +
+              (s.post_url ? `<a href="${esc(s.post_url)}" target="_blank" rel="noopener">${esc(s.title || "(untitled)")}</a>` : esc(s.title || "(untitled)")) +
+              (s.published ? ` <span class="m">${esc(s.published.slice(0, 16).replace("T", " "))}</span>` : "") + `</div>`).join("");
+            return `<div class="feed-item"><div>${platBadge(a.platform)} ` +
+              (a.profile_url ? `<a href="${esc(a.profile_url)}" target="_blank" rel="noopener"><b>@${esc(a.handle || "")}</b></a>` : `<b>@${esc(a.handle || "")}</b>`) +
+              (a.display_name ? ` <span class="m">${esc(a.display_name)}</span>` : "") + `</div>` +
+              `<div class="m" style="margin-top:3px"><span class="chip" style="${sevStyle(a.max_severity)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">max ${esc(a.max_severity || "")}</span> ` +
+              `${a.post_count} flagged post${a.post_count === 1 ? "" : "s"}${counts ? " · " + counts : ""}</div>` +
+              (samples ? `<details style="margin-top:4px"><summary class="m" style="cursor:pointer">sample posts</summary>${samples}</details>` : "") +
+              `</div>`;
+          }).join("") || `<div class="m">no accounts — no social posts matched, or social sources are unavailable</div>`;
+        const list = document.createElement("div");
+        const draw = (mode) => {
+          const mBtn = (m, label, n) =>
+            `<button data-tmode="${m}" style="margin-right:6px;${mode === m ? "font-weight:bold;text-decoration:underline" : ""}">${label} (${n})</button>`;
+          list.innerHTML =
+            `<div class="m" style="margin-bottom:8px">` +
+            mBtn("mentions", "Mentions", items.length) + mBtn("accounts", "Accounts", accounts.length) +
+            ` <span title="Accounts whose public posts matched threat keywords — includes quoting, condemnation, figurative use. Not a list of threat actors.">ⓘ</span></div>` +
+            (mode === "accounts" ? renderAccounts() : renderMentions()) + genLine(j);
+          list.querySelectorAll("[data-tmode]").forEach((b) =>
+            b.addEventListener("click", () => draw(b.dataset.tmode)));
+        };
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:4px"><b>${esc(fig.name || "")}</b>${fig.role ? " · " + esc(fig.role) : ""}${fig.country ? " · " + esc(fig.country) : ""}</div>` +
+          `<div class="m" style="margin-bottom:6px">${items.length} flagged item${items.length === 1 ? "" : "s"} · ${esc(srcs)}</div>` +
+          `<details style="margin-bottom:8px"><summary class="m" style="cursor:pointer">methodology + disclaimer</summary>` +
+          `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>`;
+        el.appendChild(list);
+        draw("mentions");
         this.count = items.length;
       },
     },
