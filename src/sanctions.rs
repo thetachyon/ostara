@@ -270,7 +270,7 @@ pub struct SanctionsResponse {
     mode: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     country: Option<String>,
-    count: usize,
+    pub count: usize,
     /// Per-country rollup (single entry in country mode).
     countries: Vec<CountrySummary>,
     items: Vec<SanctionItem>,

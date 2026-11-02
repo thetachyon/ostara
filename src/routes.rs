@@ -869,6 +869,25 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
             },
         ),
     };
+    // Fusion layer: curated indicator registry, counted like the calendar.
+    let fusion_stat = match crate::fusion::load_registry() {
+        Ok(inds) => (
+            "fusion".to_string(),
+            FeedStat {
+                ok: true,
+                count: Some(inds.len()),
+                error: None,
+            },
+        ),
+        Err(detail) => (
+            "fusion".to_string(),
+            FeedStat {
+                ok: false,
+                count: None,
+                error: Some(format!("registry invalid: {detail}")),
+            },
+        ),
+    };
     for (name, stat) in [
         flights,
         quakes,
@@ -887,6 +906,7 @@ pub async fn stats(State(state): State<AppState>) -> impl IntoResponse {
         nuclear_stat,
         chokepoints_stat,
         calendar_stat,
+        fusion_stat,
         vessels_stat,
         telegram,
         bluesky,
@@ -1114,6 +1134,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         calendar,
         earnings,
         storms,
+        fusion,
     ) = tokio::join!(
         run_probe(state.client.clone(), "flights", |c| async move {
             feeds::flights::fetch(&c, "mil", 1)
@@ -1215,6 +1236,9 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         run_probe(state.client.clone(), "storms", |c| async move {
             feeds::storms::probe_detail(&c).await
         }),
+        run_probe(state.client.clone(), "fusion", |_c| async move {
+            crate::fusion::probe_detail().await
+        }),
     );
 
     let mut feeds_map = HashMap::new();
@@ -1245,6 +1269,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         calendar,
         earnings,
         storms,
+        fusion,
     ] {
         feeds_map.insert(name, report);
     }
@@ -1286,6 +1311,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::risk::routes())
         .merge(crate::threats::routes())
         .merge(crate::sanctions::routes())
+        .merge(crate::fusion::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take
         // precedence; anything unmatched falls through to the static bundle.
         .fallback_service(ServeDir::new("web"))

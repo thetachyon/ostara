@@ -15,6 +15,7 @@ pub mod country_osint;
 pub mod dossier;
 pub mod error;
 pub mod feeds;
+pub mod fusion;
 pub mod geo;
 pub mod graph;
 pub mod intel;

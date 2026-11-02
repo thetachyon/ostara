@@ -1743,3 +1743,116 @@ async fn storms_shape() {
         }
     }
 }
+
+#[tokio::test]
+async fn fusion_unknown_indicator_is_404() {
+    // Registry-only path: no upstream involved, deterministic.
+    let g = get("/api/fusion?indicator=nope").await;
+    assert_eq!(g.status, StatusCode::NOT_FOUND);
+    assert_json(&g, "/api/fusion?indicator=nope");
+    let detail = g.body.get("detail").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        detail.contains("hormuz-energy-risk"),
+        "404 names known ids: {detail}"
+    );
+}
+
+#[tokio::test]
+async fn fusion_single_indicator_shape() {
+    // us-macro-risk: calendar is static (always live), ^VIX may degrade —
+    // either way the contract holds: 200 with the full shape.
+    let g = get("/api/fusion?indicator=us-macro-risk").await;
+    assert_eq!(g.status, StatusCode::OK);
+    assert_json(&g, "/api/fusion?indicator=us-macro-risk");
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(1),
+        "single-indicator mode returns one"
+    );
+    let ind = g.body.get("indicators").and_then(|v| v.as_array()).unwrap();
+    assert_eq!(ind.len(), 1);
+    let ind = &ind[0];
+    assert_eq!(
+        ind.get("id").and_then(|v| v.as_str()),
+        Some("us-macro-risk")
+    );
+    assert_eq!(ind.get("desk").and_then(|v| v.as_str()), Some("macro"));
+    let level = ind.get("level").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["calm", "watch", "elevated", "critical", "unknown"].contains(&level),
+        "bad level {level}"
+    );
+    assert!(
+        !ind.get("label")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .is_empty(),
+        "curated label present"
+    );
+    assert!(
+        !ind.get("methodology")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .is_empty(),
+        "methodology states the arithmetic"
+    );
+    let ev = ind.get("evidence").and_then(|v| v.as_array()).unwrap();
+    assert_eq!(ev.len(), 3, "us-macro-risk declares 3 inputs");
+    for e in ev {
+        for f in [
+            "input",
+            "source",
+            "role",
+            "live",
+            "weight",
+            "weight_used",
+            "value",
+        ] {
+            assert!(e.get(f).is_some(), "evidence carries {f}");
+        }
+    }
+    let conf = ind.get("confidence").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(
+        ["high", "medium", "low"].contains(&conf),
+        "bad confidence {conf}"
+    );
+    assert!(
+        g.body
+            .get("disclaimer")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .contains("not trading advice"),
+        "disclaimer carried"
+    );
+}
+
+#[tokio::test]
+async fn fusion_all_indicators_shape() {
+    // Full evaluation: inputs degrade gracefully, never 502.
+    let g = get("/api/fusion").await;
+    assert_eq!(g.status, StatusCode::OK);
+    assert_json(&g, "/api/fusion");
+    let inds = g.body.get("indicators").and_then(|v| v.as_array()).unwrap();
+    assert_eq!(inds.len(), 5, "all five indicators evaluated");
+    let ids: Vec<&str> = inds
+        .iter()
+        .filter_map(|i| i.get("id").and_then(|v| v.as_str()))
+        .collect();
+    for want in [
+        "hormuz-energy-risk",
+        "russia-supply-risk",
+        "china-strait-tension",
+        "us-macro-risk",
+        "election-unrest-risk",
+    ] {
+        assert!(ids.contains(&want), "missing indicator {want}");
+    }
+    for ind in inds {
+        // Score may be null (no live inputs) but the shape holds.
+        if let Some(s) = ind.get("score").and_then(|v| v.as_f64()) {
+            assert!((0.0..=100.0).contains(&s), "score in range");
+        }
+        let label = ind.get("label").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(!label.is_empty(), "every indicator has a curated label");
+    }
+}

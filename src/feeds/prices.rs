@@ -150,7 +150,7 @@ struct QuoteBars {
 // ---------------------------------------------------------------------------
 
 /// One normalized quote.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Quote {
     pub symbol: String,
     pub name: String,
@@ -170,13 +170,13 @@ pub struct Quote {
 }
 
 /// A symbol that produced no quote in this response.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MissingSymbol {
     pub symbol: String,
     pub reason: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PricesResponse {
     pub count: usize,
     pub generated_at: String,

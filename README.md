@@ -568,6 +568,45 @@ When none are active the response carries `"none_active": true` — it
 never invents a storm. Cached 600s. Feeds panel "Storms" category under
 Global plus a map layer (off by default) with category-scaled markers.
 
+### `GET /api/fusion` — proprietary fused indicators (the curation layer)
+
+```sh
+curl http://localhost:3000/api/fusion
+curl "http://localhost:3000/api/fusion?indicator=hormuz-energy-risk"
+```
+```json
+{
+  "generated_at": "2026-11-02T16:10:00.000Z",
+  "count": 5,
+  "indicators": [{
+    "id": "hormuz-energy-risk",
+    "name": "Hormuz Energy Flow Risk",
+    "desk": "energy",
+    "score": 88.3,
+    "level": "critical",
+    "label": "Multiple pressure signals on Hormuz energy flows — desks should check tanker positions and Brent exposure now.",
+    "confidence": "high",
+    "live_inputs": "5/6",
+    "evidence": [{"input": "iran_risk", "source": "/api/risk?place=Iran", "live": true, "weight": 0.3, "weight_used": 0.32, "value": "96.7 (severe)", "detail": "..."}],
+    "methodology": "score = 0.32×iran_risk(96.7) + ... = 88.3 → critical. ..."
+  }],
+  "disclaimer": "FUSION INDICATORS — curated heuristic signals, not forecasts and not trading advice. ..."
+}
+```
+
+Five curated indicators (`data/fusion_indicators.json`, embedded): Hormuz
+energy flow risk, Russia supply risk, China–Strait tension, US macro event
+risk, election unrest risk. Each fuses multiple feeds (risk scores,
+sanctions critical counts, price moves, calendar events, chokepoint
+status, vessel density) through proprietary weights and per-input
+normalization transforms into a 0–100 score with a curated analyst label
+per level (calm/watch/elevated/critical). Degraded inputs redistribute
+their weight — never silently zeroed; missing inputs lower confidence,
+never fabricate values. `score: null` + `level: "unknown"` when no input
+is live. Cached 600s; all inputs share their feeds' normal cache entries,
+so fusion adds no upstream traffic. Feeds panel "Fusion" category (first
+under Global) renders the analyst-briefing cards. Unknown ids 404.
+
 ### Web UI — MapLibre globe
 
 `GET /` serves the static bundle from `web/` (MapLibre GL JS 5.7.0 via CDN,

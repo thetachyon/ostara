@@ -39,6 +39,54 @@ window.OST = window.OST || {};
 
   OST.FEED_CATS = [
     {
+      id: "fusion", label: "Fusion", health: "fusion",
+      group: "global",
+      note: "proprietary fused indicators — curated weights, transforms, and labels over public feeds · heuristic, not a forecast, not trading advice",
+      inputs: [
+        { name: "indicator", type: "select", options: ["all", "hormuz-energy-risk", "russia-supply-risk", "china-strait-tension", "us-macro-risk", "election-unrest-risk"], value: "all" },
+      ],
+      url: (p) => "/api/fusion" + (p.indicator && p.indicator !== "all" ? `?indicator=${encodeURIComponent(p.indicator)}` : ""),
+      render(j, el) {
+        const lvlColor = (l) => l === "critical" ? "var(--bad)" : l === "elevated" ? "var(--warn)"
+          : l === "watch" ? "#ffb224" : l === "calm" ? "#46a758" : "var(--dim,#9aa4b2)";
+        const confChip = (c) => `<span class="chip" style="border:1px solid var(--dim,#9aa4b2);border-radius:3px;padding:0 5px;font-size:10px" title="fraction of input weight that was live">confidence: ${esc(c || "—")}</span>`;
+        const cards = (j.indicators || []).map((ind) => {
+          const score = ind.score;
+          const color = lvlColor(ind.level);
+          const bar = score != null
+            ? `<div style="height:8px;background:var(--panel,#1a2233);border-radius:4px;margin:6px 0"><div style="height:8px;width:${Math.max(0, Math.min(100, score))}%;background:${color};border-radius:4px"></div></div>`
+            : `<div class="m" style="margin:6px 0">score withheld — no live inputs</div>`;
+          const ev = (ind.evidence || []).map((e) =>
+            `<div class="feed-item" style="${e.live ? "" : "opacity:0.65"}"><div>` +
+            (e.live
+              ? `<span class="chip" style="color:${color};border:1px solid ${color};border-radius:3px;padding:0 5px;font-size:10px">live</span>`
+              : `<span class="chip" style="color:var(--bad);border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px">degraded</span>`) +
+            ` <b>${esc(e.input || "")}</b> <span class="m">weight ${Number(e.weight_used != null ? e.weight_used : 0).toFixed(2)}${e.live && e.weight !== e.weight_used ? ` (of ${Number(e.weight).toFixed(2)})` : ""}</span></div>` +
+            `<div>${esc(e.value || "—")}</div>` +
+            `<div class="m">${esc(e.source || "")}${e.role ? " · " + esc(e.role) : ""}</div>` +
+            (e.detail ? `<div class="m">${esc(e.detail)}</div>` : "") + `</div>`
+          ).join("");
+          return `<div class="feed-item" style="border-left:3px solid ${color};padding-left:10px;margin-bottom:12px">` +
+            `<div><span class="chip" style="color:${color};border:1px solid ${color};border-radius:3px;padding:0 5px;font-size:10px">${esc(ind.level || "")}</span> ` +
+            `<span class="chip" style="border:1px solid var(--dim,#9aa4b2);border-radius:3px;padding:0 5px;font-size:10px">${esc(ind.desk || "")}</span> ` +
+            `<b>${esc(ind.name || "")}</b> ${confChip(ind.confidence)} ` +
+            `<span class="m">${esc(ind.live_inputs || "")} inputs live</span></div>` +
+            (score != null ? `<div style="font-size:18px;font-weight:bold;color:${color}">${Number(score).toFixed(1)}</div>` : "") +
+            bar +
+            `<div style="margin:4px 0"><i>${esc(ind.label || "")}</i></div>` +
+            `<div class="m" style="margin-bottom:4px">${esc(ind.description || "")}</div>` +
+            `<details style="margin:4px 0"><summary class="m" style="cursor:pointer">evidence (${(ind.evidence || []).length})</summary><div style="margin-top:4px">${ev}</div></details>` +
+            `<details style="margin:4px 0"><summary class="m" style="cursor:pointer">methodology</summary><div class="m" style="margin-top:4px">${esc(ind.methodology || "")}</div></details>` +
+            `</div>`;
+        }).join("") || `<div class="m">no indicators</div>`;
+        el.innerHTML = cards +
+          `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary>` +
+          `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
+          genLine(j);
+        this.count = (j.indicators || []).length;
+      },
+    },
+    {
       id: "flights", label: "Flights", health: "flights", map: "flights",
       group: "country",
       inputs: [
