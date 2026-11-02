@@ -1,0 +1,197 @@
+{
+ "meta": {
+  "compiled": "2026-11-02",
+  "source": "OSTARA /api/risk world snapshot set",
+  "note": "Place list for the weekly risk-map scoring pipeline. Coordinates are map centroids."
+ },
+ "places": [
+  {
+   "name": "Ukraine",
+   "kind": "country",
+   "lon": 31.0,
+   "lat": 49.0
+  },
+  {
+   "name": "France",
+   "kind": "country",
+   "lon": 2.35,
+   "lat": 46.6
+  },
+  {
+   "name": "India",
+   "kind": "country",
+   "lon": 78.9,
+   "lat": 21.1
+  },
+  {
+   "name": "Russia",
+   "kind": "country",
+   "lon": 60.0,
+   "lat": 60.0
+  },
+  {
+   "name": "Germany",
+   "kind": "country",
+   "lon": 10.4,
+   "lat": 51.1
+  },
+  {
+   "name": "Karachi",
+   "kind": "city",
+   "lon": 67.0,
+   "lat": 24.86,
+   "country_hint": "Pakistan"
+  },
+  {
+   "name": "Israel",
+   "kind": "country",
+   "lon": 35.0,
+   "lat": 31.0
+  },
+  {
+   "name": "Iran",
+   "kind": "country",
+   "lon": 53.7,
+   "lat": 32.4
+  },
+  {
+   "name": "Pakistan",
+   "kind": "country",
+   "lon": 69.3,
+   "lat": 30.4
+  },
+  {
+   "name": "Nigeria",
+   "kind": "country",
+   "lon": 8.0,
+   "lat": 9.6
+  },
+  {
+   "name": "Syria",
+   "kind": "country",
+   "lon": 38.0,
+   "lat": 35.0
+  },
+  {
+   "name": "London",
+   "kind": "city",
+   "lon": -0.13,
+   "lat": 51.5,
+   "country_hint": "United Kingdom"
+  },
+  {
+   "name": "Mexico",
+   "kind": "country",
+   "lon": -102.5,
+   "lat": 23.6
+  },
+  {
+   "name": "Venezuela",
+   "kind": "country",
+   "lon": -66.9,
+   "lat": 6.4
+  },
+  {
+   "name": "Paris",
+   "kind": "city",
+   "lon": 2.35,
+   "lat": 48.85,
+   "country_hint": "France"
+  },
+  {
+   "name": "United Kingdom",
+   "kind": "country",
+   "lon": -1.5,
+   "lat": 52.5
+  },
+  {
+   "name": "United States of America",
+   "kind": "country",
+   "lon": -98.5,
+   "lat": 39.8
+  },
+  {
+   "name": "Afghanistan",
+   "kind": "country",
+   "lon": 66.0,
+   "lat": 33.9
+  },
+  {
+   "name": "Kyiv",
+   "kind": "city",
+   "lon": 30.52,
+   "lat": 50.45,
+   "country_hint": "Ukraine"
+  },
+  {
+   "name": "Tel Aviv",
+   "kind": "city",
+   "lon": 34.78,
+   "lat": 32.08,
+   "country_hint": "Israel"
+  },
+  {
+   "name": "Haiti",
+   "kind": "country",
+   "lon": -72.3,
+   "lat": 19.0
+  },
+  {
+   "name": "Yemen",
+   "kind": "country",
+   "lon": 47.5,
+   "lat": 15.5
+  },
+  {
+   "name": "Lagos",
+   "kind": "city",
+   "lon": 3.38,
+   "lat": 6.52,
+   "country_hint": "Nigeria"
+  },
+  {
+   "name": "Myanmar",
+   "kind": "country",
+   "lon": 95.9,
+   "lat": 21.9
+  },
+  {
+   "name": "South Africa",
+   "kind": "country",
+   "lon": 24.0,
+   "lat": -29.0
+  },
+  {
+   "name": "New York",
+   "kind": "city",
+   "lon": -74.0,
+   "lat": 40.7,
+   "country_hint": "United States"
+  },
+  {
+   "name": "Brazil",
+   "kind": "country",
+   "lon": -51.9,
+   "lat": -14.2
+  },
+  {
+   "name": "Port-au-Prince",
+   "kind": "city",
+   "lon": -72.34,
+   "lat": 18.54,
+   "country_hint": "Haiti"
+  },
+  {
+   "name": "Sudan",
+   "kind": "country",
+   "lon": 30.2,
+   "lat": 15.9
+  },
+  {
+   "name": "Colombia",
+   "kind": "country",
+   "lon": -73.0,
+   "lat": 4.0
+  }
+ ]
+}

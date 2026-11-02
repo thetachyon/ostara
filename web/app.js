@@ -147,7 +147,26 @@ window.OST = window.OST || {};
     for (const L of OST.MAP_LAYERS) {
       if (map.getSource(L.id)) continue;
       map.addSource(L.id, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      const paint = L.sized
+      const paint = L.scoreStyled
+        ? {
+            // Weekly risk scores: color + size driven by feature properties.
+            // Countries are filled dots; cities are rings (transparent fill).
+            "circle-radius": ["interpolate", ["linear"], ["coalesce", ["get", "score"], 0], 0, 5, 50, 10, 100, 16],
+            "circle-color": ["case",
+              ["==", ["get", "kind"], "city"], "rgba(0,0,0,0)",
+              [">=", ["coalesce", ["get", "score"], 0], 75], "#e5484d",
+              [">=", ["coalesce", ["get", "score"], 0], 50], "#f76b15",
+              [">=", ["coalesce", ["get", "score"], 0], 25], "#ffb224",
+              "#46a758"],
+            "circle-opacity": 0.9,
+            "circle-stroke-width": ["case", ["==", ["get", "kind"], "city"], 3, 1],
+            "circle-stroke-color": ["case",
+              [">=", ["coalesce", ["get", "score"], 0], 75], "#e5484d",
+              [">=", ["coalesce", ["get", "score"], 0], 50], "#f76b15",
+              [">=", ["coalesce", ["get", "score"], 0], 25], "#ffb224",
+              "#46a758"],
+          }
+        : L.sized
         ? {
             "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 4, 3, 6, 8, 8, 14],
             "circle-color": L.color, "circle-opacity": 0.75,
@@ -167,7 +186,7 @@ window.OST = window.OST || {};
 
   function buildLayerPanel() {
     const h = readHash();
-    const onIds = h.l ? h.l.split(",") : OST.MAP_LAYERS.map((l) => l.id);
+    const onIds = h.l ? h.l.split(",") : OST.MAP_LAYERS.filter((l) => !l.defaultOff).map((l) => l.id);
     const list = document.getElementById("map-layer-list");
     list.innerHTML = "";
     for (const L of OST.MAP_LAYERS) {

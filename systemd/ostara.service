@@ -1,0 +1,21 @@
+[Unit]
+Description=OSTARA intel API server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/hatch/workspace/ostara
+ExecStart=/home/hatch/workspace/ostara/target/release/ostara
+Restart=always
+RestartSec=10
+# Egress proxy (no credentials in the URL; sandbox requires it for outbound
+# HTTPS/websocket). The app reads ~/workspace/ostara/.env via dotenvy.
+Environment=HTTP_PROXY=http://hatch-egress-proxy:3128
+Environment=HTTPS_PROXY=http://hatch-egress-proxy:3128
+Environment=ALL_PROXY=http://hatch-egress-proxy:3128
+Environment=NO_PROXY=localhost,127.0.0.1
+
+[Install]
+WantedBy=multi-user.target

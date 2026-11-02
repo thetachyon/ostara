@@ -121,6 +121,37 @@ window.OST = window.OST || {};
         })),
     },
     {
+      id: "riskmap", label: "Risk map", color: "#e5484d",
+      url: "/api/risk-map",
+      scoreStyled: true,
+      defaultOff: true,
+      note: "weekly risk scores (heuristic media signals, not a forecast) — dated snapshot",
+      toFeatures: (j) => (j.places || [])
+        .filter((p) => p.lat != null && p.lon != null && p.score != null)
+        .map((p) => {
+          const s = Number(p.score);
+          const lvl = esc(p.level || "");
+          const delta = p.delta == null ? "" :
+            ` <span class="m">(${p.delta > 0 ? "+" : ""}${Number(p.delta).toFixed(1)} vs last week)</span>`;
+          const fams = (p.families || [])
+            .map((f) => `${esc(f.family)} ${Number(f.score_0_100).toFixed(0)}`)
+            .join(" · ");
+          return {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+            properties: {
+              title: `${esc(p.name || "")} <span class="m">(${esc(p.kind || "")})</span>`,
+              desc: `risk <b>${s.toFixed(1)} / 100</b> · ${lvl} · safety: <b>${esc(p.safety || "—")}</b>${delta}` +
+                (fams ? `<br/><span class="m">${fams}</span>` : "") +
+                (p.partial ? `<br/><span class="m">partial — a feed was down, weights redistributed</span>` : "") +
+                `<br/><span class="m">snapshot ${esc(j.generated_at || "—")} — weekly, not live</span>`,
+              score: s,
+              kind: p.kind || "",
+            },
+          };
+        }),
+    },
+    {
       id: "cameras", label: "Public cameras", color: "#40c4ff",
       url: "/api/cameras?limit=200",
       toFeatures: (j) => (j.cameras || [])

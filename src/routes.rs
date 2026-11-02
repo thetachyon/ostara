@@ -1026,6 +1026,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         markets,
         nuclear,
         chokepoints,
+        risk_map,
         conflicts,
         helio,
         bluesky,
@@ -1098,6 +1099,9 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
             let config = config.clone();
             move |c| async move { feeds::chokepoints::probe_detail(&c, &config).await }
         }),
+        run_probe(state.client.clone(), "risk_map", {
+            move |_c| async move { feeds::risk_map::probe_detail().await }
+        }),
         run_probe(state.client.clone(), "conflicts", {
             let config = config.clone();
             move |c| async move { feeds::conflicts::probe_detail(&c, &config).await }
@@ -1137,6 +1141,7 @@ pub async fn feeds_health(State(state): State<AppState>) -> impl IntoResponse {
         markets,
         nuclear,
         chokepoints,
+        risk_map,
         conflicts,
         helio,
         bluesky,

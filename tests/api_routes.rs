@@ -1442,3 +1442,98 @@ async fn risk_kind_auto_detects() {
         Some("city")
     );
 }
+
+/// Write a minimal risk snapshot into a temp dir and point
+/// RISK_SNAPSHOT_DIR at it. Returns the dir path and the previous env value.
+fn risk_map_fixture(files: &[(&str, &str)]) -> (std::path::PathBuf, Option<String>) {
+    let dir = std::env::temp_dir().join(format!(
+        "riskmap-api-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    for (name, body) in files {
+        std::fs::write(dir.join(name), body).unwrap();
+    }
+    let prev = std::env::var("RISK_SNAPSHOT_DIR").ok();
+    // SAFETY: single-threaded test use; no other test touches this var.
+    unsafe { std::env::set_var("RISK_SNAPSHOT_DIR", &dir) };
+    (dir, prev)
+}
+
+fn risk_map_restore(dir: &std::path::PathBuf, prev: Option<String>) {
+    // SAFETY: restores the pre-test value; see above.
+    unsafe {
+        match prev {
+            Some(v) => std::env::set_var("RISK_SNAPSHOT_DIR", v),
+            None => std::env::remove_var("RISK_SNAPSHOT_DIR"),
+        }
+    }
+    std::fs::remove_dir_all(dir).ok();
+}
+
+fn snap_doc(at: &str, entries: &[(&str, f64)]) -> String {
+    let places: Vec<serde_json::Value> = entries
+        .iter()
+        .map(|(n, s)| {
+            serde_json::json!({"name": n, "kind": "country", "lon": 0.0, "lat": 0.0,
+                "score": s, "level": "high", "safety": "Low", "partial": true,
+                "ok_components": 6,
+                "families": [{"family": "unrest", "weight": 0.4, "score_0_100": *s}]})
+        })
+        .collect();
+    serde_json::json!({"generated_at": at, "place_count": places.len(),
+        "places": places, "caveat": "test"})
+    .to_string()
+}
+
+#[tokio::test]
+async fn risk_map_no_snapshot_is_503() {
+    let (dir, prev) = risk_map_fixture(&[]);
+    let g = get("/api/risk-map").await;
+    assert_eq!(
+        g.status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "got: {}",
+        body_preview(&g)
+    );
+    let detail = g.body.get("detail").and_then(|v| v.as_str()).unwrap_or("");
+    assert!(detail.contains("has not run"), "got: {}", body_preview(&g));
+    risk_map_restore(&dir, prev);
+}
+
+#[tokio::test]
+async fn risk_map_shape_and_delta() {
+    let s1 = snap_doc("2026-10-26T06:00:00Z", &[("France", 80.0), ("Paris", 70.0)]);
+    let s2 = snap_doc("2026-11-02T06:00:00Z", &[("France", 86.8), ("Kyiv", 74.5)]);
+    let (dir, prev) = risk_map_fixture(&[
+        ("snapshot-20261026-060000.json", &s1),
+        ("snapshot-20261102-060000.json", &s2),
+    ]);
+    let g = get("/api/risk-map").await;
+    assert_eq!(g.status, StatusCode::OK, "got: {}", body_preview(&g));
+    assert_eq!(
+        g.body.get("count").and_then(|v| v.as_u64()),
+        Some(2),
+        "got: {}",
+        body_preview(&g)
+    );
+    assert_eq!(
+        g.body.get("generated_at").and_then(|v| v.as_str()),
+        Some("2026-11-02T06:00:00Z")
+    );
+    assert!(
+        g.body.get("caveat").and_then(|v| v.as_str()).is_some(),
+        "caveat present"
+    );
+    let places = g.body.get("places").and_then(|v| v.as_array()).unwrap();
+    let fr = places.iter().find(|p| p["name"] == "France").unwrap();
+    assert_eq!(fr["score"].as_f64(), Some(86.8));
+    assert!((fr["delta"].as_f64().unwrap() - 6.8).abs() < 0.01);
+    assert!(fr["families"].as_array().unwrap().len() == 1);
+    let ky = places.iter().find(|p| p["name"] == "Kyiv").unwrap();
+    assert!(ky["delta"].is_null(), "new place: null delta");
+    risk_map_restore(&dir, prev);
+}
