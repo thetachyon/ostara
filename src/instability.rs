@@ -30,7 +30,7 @@ use crate::{
 
 static BASELINE_JSON: &str = include_str!("../data/instability_baseline.json");
 /// Structural baselines change slowly; cache computed scores for 1 hour.
-const TTL: Duration = Duration::from_secs(3600);
+const TTL: Duration = Duration::from_secs(600);
 
 pub fn routes() -> Router<AppState> {
     Router::new()
