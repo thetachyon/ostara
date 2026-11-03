@@ -329,7 +329,7 @@ pub fn routes() -> Router<AppState> {
 // Threat posters: accounts posting threat language directed at someone.
 // ---------------------------------------------------------------------------
 
-pub const THREAT_POSTER_DISCLAIMER: &str = "KEYWORD HEURISTIC — NOT VERIFIED THREATS. These are accounts whose public posts matched threat language (assassination, death threat, kill, etc.). Targets are extracted heuristically from phrasing like 'threats against X' and may be wrong. News reporting about threats, condemnation, and figurative language all match. No account listed is accused of making a genuine threat or being dangerous. Every item requires human review.";
+pub const THREAT_POSTER_DISCLAIMER: &str = "KEYWORD HEURISTIC — NOT VERIFIED THREATS. These are accounts whose public posts matched threat language (assassination, death threat, kill, etc.). Targets are extracted heuristically from phrasing like 'threats against X' and may be wrong. News reporting about threats, condemnation, and figurative language all match. Curated news outlets are excluded from this view. No account listed is accused of making a genuine threat or being dangerous. Every item requires human review.";
 
 const THREAT_BLUESKY_QUERY: &str =
     "assassination OR \"death threat\" OR \"kill list\" OR behead OR \"threats against\"";
@@ -432,6 +432,16 @@ struct ThreatPostersQuery {
     limit: Option<usize>,
 }
 
+/// Author handles of the curated news channels (`@{name}`), excluded from
+/// threat-poster results — news outlets reporting on violence are not
+/// threat actors.
+fn news_channel_authors() -> Vec<String> {
+    crate::feeds::telegram::curated_channel_names()
+        .into_iter()
+        .map(|c| format!("@{c}"))
+        .collect()
+}
+
 async fn threat_posters(
     State(state): State<AppState>,
     Query(q): Query<ThreatPostersQuery>,
@@ -494,9 +504,14 @@ async fn threat_posters(
         (posts, note)
     };
 
-    // Aggregate by author.
+    // Aggregate by author, excluding curated news outlets (they report on
+    // violence; they are not threat actors).
+    let news_authors = news_channel_authors();
     let mut map: HashMap<(String, String), Vec<RiskyPost>> = HashMap::new();
     for p in tg_posts.into_iter().chain(bs_posts) {
+        if p.source == "telegram" && news_authors.contains(&p.author) {
+            continue;
+        }
         map.entry((p.source.clone(), p.author.clone()))
             .or_default()
             .push(p);
@@ -633,5 +648,13 @@ mod tests {
     fn extract_targets_dedupes() {
         let t = extract_targets("Threats against Macron and threats against Macron again.");
         assert_eq!(t.iter().filter(|x| *x == "Macron").count(), 1);
+    }
+
+    #[test]
+    fn news_channel_authors_lists_curated_outlets() {
+        let authors = news_channel_authors();
+        assert_eq!(authors.len(), 9);
+        assert!(authors.contains(&"@Reuters".to_string()));
+        assert!(authors.contains(&"@bbcnews".to_string()));
     }
 }

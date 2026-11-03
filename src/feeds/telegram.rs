@@ -54,12 +54,10 @@ pub const FEED: &str = "telegram";
 /// `TELEGRAM_CHANNELS` is unset. Every entry was verified live via t.me.
 static DEFAULT_CHANNELS_JSON: &str = include_str!("../../data/telegram_channels.json");
 
-/// The effective scan set: the `TELEGRAM_CHANNELS` env allowlist when set,
-/// otherwise the curated defaults. Never guesses — all defaults verified.
-pub fn effective_channels(config: &Config) -> Vec<String> {
-    if !config.telegram_channels.is_empty() {
-        return config.telegram_channels.clone();
-    }
+/// Names of the curated default channels (data/telegram_channels.json),
+/// regardless of any TELEGRAM_CHANNELS env override. Used to identify
+/// news-outlet authors for exclusion from threat-actor views.
+pub fn curated_channel_names() -> Vec<String> {
     let v: serde_json::Value =
         serde_json::from_str(DEFAULT_CHANNELS_JSON).expect("data/telegram_channels.json parses");
     v.get("channels")
@@ -71,6 +69,15 @@ pub fn effective_channels(config: &Config) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// The effective scan set: the `TELEGRAM_CHANNELS` env allowlist when set,
+/// otherwise the curated defaults. Never guesses — all defaults verified.
+pub fn effective_channels(config: &Config) -> Vec<String> {
+    if !config.telegram_channels.is_empty() {
+        return config.telegram_channels.clone();
+    }
+    curated_channel_names()
 }
 
 /// Browser UA: `t.me/s` serves the full message preview to browser-like
