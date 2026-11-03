@@ -806,12 +806,10 @@ window.OST = window.OST || {};
           this.count = 0;
           return;
         }
-        const riskColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "var(--dim)";
+        const riskColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "#46a758";
         const cards = (j.transactions || []).slice(0, ROW_CAP).map((t) => {
-          const rs = t.risk_score || 0, rl = t.risk_level || "low";
-          const badge = rs >= 25
-            ? `<span class="chip" style="color:${riskColor(rl)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px;margin-left:6px">risk ${rs} ${esc(rl)}</span>`
-            : "";
+          const rs = t.risk_score != null ? t.risk_score : 0, rl = t.risk_level || "low";
+          const badge = `<span class="chip" style="color:${riskColor(rl)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px;margin-left:6px">risk ${rs} ${esc(rl)}</span>`;
           const reasons = (t.risk_reasons || []).length
             ? `<div class="m" style="color:${riskColor(rl)}">${esc(t.risk_reasons.join(" · "))}</div>`
             : "";
