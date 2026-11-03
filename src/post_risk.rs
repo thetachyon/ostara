@@ -66,8 +66,9 @@ const FAMILIES: [Family; 3] = [
 ];
 
 /// Direct threat language — person-directed threat phrasing that is not
-/// in the safety families.
-const THREAT_KEYWORDS: [&str; 8] = [
+/// in the safety families. Public so the threat-poster scan can reuse
+/// the exact keyword set.
+pub const THREAT_KEYWORDS: [&str; 8] = [
     "assassination",
     "assassinate",
     "death threat",

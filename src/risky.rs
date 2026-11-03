@@ -320,7 +320,245 @@ async fn scan(
 }
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/api/scan/risky", get(scan))
+    Router::new()
+        .route("/api/scan/risky", get(scan))
+        .route("/api/scan/threat-posters", get(threat_posters))
+}
+
+// ---------------------------------------------------------------------------
+// Threat posters: accounts posting threat language directed at someone.
+// ---------------------------------------------------------------------------
+
+pub const THREAT_POSTER_DISCLAIMER: &str = "KEYWORD HEURISTIC — NOT VERIFIED THREATS. These are accounts whose public posts matched threat language (assassination, death threat, kill, etc.). Targets are extracted heuristically from phrasing like 'threats against X' and may be wrong. News reporting about threats, condemnation, and figurative language all match. No account listed is accused of making a genuine threat or being dangerous. Every item requires human review.";
+
+const THREAT_BLUESKY_QUERY: &str =
+    "assassination OR \"death threat\" OR \"kill list\" OR behead OR \"threats against\"";
+
+#[derive(Debug, Serialize)]
+struct ThreatPoster {
+    source: String,
+    author: String,
+    author_url: String,
+    threat_post_count: usize,
+    targets: Vec<String>,
+    max_score: f64,
+    example_posts: Vec<ThreatExample>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct ThreatExample {
+    text: String,
+    post_url: String,
+    published: String,
+    targets: Vec<String>,
+    score: f64,
+}
+
+#[derive(Debug, Serialize)]
+struct ThreatPostersResponse {
+    posters: Vec<ThreatPoster>,
+    poster_count: usize,
+    sources: Vec<SourceNote>,
+    scanned_at: String,
+    disclaimer: String,
+}
+
+/// Heuristic target extraction: who is the threat directed at?
+/// Looks for "against X", "to X" / "toward(s) X" after threat language,
+/// and "<threat verb> X" with X a capitalized phrase. Returns deduped
+/// candidate names; may be empty or wrong — labeled heuristic.
+fn extract_targets(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let is_name_word = |w: &str| {
+        let w = w.trim_matches(|c: char| !c.is_alphanumeric());
+        w.chars().next().is_some_and(|c| c.is_uppercase())
+            && w.len() > 1
+            && !["I", "The", "A", "An"].contains(&w)
+    };
+    // Trigger words that precede a target: prepositions and threat verbs.
+    let triggers = [
+        "against",
+        "toward",
+        "towards",
+        "kill",
+        "kills",
+        "killed",
+        "assassinate",
+        "assassinates",
+        "assassinated",
+        "murder",
+        "murders",
+        "murdered",
+        "behead",
+        "beheads",
+        "beheaded",
+        "lynch",
+    ];
+    let lower: Vec<String> = words.iter().map(|w| w.to_lowercase()).collect();
+    for (i, w) in lower.iter().enumerate() {
+        let w_clean = w.trim_matches(|c: char| !c.is_alphanumeric());
+        if !triggers.contains(&w_clean) {
+            continue;
+        }
+        // Capture up to 3 following capitalized words as the target name.
+        // Skip a leading "the".
+        let mut j = i + 1;
+        if j < words.len() && words[j].to_lowercase() == "the" {
+            j += 1;
+        }
+        let mut name_parts: Vec<String> = Vec::new();
+        while j < words.len() && name_parts.len() < 3 && is_name_word(words[j]) {
+            name_parts.push(
+                words[j]
+                    .trim_matches(|c: char| !c.is_alphanumeric())
+                    .to_string(),
+            );
+            j += 1;
+        }
+        if !name_parts.is_empty() {
+            let name = name_parts.join(" ");
+            if !out.contains(&name) {
+                out.push(name);
+            }
+        }
+    }
+    out
+}
+
+#[derive(Debug, Deserialize)]
+struct ThreatPostersQuery {
+    #[serde(default)]
+    limit: Option<usize>,
+}
+
+async fn threat_posters(
+    State(state): State<AppState>,
+    Query(q): Query<ThreatPostersQuery>,
+) -> Result<Json<ThreatPostersResponse>, ApiError> {
+    let limit = q.limit.unwrap_or(20).clamp(1, 50);
+
+    // Threat-keyword posts from both sources.
+    let (tg_posts, tg_note) = {
+        let (posts, note) = fetch_telegram_posts(&state).await;
+        let filtered: Vec<RiskyPost> = posts
+            .into_iter()
+            .filter(|p| p.risk.families.contains(&"threat_language".to_string()))
+            .collect();
+        (filtered, note)
+    };
+    let (bs_posts, bs_note) = {
+        let key = format!("bluesky:threats:q={THREAT_BLUESKY_QUERY}:limit=50");
+        let client = state.client.clone();
+        let res = cached_bytes::<feeds::bluesky::BlueskyResponse, _>(
+            &state,
+            &key,
+            feeds::bluesky::TTL,
+            || feeds::bluesky::fetch(&client, THREAT_BLUESKY_QUERY, 50),
+        )
+        .await;
+        let mut posts = Vec::new();
+        let note = match res {
+            Ok((body, _)) => {
+                if let Ok(resp) = serde_json::from_slice::<feeds::bluesky::BlueskyResponse>(&body) {
+                    for p in resp.posts {
+                        let risk = score_post(&p.text);
+                        if risk.families.contains(&"threat_language".to_string()) {
+                            posts.push(RiskyPost {
+                                source: "bluesky".into(),
+                                author: format!("@{}", p.author_handle),
+                                author_url: format!(
+                                    "https://bsky.app/profile/{}",
+                                    p.author_handle.trim_start_matches('@')
+                                ),
+                                text: truncate(&p.text, 400),
+                                post_url: p.url.clone(),
+                                published: p.created_at.clone(),
+                                risk,
+                            });
+                        }
+                    }
+                }
+                SourceNote {
+                    source: "bluesky".into(),
+                    ok: true,
+                    detail: "ok".into(),
+                }
+            }
+            Err(e) => SourceNote {
+                source: "bluesky".into(),
+                ok: false,
+                detail: e.user_message(),
+            },
+        };
+        (posts, note)
+    };
+
+    // Aggregate by author.
+    let mut map: HashMap<(String, String), Vec<RiskyPost>> = HashMap::new();
+    for p in tg_posts.into_iter().chain(bs_posts) {
+        map.entry((p.source.clone(), p.author.clone()))
+            .or_default()
+            .push(p);
+    }
+    let mut posters: Vec<ThreatPoster> = map
+        .into_iter()
+        .map(|((source, author), mut posts)| {
+            posts.sort_by(|a, b| {
+                b.risk
+                    .score
+                    .partial_cmp(&a.risk.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            let mut targets: Vec<String> = Vec::new();
+            let examples: Vec<ThreatExample> = posts
+                .iter()
+                .take(3)
+                .map(|p| {
+                    let t = extract_targets(&p.text);
+                    for name in &t {
+                        if !targets.contains(name) {
+                            targets.push(name.clone());
+                        }
+                    }
+                    ThreatExample {
+                        text: p.text.clone(),
+                        post_url: p.post_url.clone(),
+                        published: p.published.clone(),
+                        targets: t,
+                        score: p.risk.score,
+                    }
+                })
+                .collect();
+            let max_score = posts.iter().map(|p| p.risk.score).fold(0.0, f64::max);
+            ThreatPoster {
+                author_url: posts[0].author_url.clone(),
+                source,
+                author,
+                threat_post_count: posts.len(),
+                targets,
+                max_score: (max_score * 10.0).round() / 10.0,
+                example_posts: examples,
+            }
+        })
+        .collect();
+    posters.sort_by(|a, b| {
+        b.threat_post_count.cmp(&a.threat_post_count).then(
+            b.max_score
+                .partial_cmp(&a.max_score)
+                .unwrap_or(std::cmp::Ordering::Equal),
+        )
+    });
+    let poster_count = posters.len();
+    posters.truncate(limit);
+
+    Ok(Json(ThreatPostersResponse {
+        posters,
+        poster_count,
+        sources: vec![tg_note, bs_note],
+        scanned_at: now_iso8601(),
+        disclaimer: THREAT_POSTER_DISCLAIMER.into(),
+    }))
 }
 
 #[cfg(test)]
@@ -371,5 +609,29 @@ mod tests {
     fn disclaimer_labels_heuristic() {
         assert!(DISCLAIMER.contains("KEYWORD HEURISTIC"));
         assert!(DISCLAIMER.contains("no poster listed is accused"));
+    }
+
+    #[test]
+    fn extract_targets_finds_against_phrase() {
+        let t = extract_targets("Police investigate death threats against Emmanuel Macron.");
+        assert!(t.contains(&"Emmanuel Macron".to_string()), "{t:?}");
+    }
+
+    #[test]
+    fn extract_targets_finds_verb_target() {
+        let t = extract_targets("Online posts call to assassinate the President.");
+        assert!(t.contains(&"President".to_string()), "{t:?}");
+    }
+
+    #[test]
+    fn extract_targets_empty_without_trigger() {
+        let t = extract_targets("Markets rallied on strong earnings today.");
+        assert!(t.is_empty());
+    }
+
+    #[test]
+    fn extract_targets_dedupes() {
+        let t = extract_targets("Threats against Macron and threats against Macron again.");
+        assert_eq!(t.iter().filter(|x| *x == "Macron").count(), 1);
     }
 }

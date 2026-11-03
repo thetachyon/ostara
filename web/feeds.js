@@ -712,6 +712,36 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "threatposters", label: "Threat posters", health: null,
+      group: "global",
+      note: "accounts posting threat language directed at someone · targets extracted heuristically · keyword heuristic, no account accused of anything",
+      inputs: [
+        { name: "limit", placeholder: "limit", value: "20" },
+      ],
+      url: (p) => `/api/scan/threat-posters?limit=${encodeURIComponent(p.limit || "20")}`,
+      render(j, el) {
+        const srcs = (j.sources || []).map((s) =>
+          `${esc(s.source)}: ${s.ok ? "ok" : "down" + (s.detail ? " — " + esc(s.detail) : "")}`).join(" · ");
+        const cards = (j.posters || []).slice(0, ROW_CAP).map((t) =>
+          `<div class="feed-item" style="border-left:3px solid var(--bad);padding-left:10px;margin-bottom:10px">` +
+          `<div><b><a href="${esc(t.author_url || "#")}" target="_blank" rel="noopener">${esc(t.author || "?")}</a></b> ` +
+          `<span class="m">${esc(t.source || "")} · ${t.threat_post_count} threat post${t.threat_post_count === 1 ? "" : "s"} · max score ${Number(t.max_score).toFixed(0)}</span></div>` +
+          (t.targets && t.targets.length ? `<div>targets: <b>${t.targets.map(esc).join(", ")}</b> <span class="m">(heuristic)</span></div>` : `<div class="m">no target extracted</div>`) +
+          (t.example_posts || []).slice(0, 2).map((p) =>
+            `<div class="m" style="margin-top:4px">“${esc((p.text || "").slice(0, 180))}${(p.text || "").length > 180 ? "…" : ""}”` +
+            (p.post_url ? ` <a href="${esc(p.post_url)}" target="_blank" rel="noopener">open</a>` : "") + `</div>`
+          ).join("") +
+          `</div>`
+        ).join("") || `<div class="m">no threat posters found in this scan</div>`;
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px">${j.poster_count} posters · ${esc(srcs)}</div>` +
+          cards +
+          `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
+          genLine(j);
+        this.count = j.poster_count;
+      },
+    },
+    {
       id: "riskyposts", label: "Risky posts", health: null,
       group: "global",
       note: "top risk-scored posts + top posters from Telegram defaults & Bluesky · keyword heuristic, not verified threats · no poster is accused of anything",
