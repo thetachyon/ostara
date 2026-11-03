@@ -24,6 +24,7 @@ RUN mkdir -p src benches \
     && rm -rf src benches
 
 COPY src ./src
+COPY benches ./benches
 RUN cargo build --release
 
 # ---- Stage 2: slim runtime --------------------------------------------------
