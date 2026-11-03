@@ -835,7 +835,7 @@ window.OST = window.OST || {};
           return;
         }
         const riskColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "#46a758";
-        const cards = (j.transactions || []).slice(0, ROW_CAP).map((t) => {
+        const card = (t) => {
           const rs = t.risk_score != null ? t.risk_score : 0, rl = t.risk_level || "low";
           const badge = `<span class="chip" style="color:${riskColor(rl)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px;margin-left:6px">risk ${rs} ${esc(rl)}</span>`;
           const reasons = (t.risk_reasons || []).length
@@ -847,10 +847,19 @@ window.OST = window.OST || {};
           `<div class="m">${mono((t.hash || "").slice(0, 20))}…</div>` +
           (t.addresses && t.addresses.length ? `<div class="m">addrs: ${t.addresses.slice(0, 2).map((a) => mono(a.slice(0, 16) + "…")).join(" ")}</div>` : "") +
           `</div>`;
-        }).join("") || `<div class="m">no transactions</div>`;
+        };
+        const txs = (j.transactions || []).slice(0, ROW_CAP);
+        const elevated = txs.filter((t) => (t.risk_score || 0) >= 50)
+          .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
+        const elevatedHtml = elevated.length
+          ? `<div class="m" style="margin:8px 0 4px"><b style="color:var(--bad)">⚠ Elevated risk</b> <span class="chip" style="border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px;color:var(--bad)">${elevated.length}</span></div>` +
+            elevated.map(card).join("")
+          : `<div class="m" style="margin:8px 0 4px"><b style="color:#46a758">✓ No elevated-risk transactions</b> <span class="m">in this batch</span></div>`;
+        const allHtml = `<div class="m" style="margin:10px 0 4px"><b>All transactions</b> <span class="m">(${txs.length})</span></div>` +
+          (txs.map(card).join("") || `<div class="m">no transactions</div>`);
         el.innerHTML =
           `<div class="m" style="margin-bottom:6px"><b>${esc(j.currency || "")}</b> · ${j.count} transaction${j.count === 1 ? "" : "s"}</div>` +
-          cards + discl + genLine(j);
+          elevatedHtml + allHtml + discl + genLine(j);
         this.count = j.count;
       }
     },
