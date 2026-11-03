@@ -744,12 +744,12 @@ window.OST = window.OST || {};
     {
       id: "riskyposts", label: "Risky posts", health: null,
       group: "global",
-      note: "top risk-scored posts + top posters from Telegram defaults & Bluesky · keyword heuristic, not verified threats · no poster is accused of anything",
+      note: "posts ranked by risk score (highest first) from Telegram defaults & Bluesky · keyword heuristic, not verified threats · no poster is accused of anything",
       inputs: [
-        { name: "limit", placeholder: "limit", value: "20" },
-        { name: "min_score", placeholder: "min score 0-100", value: "25" },
+        { name: "limit", placeholder: "limit", value: "10" },
+        { name: "min_score", placeholder: "min score 0-100 (blank = show all, ranked)", value: "" },
       ],
-      url: (p) => `/api/scan/risky?limit=${encodeURIComponent(p.limit || "20")}&min_score=${encodeURIComponent(p.min_score || "25")}`,
+      url: (p) => `/api/scan/risky?limit=${encodeURIComponent(p.limit || "10")}&min_score=${encodeURIComponent((p.min_score || "").trim() === "" ? "0" : p.min_score)}`,
       render(j, el) {
         const lvlColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "var(--warn)"
           : l === "moderate" ? "#ffb224" : "var(--dim,#9aa4b2)";
