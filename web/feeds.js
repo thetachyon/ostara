@@ -863,10 +863,10 @@ window.OST = window.OST || {};
           `</div>`;
         };
         const txs = (j.transactions || []).slice(0, ROW_CAP);
-        const elevated = txs.filter((t) => (t.risk_score || 0) >= 50)
-          .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
+        const byRecent = (a, b) => (b.received_at || "").localeCompare(a.received_at || "");
+        const elevated = txs.filter((t) => (t.risk_score || 0) >= 50).sort(byRecent);
         const elevatedHtml = elevated.length
-          ? `<div class="m" style="margin:8px 0 4px"><b style="color:var(--bad)">⚠ Elevated risk</b> <span class="chip" style="border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px;color:var(--bad)">${elevated.length}</span></div>` +
+          ? `<div class="m" style="margin:8px 0 4px"><b style="color:var(--bad)">⚠ Elevated risk — most recent</b> <span class="chip" style="border:1px solid var(--bad);border-radius:3px;padding:0 5px;font-size:10px;color:var(--bad)">${elevated.length}</span></div>` +
             elevated.map(card).join("")
           : `<div class="m" style="margin:8px 0 4px"><b style="color:#46a758">✓ No elevated-risk transactions</b> <span class="m">in this batch</span></div>`;
         const allHtml = `<div class="m" style="margin:10px 0 4px"><b>All transactions</b> <span class="m">(${txs.length})</span></div>` +
