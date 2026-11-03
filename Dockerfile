@@ -8,21 +8,12 @@
 # key is optional and feeds degrade gracefully without them.
 
 # ---- Stage 1: compile -------------------------------------------------------
+# Note: no dummy-crate dependency-caching trick here. It caused a real
+# outage (the cached dummy binary shipped instead of the app). A single
+# COPY + build is obviously correct; the ~10 min build cost is acceptable.
 FROM rust:1.99-bookworm AS builder
 WORKDIR /app
-
-# Dependency caching: build a dummy crate first so this layer is reused
-# until Cargo.toml/Cargo.lock change; the real sources compile in the next.
-# (The [[bench]] target needs its file to exist for the manifest to parse,
-# so stub benches/parse_bench.rs too — `cargo build` won't compile it.)
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src benches \
-    && printf 'fn main() { println!("placeholder"); }\n' > src/main.rs \
-    && printf '' > src/lib.rs \
-    && printf 'fn main() {}\n' > benches/parse_bench.rs \
-    && cargo build --release \
-    && rm -rf src benches
-
 COPY src ./src
 COPY benches ./benches
 RUN cargo build --release
