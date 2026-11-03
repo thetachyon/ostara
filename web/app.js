@@ -113,13 +113,22 @@ window.OST = window.OST || {};
     });
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
+    const introShownAt = Date.now();
+    const INTRO_MIN_MS = 2800; // let the animation play before fading
     map.on("load", () => { ensureLayers(); refreshAll(); dismissIntro(); });
-    // Dismiss the intro overlay once the map is ready (or after 5s max).
+    // Dismiss the intro overlay once the map is ready (or after 6s max),
+    // but never before the minimum display time so the animation is seen.
     function dismissIntro() {
       const el = document.getElementById("intro");
-      if (el && !el.classList.contains("done")) el.classList.add("done");
+      if (!el || el.classList.contains("done")) return;
+      const elapsed = Date.now() - introShownAt;
+      if (elapsed < INTRO_MIN_MS) {
+        setTimeout(dismissIntro, INTRO_MIN_MS - elapsed);
+        return;
+      }
+      el.classList.add("done");
     }
-    setTimeout(dismissIntro, 5000);
+    setTimeout(dismissIntro, 6000);
     // re-add our layers after any style swap (theme change), then reload data
     map.on("styledata", () => {
       if (styleSwitching) { styleSwitching = false; ensureLayers(); refreshAll(); }
