@@ -16,6 +16,9 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY benches ./benches
+# data/*.json are baked into the binary via include_str! — the builder
+# needs them, not just the runtime image.
+COPY data ./data
 RUN cargo build --release
 
 # ---- Stage 2: slim runtime --------------------------------------------------
