@@ -232,8 +232,10 @@ async fn live_unrest_signal(client: &reqwest::Client, country: &str) -> Option<f
     if total == 0 {
         return None;
     }
-    // 0 recent → 0, 10+ recent in 7 days → 100.
-    Some((recent as f64 / 10.0 * 100.0).min(100.0))
+    // Logarithmic scale: protest news volume varies wildly by country size.
+    // 0 recent → 0, 1 → ~15, 5 → ~39, 10 → ~52, 30 → ~74, 100 → 100.
+    // Takes truly massive coverage to peg at 100.
+    Some(100.0 * ((1.0 + recent as f64).ln() / 101.0_f64.ln()))
 }
 
 async fn instability(
