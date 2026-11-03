@@ -1312,6 +1312,7 @@ pub fn app(state: AppState) -> Router {
         .merge(crate::threats::routes())
         .merge(crate::sanctions::routes())
         .merge(crate::darkweb::routes())
+        .merge(crate::crypto::router())
         .merge(crate::risky::routes())
         .merge(crate::fusion::routes())
         // Phase 5: MapLibre web UI. Explicit API routes above take

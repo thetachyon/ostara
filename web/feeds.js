@@ -9,6 +9,10 @@ window.OST = window.OST || {};
 (function (OST) {
   "use strict";
   const esc = OST.esc;
+  function trimNum(n) {
+    if (n == null || isNaN(n)) return "—";
+    return parseFloat(n.toFixed(8)).toString();
+  }
 
   const REFRESH_MS = 5 * 60 * 1000;
   const HEALTH_MS = 60 * 1000;
@@ -781,6 +785,35 @@ window.OST = window.OST || {};
           genLine(j);
         this.count = j.post_count;
       },
+    },
+    {
+      id: "crypto", label: "Crypto transactions", health: null,
+      group: "global",
+      note: "recent on-chain transactions across BTC, ETH, LTC, DOGE · keyless BlockCypher feed · values as reported on-chain",
+      inputs: [
+        { name: "currency", type: "select", options: ["all", "btc", "eth", "ltc", "doge"], value: "all" },
+        { name: "limit", placeholder: "limit", value: "10" },
+      ],
+      url: (p) => `/api/crypto/transactions?currency=${encodeURIComponent(p.currency || "all")}&limit=${encodeURIComponent(p.limit || "10")}`,
+      render(j, el) {
+        const discl = `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>`;
+        if (!j.source_ok) {
+          el.innerHTML = `<div class="m">source unavailable: ${esc(j.source_detail || "")}</div>` + discl;
+          this.count = 0;
+          return;
+        }
+        const cards = (j.transactions || []).slice(0, ROW_CAP).map((t) =>
+          `<div class="feed-item"><div><b>${esc(t.ticker)}</b> · ${esc(trimNum(t.value))} <span class="m">${esc(t.currency)}</span></div>` +
+          `<div class="m">fee: ${esc(trimNum(t.fee))} · confirmations: ${t.confirmations} · ${esc((t.received_at || "").slice(0, 19).replace("T", " "))}</div>` +
+          `<div class="m">${mono((t.hash || "").slice(0, 20))}…</div>` +
+          (t.addresses && t.addresses.length ? `<div class="m">addrs: ${t.addresses.slice(0, 2).map((a) => mono(a.slice(0, 16) + "…")).join(" ")}</div>` : "") +
+          `</div>`
+        ).join("") || `<div class="m">no transactions</div>`;
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px"><b>${esc(j.currency || "")}</b> · ${j.count} transaction${j.count === 1 ? "" : "s"}</div>` +
+          cards + discl + genLine(j);
+        this.count = j.count;
+      }
     },
     {
       id: "darkweb", label: "Dark web", health: null,
