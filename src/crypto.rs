@@ -15,6 +15,7 @@ use axum::{Json, Router, extract::Query, routing::get};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    crypto_risk,
     error::{ApiError, FeedError},
     routes::{AppState, cached_bytes},
     time::now_iso8601,
@@ -50,6 +51,10 @@ struct Tx {
     received_at: String,
     /// First few involved addresses (truncated for display).
     addresses: Vec<String>,
+    /// Suspicious-pattern score 0-100 (heuristic, not attribution).
+    risk_score: u8,
+    risk_level: String,
+    risk_reasons: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -72,6 +77,9 @@ struct TxQuery {
     currency: Option<String>,
     #[serde(default)]
     limit: Option<usize>,
+    /// only return transactions with risk_score >= this (0-100)
+    #[serde(default)]
+    min_risk: Option<u8>,
 }
 
 fn chain_info(slug: &str) -> Option<(&'static str, &'static str, &'static str, f64)> {
@@ -128,15 +136,34 @@ async fn fetch_chain(
                         .collect()
                 })
                 .unwrap_or_default();
+            let vin_sz = t.get("vin_sz").and_then(|x| x.as_u64()).unwrap_or(0) as usize;
+            let vout_sz = t.get("vout_sz").and_then(|x| x.as_u64()).unwrap_or(0) as usize;
+            let min_output = t
+                .get("outputs")
+                .and_then(|o| o.as_array())
+                .map(|outs| {
+                    outs.iter()
+                        .filter_map(|o| o.get("value").and_then(|v| v.as_f64()))
+                        .fold(f64::INFINITY, f64::min)
+                })
+                .filter(|m| m.is_finite())
+                .unwrap_or(0.0)
+                / divisor;
+            let value = f("total") / divisor;
+            let fee = f("fees") / divisor;
+            let risk = crypto_risk::score_tx(ticker, value, fee, vin_sz, vout_sz, min_output);
             Tx {
                 hash: s("hash"),
                 currency: name.to_string(),
                 ticker: ticker.to_string(),
-                value: f("total") / divisor,
-                fee: f("fees") / divisor,
+                value,
+                fee,
                 confirmations: t.get("confirmations").and_then(|x| x.as_u64()).unwrap_or(0),
                 received_at: s("received"),
                 addresses: addrs,
+                risk_score: risk.score,
+                risk_level: risk.level.to_string(),
+                risk_reasons: risk.reasons,
             }
         })
         .filter(|t| !t.hash.is_empty())
@@ -155,6 +182,7 @@ async fn transactions(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "all".to_string());
     let limit = p.limit.unwrap_or(10).clamp(1, 20);
+    let min_risk = p.min_risk.unwrap_or(0).min(100);
 
     let slugs: Vec<&str> = if cur == "all" {
         CHAINS.iter().map(|c| c.0).collect()
@@ -173,7 +201,7 @@ async fn transactions(
     } else {
         limit
     };
-    let key = format!("crypto:txs:{cur}:limit={limit}");
+    let key = format!("crypto:txs:{cur}:limit={limit}:min_risk={min_risk}");
 
     let fetch = || {
         let client = state.client.clone();
@@ -197,8 +225,17 @@ async fn transactions(
             if ok == 0 {
                 return Err(FeedError::new(FEED, detail));
             }
-            // Newest first; cap at the requested limit.
-            all.sort_by(|a, b| b.received_at.cmp(&a.received_at));
+            // Suspicious first when filtering by risk, else newest first.
+            if min_risk > 0 {
+                all.retain(|t| t.risk_score >= min_risk);
+                all.sort_by(|a, b| {
+                    b.risk_score
+                        .cmp(&a.risk_score)
+                        .then(b.received_at.cmp(&a.received_at))
+                });
+            } else {
+                all.sort_by(|a, b| b.received_at.cmp(&a.received_at));
+            }
             all.truncate(limit);
             Ok::<Vec<Tx>, FeedError>(all)
         }

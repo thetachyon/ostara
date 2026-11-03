@@ -13,6 +13,7 @@ pub mod config;
 pub mod country_inspect;
 pub mod country_osint;
 pub mod crypto;
+pub mod crypto_risk;
 pub mod darkweb;
 pub mod dossier;
 pub mod error;

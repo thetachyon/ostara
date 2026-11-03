@@ -793,8 +793,12 @@ window.OST = window.OST || {};
       inputs: [
         { name: "currency", type: "select", options: ["all", "btc", "eth", "ltc", "doge"], value: "all" },
         { name: "limit", placeholder: "limit", value: "10" },
+        { name: "min_risk", placeholder: "min risk 0-100 (blank = all)", value: "" },
       ],
-      url: (p) => `/api/crypto/transactions?currency=${encodeURIComponent(p.currency || "all")}&limit=${encodeURIComponent(p.limit || "10")}`,
+      url: (p) => {
+        const mr = (p.min_risk || "").trim();
+        return `/api/crypto/transactions?currency=${encodeURIComponent(p.currency || "all")}&limit=${encodeURIComponent(p.limit || "10")}${mr === "" ? "" : "&min_risk=" + encodeURIComponent(mr)}`;
+      },
       render(j, el) {
         const discl = `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>`;
         if (!j.source_ok) {
@@ -802,13 +806,22 @@ window.OST = window.OST || {};
           this.count = 0;
           return;
         }
-        const cards = (j.transactions || []).slice(0, ROW_CAP).map((t) =>
-          `<div class="feed-item"><div><b>${esc(t.ticker)}</b> · ${esc(trimNum(t.value))} <span class="m">${esc(t.currency)}</span></div>` +
+        const riskColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "var(--dim)";
+        const cards = (j.transactions || []).slice(0, ROW_CAP).map((t) => {
+          const rs = t.risk_score || 0, rl = t.risk_level || "low";
+          const badge = rs >= 25
+            ? `<span class="chip" style="color:${riskColor(rl)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px;margin-left:6px">risk ${rs} ${esc(rl)}</span>`
+            : "";
+          const reasons = (t.risk_reasons || []).length
+            ? `<div class="m" style="color:${riskColor(rl)}">${esc(t.risk_reasons.join(" · "))}</div>`
+            : "";
+          return `<div class="feed-item"${rs >= 50 ? ` style="border-left:2px solid ${riskColor(rl)};padding-left:8px"` : ""}><div><b>${esc(t.ticker)}</b> · ${esc(trimNum(t.value))} <span class="m">${esc(t.currency)}</span>${badge}</div>` +
           `<div class="m">fee: ${esc(trimNum(t.fee))} · confirmations: ${t.confirmations} · ${esc((t.received_at || "").slice(0, 19).replace("T", " "))}</div>` +
+          reasons +
           `<div class="m">${mono((t.hash || "").slice(0, 20))}…</div>` +
           (t.addresses && t.addresses.length ? `<div class="m">addrs: ${t.addresses.slice(0, 2).map((a) => mono(a.slice(0, 16) + "…")).join(" ")}</div>` : "") +
-          `</div>`
-        ).join("") || `<div class="m">no transactions</div>`;
+          `</div>`;
+        }).join("") || `<div class="m">no transactions</div>`;
         el.innerHTML =
           `<div class="m" style="margin-bottom:6px"><b>${esc(j.currency || "")}</b> · ${j.count} transaction${j.count === 1 ? "" : "s"}</div>` +
           cards + discl + genLine(j);
