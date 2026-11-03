@@ -940,13 +940,13 @@ async fn scan_telegram(
     sources: &mut Vec<SourceStatus>,
     out: &mut Vec<ThreatItem>,
 ) {
-    let channels: Vec<String> = state.config.telegram_channels.clone();
+    let channels: Vec<String> = feeds::telegram::effective_channels(&state.config);
     if channels.is_empty() {
         sources.push(SourceStatus {
             source: "telegram".into(),
             ok: false,
             detail: Some(
-                "not configured — set TELEGRAM_CHANNELS to public channel names to enable Telegram monitoring"
+                "no channels available — set TELEGRAM_CHANNELS or check the curated defaults"
                     .into(),
             ),
         });

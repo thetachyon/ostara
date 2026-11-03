@@ -50,6 +50,29 @@ use crate::{
 pub const TTL: Duration = Duration::from_secs(300);
 pub const FEED: &str = "telegram";
 
+/// Curated default channel list (`data/telegram_channels.json`), used when
+/// `TELEGRAM_CHANNELS` is unset. Every entry was verified live via t.me.
+static DEFAULT_CHANNELS_JSON: &str = include_str!("../../data/telegram_channels.json");
+
+/// The effective scan set: the `TELEGRAM_CHANNELS` env allowlist when set,
+/// otherwise the curated defaults. Never guesses — all defaults verified.
+pub fn effective_channels(config: &Config) -> Vec<String> {
+    if !config.telegram_channels.is_empty() {
+        return config.telegram_channels.clone();
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(DEFAULT_CHANNELS_JSON).expect("data/telegram_channels.json parses");
+    v.get("channels")
+        .and_then(|c| c.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|c| c.get("name").and_then(|n| n.as_str()))
+                .map(|s| s.to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Browser UA: `t.me/s` serves the full message preview to browser-like
 /// clients; the default reqwest UA gets a reduced page.
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
@@ -82,10 +105,12 @@ fn valid_channel_name(c: &str) -> bool {
 }
 
 /// Resolve the effective channel: explicit `?channel=` wins, otherwise the
-/// first configured allowlist entry. Errors when neither exists, when the
-/// name is not allowlisted, or when the name is not a valid public-channel
-/// username (400 in all cases).
+/// first entry of the effective channel list (TELEGRAM_CHANNELS env, else
+/// the curated defaults). Errors when neither exists, when the name is not
+/// allowlisted, or when the name is not a valid public-channel username
+/// (400 in all cases).
 fn resolve_channel(query: Option<&str>, config: &Config) -> Result<String, ApiError> {
+    let effective = effective_channels(config);
     if let Some(c) = query.map(str::trim).filter(|c| !c.is_empty()) {
         let c = c.trim_start_matches('@').to_string();
         if !valid_channel_name(&c) {
@@ -103,7 +128,7 @@ fn resolve_channel(query: Option<&str>, config: &Config) -> Result<String, ApiEr
         }
         return Ok(c);
     }
-    config.telegram_channels.first().cloned().ok_or_else(|| {
+    effective.first().cloned().ok_or_else(|| {
         ApiError::bad_request(
             "missing channel",
             "query param channel is required, e.g. ?channel=telegram (or set TELEGRAM_CHANNELS)",
@@ -312,6 +337,17 @@ pub async fn handler(
     State(state): State<AppState>,
     Query(q): Query<TelegramQuery>,
 ) -> Result<Response, ApiError> {
+    // `?channel=all` (or empty) aggregates the effective channel set —
+    // the no-input "scan it for me" mode.
+    let want_all = q
+        .channel
+        .as_deref()
+        .map(|c| c.trim().to_lowercase())
+        .map(|c| c.is_empty() || c == "all")
+        .unwrap_or(true);
+    if want_all {
+        return handler_all(state).await;
+    }
     let channel = resolve_channel(q.channel.as_deref(), &state.config)?;
     // Same get→fetch→put TTL semantics as routes::cached_bytes, hand-rolled
     // so an upstream failure surfaces as 503 (honest "Telegram unreachable")
@@ -324,6 +360,72 @@ pub async fn handler(
     let resp = fetch(&client, &channel)
         .await
         .map_err(|e| ApiError::service_unavailable("telegram upstream failed", e.detail))?;
+    let body = serde_json::to_vec(&resp)
+        .map_err(|e| ApiError::bad_gateway("serialize failed", e.to_string()))?;
+    state.cache.put(key, body.clone(), TTL);
+    Ok(json_bytes(body, false))
+}
+
+/// Aggregated multi-channel response for the no-input scan mode.
+#[derive(Debug, Serialize)]
+struct TelegramAllResponse {
+    channels: Vec<String>,
+    count: usize,
+    generated_at: String,
+    messages: Vec<TelegramMessage>,
+    failures: Vec<String>,
+}
+
+async fn handler_all(state: AppState) -> Result<Response, ApiError> {
+    use futures_util::future::join_all;
+    let channels = effective_channels(&state.config);
+    let key = "telegram:all".to_string();
+    if let Some(body) = state.cache.get(&key) {
+        return Ok(json_bytes(body, true));
+    }
+    let futs = channels.iter().map(|ch| {
+        let client = state.client.clone();
+        let ch2 = ch.clone();
+        let st = state.clone();
+        async move {
+            let ckey = format!("telegram:{ch2}");
+            if let Some(body) = st.cache.get(&ckey) {
+                return (
+                    ch2,
+                    serde_json::from_slice::<TelegramResponse>(&body)
+                        .map(|r| r.messages)
+                        .unwrap_or_default(),
+                    None::<String>,
+                );
+            }
+            match fetch(&client, &ch2).await {
+                Ok(r) => {
+                    let body = serde_json::to_vec(&r).unwrap_or_default();
+                    st.cache.put(ckey, body, TTL);
+                    (ch2, r.messages, None)
+                }
+                Err(e) => (ch2, Vec::new(), Some(e.detail)),
+            }
+        }
+    });
+    let results = join_all(futs).await;
+    let mut messages = Vec::new();
+    let mut failures = Vec::new();
+    for (ch, msgs, err) in results {
+        if let Some(e) = err {
+            failures.push(format!("@{ch}: {e}"));
+        }
+        messages.extend(msgs);
+    }
+    // Newest first for the scan view.
+    messages.sort_by(|a, b| b.date.cmp(&a.date));
+    let resp = TelegramAllResponse {
+        channels,
+        count: messages.len(),
+        generated_at: now_iso8601(),
+        messages,
+        failures,
+    };
     let body = serde_json::to_vec(&resp)
         .map_err(|e| ApiError::bad_gateway("serialize failed", e.to_string()))?;
     state.cache.put(key, body.clone(), TTL);
@@ -349,9 +451,21 @@ mod tests {
     }
 
     #[test]
-    fn missing_channel_without_allowlist_is_400() {
+    fn missing_channel_falls_back_to_curated_defaults() {
         let config = Config::test_default();
-        assert!(resolve_channel(None, &config).is_err());
+        // No TELEGRAM_CHANNELS set: the curated defaults supply the channel.
+        let ch = resolve_channel(None, &config).unwrap();
+        assert!(!ch.is_empty());
+        assert!(effective_channels(&config).contains(&ch));
+    }
+
+    #[test]
+    fn effective_channels_uses_curated_defaults_when_env_empty() {
+        let config = Config::test_default();
+        let channels = effective_channels(&config);
+        // 9 verified channels in data/telegram_channels.json.
+        assert_eq!(channels.len(), 9);
+        assert!(channels.contains(&"Reuters".to_string()));
     }
 
     #[test]

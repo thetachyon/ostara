@@ -466,9 +466,11 @@ window.OST = window.OST || {};
       id: "telegram", label: "Telegram", health: "telegram",
       group: "global",
       note: "public channels only \u00b7 keyless \u00b7 no login",
-      inputs: [{ name: "channel", placeholder: "channel name (no @)", required: true }],
-      validate: (p) => (p.channel && p.channel.trim() ? null : "enter a channel name"),
-      url: (p) => `/api/telegram?channel=${encodeURIComponent(p.channel || "")}`,
+      inputs: [{ name: "channel", placeholder: "channel (blank = all 9 default news channels)" }],
+      url: (p) => {
+        const c = (p.channel || "").trim();
+        return c ? `/api/telegram?channel=${encodeURIComponent(c)}` : `/api/telegram?channel=all`;
+      },
       render(j, el) {
         const items = j.messages || [];
         el.innerHTML = `<div class="m" style="margin-bottom:6px">${items.length} message${items.length === 1 ? "" : "s"}</div>` +
@@ -485,11 +487,13 @@ window.OST = window.OST || {};
       group: "global",
       note: "keyless · public posts via api.bsky.app",
       inputs: [
-        { name: "q", placeholder: "search query", required: true },
+        { name: "q", placeholder: "search query (blank = risk-keyword scan)" },
         { name: "limit", placeholder: "limit", value: "25" },
       ],
-      validate: (p) => (p.q && p.q.trim() ? null : "enter a search query"),
-      url: (p) => `/api/bluesky?q=${encodeURIComponent(p.q || "")}&limit=${encodeURIComponent(p.limit || "25")}`,
+      url: (p) => {
+        const q = (p.q || "").trim() || "murder OR shooting OR bombing OR stabbing OR riot OR kidnapping OR airstrike";
+        return `/api/bluesky?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(p.limit || "25")}`;
+      },
       render(j, el) {
         const rows = (j.posts || []).slice(0, ROW_CAP).map((p) => [
           esc("@" + (p.author_handle || "?")),
@@ -552,7 +556,7 @@ window.OST = window.OST || {};
       group: "global",
       note: "keyless RSS · q is country-queryable (e.g. protest France)",
       inputs: [
-        { name: "q", placeholder: "search query", required: true },
+        { name: "q", placeholder: "search query (blank = risk-keyword scan)" },
         { name: "limit", placeholder: "limit", value: "25" },
       ],
       validate: (p) => (p.q && p.q.trim() ? null : "enter a search query"),
@@ -705,6 +709,47 @@ window.OST = window.OST || {};
           `<div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
           genLine(j);
         this.count = items.length;
+      },
+    },
+    {
+      id: "riskyposts", label: "Risky posts", health: null,
+      group: "global",
+      note: "top risk-scored posts + top posters from Telegram defaults & Bluesky · keyword heuristic, not verified threats · no poster is accused of anything",
+      inputs: [
+        { name: "limit", placeholder: "limit", value: "20" },
+        { name: "min_score", placeholder: "min score 0-100", value: "25" },
+      ],
+      url: (p) => `/api/scan/risky?limit=${encodeURIComponent(p.limit || "20")}&min_score=${encodeURIComponent(p.min_score || "25")}`,
+      render(j, el) {
+        const lvlColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "var(--warn)"
+          : l === "moderate" ? "#ffb224" : "var(--dim,#9aa4b2)";
+        const srcs = (j.sources || []).map((s) =>
+          `${esc(s.source)}: ${s.ok ? "ok" : "down" + (s.detail ? " — " + esc(s.detail) : "")}`).join(" · ");
+        const postCards = (j.posts || []).slice(0, ROW_CAP).map((p) =>
+          `<div class="feed-item" style="border-left:3px solid ${lvlColor(p.risk.level)};padding-left:10px;margin-bottom:10px">` +
+          `<div><span class="chip" style="color:${lvlColor(p.risk.level)};border:1px solid ${lvlColor(p.risk.level)};border-radius:3px;padding:0 5px;font-size:10px">${esc(p.risk.level || "")} ${Number(p.risk.score).toFixed(0)}</span> ` +
+          `<b>${esc(p.author || "")}</b> <span class="m">${esc(p.source || "")} · ${esc((p.published || "").slice(0, 16).replace("T", " "))}</span></div>` +
+          `<div>${esc(p.text || "")}</div>` +
+          (p.risk.matched_keywords && p.risk.matched_keywords.length ? `<div class="m">matched: ${p.risk.matched_keywords.map(esc).join(", ")}</div>` : "") +
+          (p.post_url ? `<div class="m"><a href="${esc(p.post_url)}" target="_blank" rel="noopener">open post</a></div>` : "") +
+          `</div>`
+        ).join("") || `<div class="m">no posts scored above the threshold</div>`;
+        const posterRows = (j.posters || []).slice(0, ROW_CAP).map((t) => [
+          `<a href="${esc(t.author_url || "#")}" target="_blank" rel="noopener">${esc(t.author || "?")}</a>`,
+          esc(t.source || ""),
+          t.risky_post_count + " / " + t.post_count,
+          Number(t.max_score).toFixed(0),
+          Number(t.avg_score).toFixed(0),
+          esc((t.top_keywords || []).join(", ")),
+        ]);
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px">${j.post_count} risky posts · ${j.poster_count} posters · ${esc(srcs)}</div>` +
+          `<h4 style="margin:10px 0 6px">Top posts</h4>` + postCards +
+          `<h4 style="margin:14px 0 6px">Top posters</h4>` +
+          (posterRows.length ? table(["Poster", "Source", "Risky/Total", "Max", "Avg", "Top keywords"], posterRows) : `<div class="m">no posters above threshold</div>`) +
+          `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>` +
+          genLine(j);
+        this.count = j.post_count;
       },
     },
     {
