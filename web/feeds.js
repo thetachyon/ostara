@@ -1114,6 +1114,10 @@ window.OST = window.OST || {};
     if (cat.afterInputs) cat.afterInputs(body);
     body.querySelectorAll("input").forEach((inp) =>
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }));
+    // Select dropdowns (e.g. dark-web mode) reload immediately on change —
+    // no need to tap Load.
+    body.querySelectorAll("select").forEach((sel) =>
+      sel.addEventListener("change", go));
   }
 
   async function loadCat(cat, manual) {
