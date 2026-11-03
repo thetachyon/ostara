@@ -787,6 +787,34 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "instability", label: "Instability index", health: null,
+      group: "country-specific",
+      note: "per-country instability score + civil unrest probability · structural baselines (food, trust, economy) + live media signal · heuristic, not a forecast",
+      inputs: [
+        { name: "country", placeholder: "country name or ISO code", value: "" },
+      ],
+      url: (p) => `/api/instability?country=${encodeURIComponent((p.country || "").trim())}`,
+      validate: (p) => (p.country || "").trim() === "" ? "enter a country" : null,
+      render(j, el) {
+        const discl = `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>`;
+        const lvlColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "#46a758";
+        const bar = (score) => {
+          const c = lvlColor(score < 25 ? "low" : score < 50 ? "moderate" : score < 75 ? "high" : "severe");
+          return `<div style="background:#1a2332;border-radius:3px;height:8px;margin:4px 0"><div style="background:${c};height:8px;border-radius:3px;width:${Math.min(100, Math.max(0, score))}%"></div></div>`;
+        };
+        const comps = (j.components || []).map((c) =>
+          c.score < 0 ? "" :
+          `<div class="feed-item"><div><b>${esc(c.name.replace(/_/g, " "))}</b> <span style="color:${lvlColor(c.score < 25 ? "low" : c.score < 50 ? "moderate" : c.score < 75 ? "high" : "severe")}">${c.score.toFixed(1)}</span> <span class="m">weight ${(c.weight * 100).toFixed(0)}%</span></div>${bar(c.score)}<div class="m">${esc(c.detail || "")}</div></div>`
+        ).join("");
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px"><b>${esc(j.country || "")}</b> <span class="m">(${esc(j.iso || "")})</span> <span class="m">structural confidence: ${esc(j.structural_confidence || "—")}</span></div>` +
+          `<div class="feed-item"><div><b>Instability score</b> <span style="color:${lvlColor(j.instability_level)};font-size:18px"><b>${(j.instability_score || 0).toFixed(1)}</b></span> <span class="chip" style="color:${lvlColor(j.instability_level)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(j.instability_level || "")}</span></div>${bar(j.instability_score || 0)}</div>` +
+          `<div class="feed-item"><div><b>Civil unrest probability</b> <span style="color:${lvlColor(j.unrest_level)};font-size:18px"><b>${(j.unrest_probability || 0).toFixed(1)}%</b></span> <span class="chip" style="color:${lvlColor(j.unrest_level)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(j.unrest_level || "")}</span></div>${bar(j.unrest_probability || 0)}<div class="m">${esc(j.live_signal_detail || "")}</div></div>` +
+          `<div class="m" style="margin:8px 0 4px"><b>Components</b></div>` + comps + discl + genLine(j);
+        this.count = (j.components || []).length;
+      }
+    },
+    {
       id: "crypto", label: "Crypto transactions", health: null,
       group: "global",
       note: "recent on-chain transactions across BTC, ETH, LTC, DOGE · keyless BlockCypher feed · values as reported on-chain",

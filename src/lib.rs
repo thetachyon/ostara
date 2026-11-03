@@ -21,6 +21,7 @@ pub mod feeds;
 pub mod fusion;
 pub mod geo;
 pub mod graph;
+pub mod instability;
 pub mod intel;
 pub mod post_risk;
 pub mod recon;

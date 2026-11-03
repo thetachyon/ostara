@@ -1,0 +1,358 @@
+//! Country instability index: composite scores combining structural
+//! baselines (food stress, government trust, social trust, economic stress)
+//! with live media signals.
+//!
+//! Two outputs:
+//! - **instability_score** (0-100): structural composite, slow-moving.
+//! - **unrest_probability** (0-100): estimated probability of civil unrest,
+//!   combining structural fragility with live media signals.
+//!
+//! All structural data is curated in `data/instability_baseline.json` with
+//! documented sources and confidence tags. These are modeling estimates,
+//! not precise measurements. The unrest probability is a heuristic model
+//! output, not a forecast.
+
+use std::collections::HashMap;
+use std::time::Duration;
+
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    routing::get,
+};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    error::{ApiError, FeedError},
+    routes::{AppState, cached_bytes},
+    time::now_iso8601,
+};
+
+static BASELINE_JSON: &str = include_str!("../data/instability_baseline.json");
+/// Structural baselines change slowly; cache computed scores for 1 hour.
+const TTL: Duration = Duration::from_secs(3600);
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/api/instability", get(instability))
+        .route("/api/instability/countries", get(countries))
+}
+
+// Weights for the structural composite. Documented in the response.
+const W_FOOD: f64 = 0.25;
+const W_GOV: f64 = 0.25;
+const W_SOCIAL: f64 = 0.20;
+const W_ECON: f64 = 0.20;
+const W_LIVE: f64 = 0.10;
+
+#[derive(Debug, Clone, Deserialize)]
+struct BaselineCountry {
+    name: String,
+    iso: String,
+    food_stress: f64,
+    gov_trust_deficit: f64,
+    social_trust_deficit: f64,
+    economic_stress: f64,
+    confidence: String,
+}
+
+fn baseline() -> HashMap<String, BaselineCountry> {
+    let v: serde_json::Value =
+        serde_json::from_str(BASELINE_JSON).expect("data/instability_baseline.json parses");
+    let mut map = HashMap::new();
+    if let Some(arr) = v.get("countries").and_then(|c| c.as_array()) {
+        for c in arr {
+            if let Ok(bc) = serde_json::from_value::<BaselineCountry>(c.clone()) {
+                map.insert(bc.iso.to_uppercase(), bc.clone());
+                map.insert(bc.name.to_lowercase(), bc);
+            }
+        }
+    }
+    map
+}
+
+fn find_baseline(needle: &str) -> Option<BaselineCountry> {
+    let map = baseline();
+    let n = needle.trim();
+    // Try ISO code, then name (case-insensitive), then substring.
+    if let Some(bc) = map.get(&n.to_uppercase()) {
+        return Some(bc.clone());
+    }
+    if let Some(bc) = map.get(&n.to_lowercase()) {
+        return Some(bc.clone());
+    }
+    let nl = n.to_lowercase();
+    map.values()
+        .find(|bc| bc.name.to_lowercase().contains(&nl))
+        .cloned()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Component {
+    name: String,
+    score: f64,
+    weight: f64,
+    detail: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct InstabilityResponse {
+    country: String,
+    iso: String,
+    instability_score: f64,
+    instability_level: String,
+    unrest_probability: f64,
+    unrest_level: String,
+    components: Vec<Component>,
+    structural_confidence: String,
+    live_signal: Option<f64>,
+    live_signal_detail: String,
+    scanned_at: String,
+    disclaimer: String,
+}
+
+const DISCLAIMER: &str = "HEURISTIC MODEL, NOT A FORECAST. The instability score combines curated structural indicators (food stress, trust deficits, economic pressure) with live media signals. The unrest probability is a model estimate, not a prediction of actual events. Structural data are estimates from public sources with confidence tags. Verify independently before acting.";
+
+fn level(score: f64) -> &'static str {
+    match score {
+        s if s < 25.0 => "low",
+        s if s < 50.0 => "moderate",
+        s if s < 75.0 => "high",
+        _ => "severe",
+    }
+}
+
+/// Logistic function mapping a 0-100 fragility input to a 0-100 probability.
+/// Calibrated so that fragility=50 → ~34%, fragility=75 → ~73%, fragility=90 → ~88%.
+fn fragility_to_probability(fragility: f64) -> f64 {
+    let x = (fragility - 60.0) / 15.0;
+    100.0 / (1.0 + (-x).exp())
+}
+
+#[derive(Debug, Deserialize)]
+struct InstabilityQuery {
+    country: Option<String>,
+}
+
+/// Minimal URL encoding for query params (alphanumeric + a few safe chars
+/// pass through; everything else becomes %XX).
+fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            b' ' => out.push_str("%20"),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
+/// Lightweight live unrest signal: counts unrest-keyword hits in recent
+/// Google News results for the country. Returns 0-100 or None if unavailable.
+async fn live_unrest_signal(client: &reqwest::Client, country: &str) -> Option<f64> {
+    // Use the existing gnews endpoint pattern: search for unrest keywords.
+    let q = format!("{country} protest OR riot OR unrest OR strike");
+    let url = format!(
+        "https://news.google.com/rss/search?q={}&hl=en-US&gl=US&ceid=US:en",
+        urlencode(&q)
+    );
+    let resp = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (compatible; ostara/0.1)")
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let text = resp.text().await.ok()?;
+    // Count items as a rough volume signal; normalize by typical volume.
+    let count = text.matches("<item>").count() as f64;
+    // 0 items → 0, 20+ items → 100, linear in between.
+    Some((count / 20.0 * 100.0).min(100.0))
+}
+
+async fn instability(
+    State(state): State<AppState>,
+    Query(q): Query<InstabilityQuery>,
+) -> Result<Json<InstabilityResponse>, ApiError> {
+    let needle = q
+        .country
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            ApiError::bad_request(
+                "missing country",
+                "query param country is required, e.g. ?country=France or ?country=FR",
+            )
+        })?;
+    let bc = find_baseline(needle).ok_or_else(|| {
+        ApiError::not_found(
+            "unknown country",
+            format!("no instability baseline for {needle:?}; see /api/instability/countries"),
+        )
+    })?;
+
+    let key = format!("instability:{}", bc.iso);
+    let fetch = || {
+        let client = state.client.clone();
+        let bc2 = bc.clone();
+        async move {
+            // Structural composite.
+            let structural = W_FOOD * bc2.food_stress
+                + W_GOV * bc2.gov_trust_deficit
+                + W_SOCIAL * bc2.social_trust_deficit
+                + W_ECON * bc2.economic_stress;
+
+            // Live signal (may be unavailable).
+            let live = live_unrest_signal(&client, &bc2.name).await;
+
+            // Instability score: structural weighted with live.
+            let instability = if let Some(l) = live {
+                // Renormalize: structural components sum to 0.9 weight, live 0.1.
+                (structural / 0.9 * (1.0 - W_LIVE)) + l * W_LIVE
+            } else {
+                // No live signal: structural only, renormalized.
+                structural / 0.9
+            };
+
+            // Unrest probability: structural fragility (60%) + live (40%).
+            let fragility = (bc2.food_stress * 0.3
+                + bc2.gov_trust_deficit * 0.25
+                + bc2.social_trust_deficit * 0.15
+                + bc2.economic_stress * 0.3)
+                .min(100.0);
+            let live_component = live.unwrap_or(fragility * 0.5);
+            let combined = fragility * 0.6 + live_component * 0.4;
+            let probability = fragility_to_probability(combined);
+
+            let components = vec![
+                Component {
+                    name: "food_stress".into(),
+                    score: bc2.food_stress,
+                    weight: W_FOOD,
+                    detail: "Food insecurity / affordability pressure. Higher = worse.".into(),
+                },
+                Component {
+                    name: "gov_trust_deficit".into(),
+                    score: bc2.gov_trust_deficit,
+                    weight: W_GOV,
+                    detail: "Lack of public trust in government. Higher = less trust.".into(),
+                },
+                Component {
+                    name: "social_trust_deficit".into(),
+                    score: bc2.social_trust_deficit,
+                    weight: W_SOCIAL,
+                    detail: "Lack of interpersonal trust. Higher = more fragmented.".into(),
+                },
+                Component {
+                    name: "economic_stress".into(),
+                    score: bc2.economic_stress,
+                    weight: W_ECON,
+                    detail: "Inflation, unemployment, currency/debt pressure.".into(),
+                },
+                Component {
+                    name: "live_unrest_signal".into(),
+                    score: live.unwrap_or(-1.0),
+                    weight: W_LIVE,
+                    detail: if live.is_some() {
+                        "Recent protest/riot/unrest media volume.".into()
+                    } else {
+                        "Unavailable — structural only.".into()
+                    },
+                },
+            ];
+
+            Ok::<InstabilityResponse, FeedError>(InstabilityResponse {
+                country: bc2.name.clone(),
+                iso: bc2.iso.clone(),
+                instability_score: (instability * 10.0).round() / 10.0,
+                instability_level: level(instability).into(),
+                unrest_probability: (probability * 10.0).round() / 10.0,
+                unrest_level: level(probability).into(),
+                components,
+                structural_confidence: bc2.confidence.clone(),
+                live_signal: live,
+                live_signal_detail: if live.is_some() {
+                    "Google News unrest-keyword volume (0-100).".into()
+                } else {
+                    "Live signal unavailable; scores are structural only.".into()
+                },
+                scanned_at: now_iso8601(),
+                disclaimer: DISCLAIMER.into(),
+            })
+        }
+    };
+
+    let (body, _) = cached_bytes::<InstabilityResponse, _>(&state, &key, TTL, fetch).await?;
+    let resp: InstabilityResponse = serde_json::from_slice(&body)
+        .map_err(|e| ApiError::bad_gateway("decode failed", e.to_string()))?;
+    Ok(Json(resp))
+}
+
+#[derive(Debug, Serialize)]
+struct CountryListItem {
+    name: String,
+    iso: String,
+    confidence: String,
+}
+
+async fn countries() -> Json<Vec<CountryListItem>> {
+    let map = baseline();
+    let mut seen = std::collections::HashSet::new();
+    let mut out: Vec<CountryListItem> = Vec::new();
+    for bc in map.values() {
+        if seen.insert(bc.iso.clone()) {
+            out.push(CountryListItem {
+                name: bc.name.clone(),
+                iso: bc.iso.clone(),
+                confidence: bc.confidence.clone(),
+            });
+        }
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Json(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn baseline_loads() {
+        let m = baseline();
+        assert!(m.len() > 50);
+        assert!(m.contains_key("US"));
+    }
+
+    #[test]
+    fn find_baseline_by_iso_and_name() {
+        assert!(find_baseline("FR").is_some());
+        assert!(find_baseline("france").is_some());
+        assert!(find_baseline("XX").is_none());
+    }
+
+    #[test]
+    fn probability_calibration() {
+        // fragility=50 → ~34%, 75 → ~73%, 90 → ~88%
+        let p50 = fragility_to_probability(50.0);
+        let p75 = fragility_to_probability(75.0);
+        let p90 = fragility_to_probability(90.0);
+        assert!((p50 - 34.0).abs() < 5.0, "p50={p50}");
+        assert!((p75 - 73.0).abs() < 5.0, "p75={p75}");
+        assert!((p90 - 88.0).abs() < 5.0, "p90={p90}");
+        assert!(p50 < p75 && p75 < p90);
+    }
+
+    #[test]
+    fn level_thresholds() {
+        assert_eq!(level(10.0), "low");
+        assert_eq!(level(40.0), "moderate");
+        assert_eq!(level(60.0), "high");
+        assert_eq!(level(90.0), "severe");
+    }
+}
