@@ -160,6 +160,34 @@
     }
   }
 
+  async function loadInstability(iso2) {
+    const slot = document.getElementById("insp-instability");
+    if (!slot) return;
+    slot.innerHTML = `<div class="insp-sec"><h3>Instability index</h3><div class="empty">loading instability signals…</div></div>`;
+    try {
+      const { data } = await OST.fetchJSON(`/api/instability?country=${encodeURIComponent(iso2)}`, { timeout: 60000 });
+      slot.innerHTML = renderInstability(data);
+    } catch (e) {
+      slot.innerHTML = `<div class="insp-sec"><h3>Instability index</h3><div class="empty">unavailable — ${esc(e.message || "fetch error")}</div></div>`;
+    }
+  }
+
+  function renderInstability(d) {
+    const lvlColor = (l) => l === "severe" ? "var(--bad)" : l === "high" ? "#f5a623" : l === "moderate" ? "#e3b341" : "#46a758";
+    const bar = (score) => {
+      const c = lvlColor(score < 25 ? "low" : score < 50 ? "moderate" : score < 75 ? "high" : "severe");
+      return `<div style="background:#1a2332;border-radius:3px;height:6px;margin:3px 0"><div style="background:${c};height:6px;border-radius:3px;width:${Math.min(100, Math.max(0, score))}%"></div></div>`;
+    };
+    const comps = (d.components || []).filter((c) => c.score >= 0).map((c) =>
+      `<div style="margin:3px 0"><span class="m">${esc(c.name.replace(/_/g, " "))}</span> <b style="color:${lvlColor(c.score < 25 ? "low" : c.score < 50 ? "moderate" : c.score < 75 ? "high" : "severe")}">${c.score.toFixed(0)}</b>${bar(c.score)}</div>`
+    ).join("");
+    return `<div class="insp-sec"><h3>Instability index</h3>` +
+      `<div><span class="m">score</span> <b style="color:${lvlColor(d.instability_level)};font-size:16px">${(d.instability_score || 0).toFixed(1)}</b> <span class="chip" style="color:${lvlColor(d.instability_level)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(d.instability_level || "")}</span></div>` +
+      `<div style="margin-top:4px"><span class="m">civil unrest probability</span> <b style="color:${lvlColor(d.unrest_level)};font-size:16px">${(d.unrest_probability || 0).toFixed(1)}%</b> <span class="chip" style="color:${lvlColor(d.unrest_level)};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${esc(d.unrest_level || "")}</span></div>` +
+      `<div style="margin-top:6px">${comps}</div>` +
+      `<div class="m" style="margin-top:4px">structural confidence: ${esc(d.structural_confidence || "—")} · heuristic, not a forecast</div></div>`;
+  }
+
   function render(data) {
     const body = document.getElementById("insp-body");
     const head = document.getElementById("insp-title");
@@ -190,11 +218,12 @@
       `<li>${link(w.invite_url, w.name)}${w.verified ? " ✓" : ""}<br/><span class="m">${esc(w.category || "")}${w.language ? " · " + esc(w.language) : ""} · directory, not live messages</span></li>`);
     const vessels = feedSection("Vessels", f.vessels || { ok: true, count: 0, items: [] }, (v) =>
       `<li>${esc(v.name || v.mmsi)}${v.vessel_type ? " · " + esc(v.vessel_type) : ""}<br/><span class="m">mmsi ${esc(String(v.mmsi))}${v.speed_knots != null ? " · " + Math.round(v.speed_knots) + " kt" : ""} · ${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}</span></li>`);
-    body.innerHTML = note + osint + `<div id="insp-unrest"></div><div id="insp-risk"></div>` + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
+    body.innerHTML = note + osint + `<div id="insp-unrest"></div><div id="insp-risk"></div><div id="insp-instability"></div>` + news + conflicts + nuclear + flights + quakes + cameras + whatsapp + vessels;
     const btn = body.querySelector(".insp-full");
     if (btn) btn.addEventListener("click", () => openFullPack(btn.dataset.iso3, btn.dataset.name));
     loadUnrest(c.iso2);
     loadRisk(c.iso2);
+    loadInstability(c.iso2);
   }
 
   OST.inspectCountry = async function (lat, lon) {
