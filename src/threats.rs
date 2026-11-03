@@ -130,6 +130,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    darkweb,
     error::ApiError,
     feeds,
     routes::{AppState, cached_bytes},
@@ -1009,6 +1010,74 @@ async fn scan_telegram(
     });
 }
 
+/// Scan Ahmia (Tor hidden-service search, clearnet-accessible) for the
+/// figure's name alongside threat language. Onion results are unvetted
+/// listings; the same keyword classifier and direction rules apply, and
+/// the dark-web disclaimer travels with every item via the source label.
+async fn scan_ahmia(
+    state: &AppState,
+    fig: &Figure,
+    terms: &[String],
+    sources: &mut Vec<SourceStatus>,
+    out: &mut Vec<ThreatItem>,
+) {
+    let query = format!(
+        "\"{}\" (assassination OR \"death threat\" OR threaten OR kill OR attack)",
+        fig.name
+    );
+    let key = format!(
+        "darkweb:ahmia:threats:q={}:limit={SCAN_LIMIT}",
+        fig.name.to_lowercase()
+    );
+    let client = state.client.clone();
+    let res: Result<Vec<darkweb::OnionResult>, ApiError> = async {
+        let (body, _) = cached_bytes(state, &key, darkweb::AHMIA_TTL, || {
+            let c = client.clone();
+            let q = query.clone();
+            async move { darkweb::ahmia_search(&c, &q, SCAN_LIMIT as usize).await }
+        })
+        .await?;
+        serde_json::from_slice(&body)
+            .map_err(|e| ApiError::bad_gateway("ahmia decode failed", e.to_string()))
+    }
+    .await;
+    match res {
+        Ok(results) => {
+            sources.push(SourceStatus {
+                source: "ahmia".into(),
+                ok: true,
+                detail: None,
+            });
+            for r in results {
+                let text = format!("{} {}", r.title, r.snippet);
+                if let Some((sev, kws)) = classify(&text, terms) {
+                    let dir = classify_direction(&text, terms);
+                    out.push(ThreatItem {
+                        source: "ahmia".into(),
+                        title: r.title.clone(),
+                        text_snippet: snippet(&r.snippet, 280),
+                        url: r.url.clone(),
+                        published: None,
+                        severity: sev.as_str().into(),
+                        matched_keywords: kws,
+                        direction: dir.as_str().into(),
+                        // Onion listings have no attributable author.
+                        author: None,
+                        author_display: None,
+                        author_url: None,
+                        post_url: None,
+                    });
+                }
+            }
+        }
+        Err(e) => sources.push(SourceStatus {
+            source: "ahmia".into(),
+            ok: false,
+            detail: Some(e.user_message()),
+        }),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -1115,11 +1184,12 @@ pub async fn scan(
     }
 
     let terms = name_terms(fig);
-    let mut sources = Vec::with_capacity(3);
+    let mut sources = Vec::with_capacity(4);
     let mut items: Vec<ThreatItem> = Vec::new();
     scan_gnews(&state, fig, &terms, &mut sources, &mut items).await;
     scan_bluesky(&state, fig, &terms, &mut sources, &mut items).await;
     scan_telegram(&state, &terms, &mut sources, &mut items).await;
+    scan_ahmia(&state, fig, &terms, &mut sources, &mut items).await;
 
     if severity_filter != "all" {
         items.retain(|i| i.severity == severity_filter);

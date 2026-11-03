@@ -956,7 +956,9 @@ window.OST = window.OST || {};
     const nav = document.getElementById("feed-nav");
     nav.innerHTML = FEED_GROUPS.map((g) =>
       `<div class="feed-nav-group"><div class="feed-nav-head" title="${esc(g.hint)}">${esc(g.title)}</div>` +
-      OST.FEED_CATS.filter((c) => (c.group || "global") === g.id).map((c) =>
+      OST.FEED_CATS.filter((c) => (c.group || "global") === g.id)
+        .sort((a, b) => (a.label || "").localeCompare(b.label || ""))
+        .map((c) =>
         `<button class="co-row" data-fcat="${c.id}">` +
         `<span class="co-name">${healthDot(c)} ${esc(c.label)}</span>` +
         `<span class="co-meta"><span class="n" id="fc-n-${c.id}">…</span></span></button>`

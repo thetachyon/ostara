@@ -75,7 +75,7 @@ const RW_BASE: &str = "https://api.ransomware.live";
 const AHMIA_SEARCH: &str = "https://ahmia.fi/search/";
 /// ransomware.live free tier: 1 req/min per endpoint — cache well above it.
 const RW_TTL: Duration = Duration::from_secs(900);
-const AHMIA_TTL: Duration = Duration::from_secs(600);
+pub(crate) const AHMIA_TTL: Duration = Duration::from_secs(600);
 
 // ---------------------------------------------------------------------------
 // Registry
@@ -103,10 +103,10 @@ struct Overview {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct OnionResult {
-    title: String,
-    url: String,
-    snippet: String,
+pub(crate) struct OnionResult {
+    pub(crate) title: String,
+    pub(crate) url: String,
+    pub(crate) snippet: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -271,7 +271,7 @@ fn truncate(s: &str, max: usize) -> String {
     format!("{}…", &s[..end])
 }
 
-async fn ahmia_search(
+pub(crate) async fn ahmia_search(
     client: &reqwest::Client,
     q: &str,
     limit: usize,
