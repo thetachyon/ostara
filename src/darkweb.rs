@@ -11,10 +11,11 @@
 //!   clearnet web interface. `GET /api/darkweb/search?q=` scrapes its
 //!   HTML results for onion URLs and titles. Results are unvetted
 //!   onion-site listings.
-//! - **ransomware.live** (v2 API, anonymous free tier, 1 req/min per
-//!   endpoint): aggregates ransomware groups' leak-site posts
-//!   (victim claims). `GET /api/darkweb/ransomware/victims` and
-//!   `/api/darkweb/ransomware/groups`.
+//! - **ransomware victim dataset** (ransom.privtools.eu, JSON dump of the
+//!   recent 30 days, sourced from ransomware.live leak-site monitoring,
+//!   refreshed 3x daily): victim claims. `GET /api/darkweb/ransomware/victims`
+//!   and `/api/darkweb/ransomware/groups`. The ransomware.live v2 API itself
+//!   blocks datacenter IPs (Cloudflare), so the privtools mirror is used.
 //!
 //! ## Honest limitations (stated on every response)
 //!
@@ -71,10 +72,15 @@ pub const DISCLAIMER: &str = "DARK-WEB INTEL, NOT VERIFIED BREACHES. Ransomware 
 static SOURCES_JSON: &str = include_str!("../data/darkweb_sources.json");
 
 const FEED: &str = "darkweb";
-const RW_BASE: &str = "https://api.ransomware.live";
+/// Ransomware victim dataset: ransom.privtools.eu publishes a JSON dump
+/// (recent 30 days) sourced from ransomware.live's leak-site monitoring,
+/// refreshed 3x daily. This replaces the ransomware.live v2 API, which
+/// blocks datacenter IPs with Cloudflare. Credit ransomware.live as the
+/// original source (their request).
+const PRIVTOOLS_RECENT: &str = "https://ransom.privtools.eu/assets/recent.json";
 const AHMIA_SEARCH: &str = "https://ahmia.fi/search/";
-/// ransomware.live free tier: 1 req/min per endpoint — cache well above it.
-const RW_TTL: Duration = Duration::from_secs(900);
+/// Dataset refreshes 3x daily; cache for 2h.
+const RW_TTL: Duration = Duration::from_secs(7200);
 pub(crate) const AHMIA_TTL: Duration = Duration::from_secs(600);
 
 // ---------------------------------------------------------------------------
@@ -155,39 +161,51 @@ struct GroupsResponse {
 // Upstream clients
 // ---------------------------------------------------------------------------
 
-/// GET JSON from ransomware.live; a non-JSON or error response becomes a
-/// FeedError with a human-readable detail (Cloudflare blocks surface as
-/// decode failures — reported honestly, never silently dropped).
-async fn rw_get_json<T>(client: &reqwest::Client, path: &str) -> Result<T, FeedError>
-where
-    T: serde::de::DeserializeOwned,
-{
-    let url = format!("{RW_BASE}{path}");
+/// GET the privtools ransomware victim JSON. Fields contain embedded HTML
+/// (anchor tags) — stripped during normalization. A non-JSON response
+/// becomes a FeedError with a human-readable detail, never silently
+/// dropped.
+async fn rw_get_victims(client: &reqwest::Client) -> Result<Vec<serde_json::Value>, FeedError> {
     let resp = client
-        .get(&url)
-        .header("User-Agent", "ostara/0.1 (dark-web intel; 1 req/min)")
+        .get(PRIVTOOLS_RECENT)
+        .header("User-Agent", "ostara/0.1 (dark-web intel)")
         .send()
         .await
-        .map_err(|e| FeedError::new(FEED, format!("ransomware.live request failed: {e}")))?;
+        .map_err(|e| FeedError::new(FEED, format!("victim dataset request failed: {e}")))?;
     let status = resp.status();
     if !status.is_success() {
         return Err(FeedError::new(
             FEED,
-            format!("ransomware.live upstream status {status} for {path}"),
+            format!("victim dataset upstream status {status}"),
         ));
     }
     let text = resp
         .text()
         .await
-        .map_err(|e| FeedError::new(FEED, format!("ransomware.live read failed: {e}")))?;
-    serde_json::from_str::<T>(&text).map_err(|_| {
+        .map_err(|e| FeedError::new(FEED, format!("victim dataset read failed: {e}")))?;
+    let v: serde_json::Value = serde_json::from_str(&text).map_err(|_| {
         FeedError::new(
             FEED,
-            format!(
-                "ransomware.live returned non-JSON for {path} (likely bot protection); not parsed"
-            ),
+            "victim dataset returned non-JSON (likely bot protection); not parsed".to_string(),
         )
-    })
+    })?;
+    Ok(as_array(v))
+}
+
+/// Strip HTML tags from a string (the dataset embeds anchor tags in
+/// post_title, group_name, etc.).
+fn strip_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut in_tag = false;
+    for c in s.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Scrape Ahmia's HTML search results for onion URLs + titles.
@@ -326,31 +344,18 @@ fn urlencoding(s: &str) -> String {
 /// v2 victim objects carry several possible field spellings; normalize the
 /// ones the OSINToolKit documents: post_title/victim, group_name,
 /// country, discovered, description, claim_url/website.
+/// Normalize a privtools victim entry. Fields contain embedded HTML
+/// (anchor tags) — stripped. Schema: post_title, group_name, discovered,
+/// country, country_flag, screenshot, activity.
 fn normalize_victim(v: &serde_json::Value) -> VictimClaim {
-    let s = |k: &str| {
-        v.get(k)
-            .and_then(|x| x.as_str())
-            .unwrap_or("")
-            .trim()
-            .to_string()
-    };
-    let victim = if s("post_title").is_empty() {
-        s("victim")
-    } else {
-        s("post_title")
-    };
-    let claim_url = if s("claim_url").is_empty() {
-        s("website")
-    } else {
-        s("claim_url")
-    };
+    let s = |k: &str| strip_html(v.get(k).and_then(|x| x.as_str()).unwrap_or("").trim());
     VictimClaim {
-        victim,
+        victim: s("post_title"),
         group: s("group_name"),
         country: s("country"),
         discovered: s("discovered"),
-        description: truncate(&s("description"), 280),
-        claim_url,
+        description: truncate(&s("activity"), 280),
+        claim_url: String::new(),
     }
 }
 
@@ -366,30 +371,30 @@ fn as_array(v: serde_json::Value) -> Vec<serde_json::Value> {
 // ---------------------------------------------------------------------------
 
 async fn overview(State(state): State<AppState>) -> Result<Json<Overview>, ApiError> {
-    // Probe both upstreams (cached); a failed probe is a status, not an error.
-    let info_key = "darkweb:rw:info";
-    let info: Option<serde_json::Value> =
-        match cached_bytes::<serde_json::Value, _>(&state, info_key, RW_TTL, || {
+    // Probe the victim dataset (cached); a failed probe is a status, not an error.
+    let victims_key = "darkweb:rw:victims";
+    let victim_list: Option<Vec<serde_json::Value>> =
+        match cached_bytes::<Vec<serde_json::Value>, _>(&state, victims_key, RW_TTL, || {
             let client = state.client.clone();
-            async move { rw_get_json::<serde_json::Value>(&client, "/v2/info").await }
+            async move { rw_get_victims(&client).await }
         })
         .await
         {
             Ok((body, _)) => serde_json::from_slice(&body).ok(),
             Err(_) => state
                 .cache
-                .get(info_key)
+                .get(victims_key)
                 .and_then(|b| serde_json::from_slice(&b).ok()),
         };
-    let (groups_n, victims_n, rw_ok, rw_detail) = match &info {
-        Some(v) => (
-            v.get("groups").and_then(|x| x.as_u64()).map(|x| x as usize),
-            v.get("victims")
-                .and_then(|x| x.as_u64())
-                .map(|x| x as usize),
-            true,
-            "ok".to_string(),
-        ),
+    let (groups_n, victims_n, rw_ok, rw_detail) = match &victim_list {
+        Some(list) => {
+            let groups: std::collections::HashSet<String> = list
+                .iter()
+                .filter_map(|v| v.get("group_name").and_then(|g| g.as_str()))
+                .map(strip_html)
+                .collect();
+            (Some(groups.len()), Some(list.len()), true, "ok".to_string())
+        }
         None => (
             None,
             None,
@@ -411,7 +416,7 @@ async fn overview(State(state): State<AppState>) -> Result<Json<Overview>, ApiEr
         scanned_at: now_iso8601(),
         sources: vec![
             SourceStatus {
-                name: "ransomware.live".into(),
+                name: "ransomware victims (privtools)".into(),
                 ok: rw_ok,
                 detail: rw_detail,
             },
@@ -427,7 +432,7 @@ async fn overview(State(state): State<AppState>) -> Result<Json<Overview>, ApiEr
         ],
         ransomware_groups: groups_n,
         ransomware_victims_total: victims_n,
-        note: "Victim counts are operator claims aggregated by ransomware.live, not verified breaches.".into(),
+        note: "Victim counts are operator claims aggregated from ransomware.live leak-site monitoring via ransom.privtools.eu (30-day window), not verified breaches.".into(),
         disclaimer: DISCLAIMER.into(),
     }))
 }
@@ -529,32 +534,44 @@ async fn victims(
     }
     let limit = p.limit.unwrap_or(25).clamp(1, 100);
 
-    let (mode, path) = match (country, q) {
-        (Some(c), _) => (
-            format!("country:{}", c.to_uppercase()),
-            format!("/v2/countryvictims/{}", c.to_uppercase()),
-        ),
-        (_, Some(qq)) => (
-            format!("search:{qq}"),
-            format!("/v2/searchvictims/{}", urlencoding(qq)),
-        ),
-        _ => ("recent".to_string(), "/v2/victims/recent".to_string()),
+    // All filtering happens client-side over the 30-day dataset: country
+    // matches the ISO2 country code, q matches victim/group text.
+    let mode = match (country, q) {
+        (Some(c), _) => format!("country:{}", c.to_uppercase()),
+        (_, Some(qq)) => format!("search:{qq}"),
+        _ => "recent".to_string(),
     };
     let key = format!("darkweb:rw:victims:{mode}:limit={limit}");
 
     let fetch = || {
         let client = state.client.clone();
-        let path2 = path.clone();
+        let country2 = country.map(|c| c.to_uppercase());
+        let q2 = q.map(|s| s.to_lowercase());
         async move {
-            let v: serde_json::Value = rw_get_json(&client, &path2).await?;
-            Ok::<Vec<VictimClaim>, FeedError>(
-                as_array(v)
-                    .into_iter()
-                    .map(|x| normalize_victim(&x))
-                    .filter(|c| !c.victim.is_empty())
-                    .take(limit)
-                    .collect(),
-            )
+            let list = rw_get_victims(&client).await?;
+            let mut claims: Vec<VictimClaim> = list
+                .into_iter()
+                .map(|x| normalize_victim(&x))
+                .filter(|c| !c.victim.is_empty())
+                .filter(|c| {
+                    if let Some(ref cc) = country2
+                        && c.country.to_uppercase() != *cc
+                    {
+                        return false;
+                    }
+                    if let Some(ref qq) = q2 {
+                        let hay = format!("{} {}", c.victim, c.group).to_lowercase();
+                        if !hay.contains(qq.as_str()) {
+                            return false;
+                        }
+                    }
+                    true
+                })
+                .collect();
+            // Newest first.
+            claims.sort_by(|a, b| b.discovered.cmp(&a.discovered));
+            claims.truncate(limit);
+            Ok::<Vec<VictimClaim>, FeedError>(claims)
         }
     };
     let (claims, source_ok, source_detail) =
@@ -579,12 +596,43 @@ async fn victims(
 }
 
 async fn groups(State(state): State<AppState>) -> Result<Json<GroupsResponse>, ApiError> {
+    // Aggregate group profiles from the victim dataset: name, victim count,
+    // latest claim date. Sorted by victim count descending.
     let key = "darkweb:rw:groups";
     let fetch = || {
         let client = state.client.clone();
         async move {
-            let v: serde_json::Value = rw_get_json(&client, "/v2/groups").await?;
-            Ok::<Vec<serde_json::Value>, FeedError>(as_array(v))
+            let list = rw_get_victims(&client).await?;
+            let mut agg: std::collections::HashMap<String, (usize, String)> =
+                std::collections::HashMap::new();
+            for v in &list {
+                let g = strip_html(v.get("group_name").and_then(|x| x.as_str()).unwrap_or(""));
+                if g.is_empty() {
+                    continue;
+                }
+                let d = v
+                    .get("discovered")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let e = agg.entry(g).or_insert((0, String::new()));
+                e.0 += 1;
+                if d > e.1 {
+                    e.1 = d;
+                }
+            }
+            let mut groups: Vec<serde_json::Value> = agg
+                .into_iter()
+                .map(|(name, (victims, latest))| {
+                    serde_json::json!({"name": name, "victims_30d": victims, "latest_claim": latest})
+                })
+                .collect();
+            groups.sort_by(|a, b| {
+                b.get("victims_30d")
+                    .and_then(|x| x.as_u64())
+                    .cmp(&a.get("victims_30d").and_then(|x| x.as_u64()))
+            });
+            Ok::<Vec<serde_json::Value>, FeedError>(groups)
         }
     };
     let (group_list, source_ok, source_detail) =
@@ -662,24 +710,28 @@ mod tests {
     }
 
     #[test]
-    fn normalize_victim_handles_field_spellings() {
+    fn normalize_victim_strips_embedded_html() {
         let v = serde_json::json!({
-            "post_title": "ACME Corp",
-            "group_name": "lockbit",
+            "post_title": "<a href='https://acme.example'>ACME Corp</a>",
+            "group_name": "<a href='/group/lockbit/'>lockbit</a>",
             "country": "US",
-            "discovered": "2026-10-01",
-            "description": "desc",
-            "claim_url": "http://x.onion/1"
+            "discovered": "2026-10-01T00:00:00+00:00",
+            "activity": "2 new posts"
         });
         let c = normalize_victim(&v);
         assert_eq!(c.victim, "ACME Corp");
         assert_eq!(c.group, "lockbit");
-        assert_eq!(c.claim_url, "http://x.onion/1");
-        // fallback spellings
-        let v2 = serde_json::json!({"victim": "Beta LLC", "website": "http://y.onion/2"});
-        let c2 = normalize_victim(&v2);
-        assert_eq!(c2.victim, "Beta LLC");
-        assert_eq!(c2.claim_url, "http://y.onion/2");
+        assert_eq!(c.country, "US");
+        assert_eq!(c.description, "2 new posts");
+    }
+
+    #[test]
+    fn strip_html_handles_plain_text() {
+        assert_eq!(strip_html("plain text"), "plain text");
+        assert_eq!(
+            strip_html("<b>bold</b> and <i>italic</i>"),
+            "bold and italic"
+        );
     }
 
     #[test]
