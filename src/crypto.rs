@@ -34,8 +34,43 @@ const CHAINS: &[(&str, &str, &str, f64)] = &[
     ("doge", "Dogecoin", "DOGE", 1e8),
 ];
 
+/// Known-entity address labels, baked in at compile time.
+/// Only verified addresses belong here — a wrong label is worse than none.
+static LABELS_JSON: &str = include_str!("../data/crypto_labels.json");
+
+fn label_for(address: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(LABELS_JSON).ok()?;
+    v.get("labels")?
+        .get(address)?
+        .as_str()
+        .map(|s| s.to_string())
+}
+
+/// Truncate an address for display, keeping start/end for recognizability.
+fn trunc_addr(a: &str) -> String {
+    if a.len() <= 16 {
+        a.to_string()
+    } else {
+        format!("{}…{}", &a[..8], &a[a.len() - 4..])
+    }
+}
+
 pub fn router() -> Router<AppState> {
     Router::new().route("/api/crypto/transactions", get(transactions))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Party {
+    /// Truncated address for display; full address in `address_full`.
+    address: String,
+    address_full: String,
+    /// Value in the currency's main unit (outputs only; None for inputs).
+    value: Option<f64>,
+    /// Known-entity label, if the address is in the label registry.
+    label: Option<String>,
+    /// Heuristic: likely change output back to sender (single input, 2 outputs,
+    /// one output address matches an input address or is the smaller output).
+    likely_change: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,6 +86,10 @@ struct Tx {
     received_at: String,
     /// First few involved addresses (truncated for display).
     addresses: Vec<String>,
+    /// Transaction inputs = senders (on-chain; not verified identities).
+    senders: Vec<Party>,
+    /// Transaction outputs = recipients (on-chain; not verified identities).
+    recipients: Vec<Party>,
     /// Suspicious-pattern score 0-100 (heuristic, not attribution).
     risk_score: u8,
     risk_level: String,
@@ -68,7 +107,7 @@ struct TransactionsResponse {
     disclaimer: String,
 }
 
-const DISCLAIMER: &str = "ON-CHAIN DATA. Recent transactions via BlockCypher's keyless API (rate-limited). Values are as reported on-chain; unconfirmed transactions may never confirm. This is a transaction list, not wallet surveillance — no addresses are tracked.";
+const DISCLAIMER: &str = "ON-CHAIN DATA. Recent transactions via BlockCypher's keyless API (rate-limited). Values are as reported on-chain; unconfirmed transactions may never confirm. Senders/recipients are on-chain addresses from transaction inputs/outputs — NOT verified identities. 'Buyer' vs 'seller' cannot be determined from on-chain data alone; an address's economic role requires off-chain attribution. 'Likely change' is a heuristic (single input, 2 outputs) and may be wrong. This is a transaction list, not wallet surveillance — no addresses are tracked.";
 
 #[derive(Debug, Deserialize)]
 struct TxQuery {
@@ -152,6 +191,75 @@ async fn fetch_chain(
             let value = f("total") / divisor;
             let fee = f("fees") / divisor;
             let risk = crypto_risk::score_tx(ticker, value, fee, vin_sz, vout_sz, min_output);
+            // Senders = input addresses.
+            let sender_addrs: Vec<String> = t
+                .get("inputs")
+                .and_then(|i| i.as_array())
+                .map(|ins| {
+                    ins.iter()
+                        .filter_map(|inp| {
+                            inp.get("addresses")
+                                .and_then(|a| a.as_array())
+                                .and_then(|a| a.first())
+                                .and_then(|x| x.as_str())
+                        })
+                        .take(6)
+                        .map(|x| x.to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
+            // Recipients = output addresses with values.
+            let outputs: Vec<(String, f64)> = t
+                .get("outputs")
+                .and_then(|o| o.as_array())
+                .map(|outs| {
+                    outs.iter()
+                        .filter_map(|o| {
+                            let addr = o
+                                .get("addresses")
+                                .and_then(|a| a.as_array())
+                                .and_then(|a| a.first())
+                                .and_then(|x| x.as_str())?
+                                .to_string();
+                            let val = o.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0) / divisor;
+                            Some((addr, val))
+                        })
+                        .take(8)
+                        .collect()
+                })
+                .unwrap_or_default();
+            // Likely-change heuristic: single input, 2 outputs, and the smaller
+            // output returns to the sender's address (or is much smaller).
+            let single_sender = sender_addrs.len() == 1;
+            let senders: Vec<Party> = sender_addrs
+                .iter()
+                .map(|a| Party {
+                    address: trunc_addr(a),
+                    address_full: a.clone(),
+                    value: None,
+                    label: label_for(a),
+                    likely_change: false,
+                })
+                .collect();
+            let recipients: Vec<Party> = outputs
+                .iter()
+                .map(|(a, v)| {
+                    let is_change = single_sender
+                        && outputs.len() == 2
+                        && (sender_addrs.first().map(|s| s == a).unwrap_or(false)
+                            || {
+                                let other = outputs.iter().find(|(oa, _)| oa != a);
+                                other.map(|(_, ov)| *v < *ov * 0.5).unwrap_or(false)
+                            });
+                    Party {
+                        address: trunc_addr(a),
+                        address_full: a.clone(),
+                        value: Some(*v),
+                        label: label_for(a),
+                        likely_change: is_change,
+                    }
+                })
+                .collect();
             Tx {
                 hash: s("hash"),
                 currency: name.to_string(),
@@ -161,6 +269,8 @@ async fn fetch_chain(
                 confirmations: t.get("confirmations").and_then(|x| x.as_u64()).unwrap_or(0),
                 received_at: s("received"),
                 addresses: addrs,
+                senders,
+                recipients,
                 risk_score: risk.score,
                 risk_level: risk.level.to_string(),
                 risk_reasons: risk.reasons,

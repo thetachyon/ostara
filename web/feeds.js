@@ -841,11 +841,25 @@ window.OST = window.OST || {};
           const reasons = (t.risk_reasons || []).length
             ? `<div class="m" style="color:${riskColor(rl)}">${esc(t.risk_reasons.join(" · "))}</div>`
             : "";
+          const partyLine = (p, valSuffix) => {
+            const lbl = p.label ? ` <b style="color:var(--accent)">${esc(p.label)}</b>` : "";
+            const chg = p.likely_change ? ` <span class="m" style="font-style:italic">(likely change)</span>` : "";
+            return `<div class="m" title="${esc(p.address_full || "")}">${mono(esc(p.address || ""))}${lbl}${valSuffix || ""}${chg}</div>`;
+          };
+          const sendersHtml = (t.senders || []).length
+            ? `<div class="m" style="margin-top:4px"><b>From</b> <span class="m">(sender)</span></div>` +
+              (t.senders || []).slice(0, 4).map((p) => partyLine(p)).join("")
+            : "";
+          const recipientsHtml = (t.recipients || []).length
+            ? `<div class="m" style="margin-top:4px"><b>To</b> <span class="m">(recipient)</span></div>` +
+              (t.recipients || []).slice(0, 6).map((p) =>
+                partyLine(p, p.value != null ? ` <span class="m">— ${esc(trimNum(p.value))} ${esc(t.ticker)}</span>` : "")
+              ).join("")
+            : "";
           return `<div class="feed-item"${rs >= 50 ? ` style="border-left:2px solid ${riskColor(rl)};padding-left:8px"` : ""}><div><b>${esc(t.ticker)}</b> · ${esc(trimNum(t.value))} <span class="m">${esc(t.currency)}</span>${badge}</div>` +
           `<div class="m">fee: ${esc(trimNum(t.fee))} · confirmations: ${t.confirmations} · ${esc((t.received_at || "").slice(0, 19).replace("T", " "))}</div>` +
-          reasons +
+          reasons + sendersHtml + recipientsHtml +
           `<div class="m">${mono((t.hash || "").slice(0, 20))}…</div>` +
-          (t.addresses && t.addresses.length ? `<div class="m">addrs: ${t.addresses.slice(0, 2).map((a) => mono(a.slice(0, 16) + "…")).join(" ")}</div>` : "") +
           `</div>`;
         };
         const txs = (j.transactions || []).slice(0, ROW_CAP);
