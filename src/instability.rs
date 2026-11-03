@@ -195,9 +195,69 @@ fn days_ago(pub_date: &str) -> Option<f64> {
     Some(now_days - (days_since_epoch - epoch_days))
 }
 
-/// Lightweight live unrest signal: counts RECENT (last 7 days) unrest-keyword
-/// hits in Google News RSS for the country. Returns 0-100 or None if
-/// unavailable. Historical articles are excluded — only fresh coverage counts.
+/// Severity of an unrest headline (0-100) based on keyword language.
+/// Severe = deaths/violence, high = clashes/crackdown, moderate = protest/march.
+fn headline_severity(title: &str) -> f64 {
+    let t = title.to_lowercase();
+    // Check severe first (highest priority).
+    for kw in [
+        "killed",
+        "killing",
+        "dead",
+        "deaths",
+        "death toll",
+        "massacre",
+        "bombing",
+        "bombed",
+        "explosion",
+        "coup",
+        "civil war",
+        "martial law",
+        "mass killing",
+    ] {
+        if t.contains(kw) {
+            return 90.0;
+        }
+    }
+    for kw in [
+        "clash",
+        "violent",
+        "violence",
+        "tear gas",
+        "rubber bullets",
+        "crackdown",
+        "arrests",
+        "arrested",
+        "emergency",
+        "curfew",
+        "stormed",
+        "torched",
+        "burning",
+    ] {
+        if t.contains(kw) {
+            return 65.0;
+        }
+    }
+    for kw in [
+        "protest",
+        "demonstration",
+        "march",
+        "rally",
+        "strike",
+        "unrest",
+        "riot",
+    ] {
+        if t.contains(kw) {
+            return 40.0;
+        }
+    }
+    // Matched the search but no severity keywords — likely tangential.
+    15.0
+}
+
+/// Lightweight live unrest signal: severity-weighted count of RECENT
+/// (last 7 days) unrest articles in Google News RSS for the country.
+/// Returns 0-100 or None if unavailable. Historical articles excluded.
 async fn live_unrest_signal(client: &reqwest::Client, country: &str) -> Option<f64> {
     let q = format!("{country} protest OR riot OR unrest OR strike");
     let url = format!(
@@ -214,17 +274,20 @@ async fn live_unrest_signal(client: &reqwest::Client, country: &str) -> Option<f
         return None;
     }
     let text = resp.text().await.ok()?;
-    let mut recent = 0u32;
+    let mut severity_sum = 0.0;
     let mut total = 0u32;
     for chunk in text.split("<item>") {
-        if let Some(start) = chunk.find("<pubDate>") {
-            if let Some(end) = chunk[start..].find("</pubDate>") {
-                let date_str = &chunk[start + 9..start + end];
-                total += 1;
-                if let Some(d) = days_ago(date_str) {
-                    if d >= 0.0 && d <= 7.0 {
-                        recent += 1;
-                    }
+        let date_str = chunk
+            .find("<pubDate>")
+            .and_then(|s| chunk[s..].find("</pubDate>").map(|e| &chunk[s + 9..s + e]));
+        let title = chunk
+            .find("<title>")
+            .and_then(|s| chunk[s..].find("</title>").map(|e| &chunk[s + 7..s + e]));
+        if let (Some(ds), Some(ti)) = (date_str, title) {
+            total += 1;
+            if let Some(d) = days_ago(ds) {
+                if d >= 0.0 && d <= 7.0 {
+                    severity_sum += headline_severity(ti);
                 }
             }
         }
@@ -232,10 +295,9 @@ async fn live_unrest_signal(client: &reqwest::Client, country: &str) -> Option<f
     if total == 0 {
         return None;
     }
-    // Logarithmic scale: protest news volume varies wildly by country size.
-    // 0 recent → 0, 1 → ~15, 5 → ~39, 10 → ~52, 30 → ~74, 100 → 100.
-    // Takes truly massive coverage to peg at 100.
-    Some(100.0 * ((1.0 + recent as f64).ln() / 101.0_f64.ln()))
+    // Severity-weighted: 5 severe articles (~450) → ~90, 1 moderate (40) → ~19.
+    // Logarithmic so it takes sustained severe coverage to peg at 100.
+    Some(100.0 * ((1.0 + severity_sum / 100.0).ln() / 6.0_f64.ln()))
 }
 
 async fn instability(
@@ -430,5 +492,13 @@ mod tests {
         assert!(days_ago("not a date").is_none());
         assert!(days_ago("Sat, 31 Foo 2026 21:50:29 GMT").is_none());
         let _ = now;
+    }
+
+    #[test]
+    fn headline_severity_tiers() {
+        assert_eq!(headline_severity("Protesters killed in clashes"), 90.0);
+        assert_eq!(headline_severity("Police use tear gas on march"), 65.0);
+        assert_eq!(headline_severity("Thousands join peaceful march"), 40.0);
+        assert_eq!(headline_severity("City council meeting scheduled"), 15.0);
     }
 }
