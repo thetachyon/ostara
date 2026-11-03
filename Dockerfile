@@ -32,8 +32,10 @@ FROM debian:bookworm-slim
 
 # ca-certificates: the app validates TLS itself (rustls native roots) for
 # upstream HTTPS calls — the system store must exist.
+# libssl3: the binary links OpenSSL (via a dependency) — without it the
+# container exits immediately on start ("machine never started").
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
