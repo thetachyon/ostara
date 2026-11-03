@@ -135,10 +135,12 @@ fn level(score: f64) -> &'static str {
     }
 }
 
-/// Logistic function mapping a 0-100 fragility input to a 0-100 probability.
-/// Calibrated so that fragility=50 → ~34%, fragility=75 → ~73%, fragility=90 → ~88%.
+/// Logistic function mapping a 0-100 combined input to a 0-100 probability.
+/// Midpoint at 50: combined=50 → 50%, 65 → ~73%, 80 → ~88%.
+/// Active unrest (high live signal) pushes probability up even when
+/// structural fragility is low.
 fn fragility_to_probability(fragility: f64) -> f64 {
-    let x = (fragility - 60.0) / 15.0;
+    let x = (fragility - 50.0) / 15.0;
     100.0 / (1.0 + (-x).exp())
 }
 
@@ -462,14 +464,14 @@ mod tests {
 
     #[test]
     fn probability_calibration() {
-        // fragility=50 → ~34%, 75 → ~73%, 90 → ~88%
+        // combined=50 → 50%, 65 → ~73%, 80 → ~88%
         let p50 = fragility_to_probability(50.0);
-        let p75 = fragility_to_probability(75.0);
-        let p90 = fragility_to_probability(90.0);
-        assert!((p50 - 34.0).abs() < 5.0, "p50={p50}");
-        assert!((p75 - 73.0).abs() < 5.0, "p75={p75}");
-        assert!((p90 - 88.0).abs() < 5.0, "p90={p90}");
-        assert!(p50 < p75 && p75 < p90);
+        let p65 = fragility_to_probability(65.0);
+        let p80 = fragility_to_probability(80.0);
+        assert!((p50 - 50.0).abs() < 5.0, "p50={p50}");
+        assert!((p65 - 73.0).abs() < 5.0, "p65={p65}");
+        assert!((p80 - 88.0).abs() < 5.0, "p80={p80}");
+        assert!(p50 < p65 && p65 < p80);
     }
 
     #[test]
