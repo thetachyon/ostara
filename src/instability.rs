@@ -82,9 +82,21 @@ fn find_baseline(needle: &str) -> Option<BaselineCountry> {
         return Some(bc.clone());
     }
     let nl = n.to_lowercase();
-    map.values()
-        .find(|bc| bc.name.to_lowercase().contains(&nl))
-        .cloned()
+    if let Some(bc) = map.values().find(|bc| bc.name.to_lowercase().contains(&nl)) {
+        return Some(bc.clone());
+    }
+    // Fallback for territories / disputed areas / unlisted states:
+    // global-average structural estimate, explicitly very-low confidence.
+    // The live media signal still provides value.
+    Some(BaselineCountry {
+        name: n.to_string(),
+        iso: n.to_uppercase(),
+        food_stress: 18.0,
+        gov_trust_deficit: 60.0,
+        social_trust_deficit: 62.0,
+        economic_stress: 52.0,
+        confidence: "very low (global-average fallback; no country baseline)".to_string(),
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -190,12 +202,7 @@ async fn instability(
                 "query param country is required, e.g. ?country=France or ?country=FR",
             )
         })?;
-    let bc = find_baseline(needle).ok_or_else(|| {
-        ApiError::not_found(
-            "unknown country",
-            format!("no instability baseline for {needle:?}; see /api/instability/countries"),
-        )
-    })?;
+    let bc = find_baseline(needle).expect("find_baseline always returns a fallback");
 
     let key = format!("instability:{}", bc.iso);
     let fetch = || {
@@ -333,7 +340,9 @@ mod tests {
     fn find_baseline_by_iso_and_name() {
         assert!(find_baseline("FR").is_some());
         assert!(find_baseline("france").is_some());
-        assert!(find_baseline("XX").is_none());
+        // Unknown codes get the global-average fallback, not None.
+        let fb = find_baseline("XX").unwrap();
+        assert!(fb.confidence.contains("very low"));
     }
 
     #[test]

@@ -467,6 +467,1122 @@
    "social_trust_deficit": 70,
    "economic_stress": 45,
    "confidence": "high"
+  },
+  {
+   "name": "Norway",
+   "iso": "NO",
+   "food_stress": 5,
+   "gov_trust_deficit": 35,
+   "social_trust_deficit": 25,
+   "economic_stress": 25,
+   "confidence": "low"
+  },
+  {
+   "name": "Sweden",
+   "iso": "SE",
+   "food_stress": 5,
+   "gov_trust_deficit": 35,
+   "social_trust_deficit": 25,
+   "economic_stress": 25,
+   "confidence": "low"
+  },
+  {
+   "name": "Denmark",
+   "iso": "DK",
+   "food_stress": 5,
+   "gov_trust_deficit": 35,
+   "social_trust_deficit": 25,
+   "economic_stress": 25,
+   "confidence": "low"
+  },
+  {
+   "name": "Finland",
+   "iso": "FI",
+   "food_stress": 5,
+   "gov_trust_deficit": 35,
+   "social_trust_deficit": 25,
+   "economic_stress": 25,
+   "confidence": "low"
+  },
+  {
+   "name": "Iceland",
+   "iso": "IS",
+   "food_stress": 5,
+   "gov_trust_deficit": 35,
+   "social_trust_deficit": 25,
+   "economic_stress": 25,
+   "confidence": "low"
+  },
+  {
+   "name": "Netherlands",
+   "iso": "NL",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Belgium",
+   "iso": "BE",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Switzerland",
+   "iso": "CH",
+   "food_stress": 7,
+   "gov_trust_deficit": 40,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Austria",
+   "iso": "AT",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Ireland",
+   "iso": "IE",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Portugal",
+   "iso": "PT",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Greece",
+   "iso": "GR",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 48,
+   "confidence": "low"
+  },
+  {
+   "name": "Czechia",
+   "iso": "CZ",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Slovakia",
+   "iso": "SK",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Hungary",
+   "iso": "HU",
+   "food_stress": 9,
+   "gov_trust_deficit": 65,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Romania",
+   "iso": "RO",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Bulgaria",
+   "iso": "BG",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Croatia",
+   "iso": "HR",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Slovenia",
+   "iso": "SI",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Estonia",
+   "iso": "EE",
+   "food_stress": 9,
+   "gov_trust_deficit": 50,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Latvia",
+   "iso": "LV",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Lithuania",
+   "iso": "LT",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Serbia",
+   "iso": "RS",
+   "food_stress": 9,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Bosnia and Herzegovina",
+   "iso": "BA",
+   "food_stress": 9,
+   "gov_trust_deficit": 72,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Albania",
+   "iso": "AL",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "North Macedonia",
+   "iso": "MK",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Montenegro",
+   "iso": "ME",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Belarus",
+   "iso": "BY",
+   "food_stress": 9,
+   "gov_trust_deficit": 75,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Moldova",
+   "iso": "MD",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Georgia",
+   "iso": "GE",
+   "food_stress": 9,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Armenia",
+   "iso": "AM",
+   "food_stress": 9,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 62,
+   "economic_stress": 42,
+   "confidence": "low"
+  },
+  {
+   "name": "Azerbaijan",
+   "iso": "AZ",
+   "food_stress": 16,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Kazakhstan",
+   "iso": "KZ",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Uzbekistan",
+   "iso": "UZ",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Turkmenistan",
+   "iso": "TM",
+   "food_stress": 16,
+   "gov_trust_deficit": 80,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Kyrgyzstan",
+   "iso": "KG",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Tajikistan",
+   "iso": "TJ",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Peru",
+   "iso": "PE",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Ecuador",
+   "iso": "EC",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Bolivia",
+   "iso": "BO",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Paraguay",
+   "iso": "PY",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Uruguay",
+   "iso": "UY",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 65,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Cuba",
+   "iso": "CU",
+   "food_stress": 14,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 76,
+   "economic_stress": 85,
+   "confidence": "low"
+  },
+  {
+   "name": "Dominican Republic",
+   "iso": "DO",
+   "food_stress": 16,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Jamaica",
+   "iso": "JM",
+   "food_stress": 16,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Trinidad and Tobago",
+   "iso": "TT",
+   "food_stress": 16,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Panama",
+   "iso": "PA",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Costa Rica",
+   "iso": "CR",
+   "food_stress": 14,
+   "gov_trust_deficit": 58,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Guatemala",
+   "iso": "GT",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Honduras",
+   "iso": "HN",
+   "food_stress": 14,
+   "gov_trust_deficit": 66,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "El Salvador",
+   "iso": "SV",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Nicaragua",
+   "iso": "NI",
+   "food_stress": 14,
+   "gov_trust_deficit": 75,
+   "social_trust_deficit": 76,
+   "economic_stress": 52,
+   "confidence": "low"
+  },
+  {
+   "name": "Bahamas",
+   "iso": "BS",
+   "food_stress": 16,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Barbados",
+   "iso": "BB",
+   "food_stress": 16,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "UAE",
+   "iso": "AE",
+   "food_stress": 16,
+   "gov_trust_deficit": 40,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Qatar",
+   "iso": "QA",
+   "food_stress": 16,
+   "gov_trust_deficit": 42,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Kuwait",
+   "iso": "KW",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Oman",
+   "iso": "OM",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Bahrain",
+   "iso": "BH",
+   "food_stress": 16,
+   "gov_trust_deficit": 68,
+   "social_trust_deficit": 60,
+   "economic_stress": 55,
+   "confidence": "low"
+  },
+  {
+   "name": "Libya",
+   "iso": "LY",
+   "food_stress": 15,
+   "gov_trust_deficit": 80,
+   "social_trust_deficit": 61,
+   "economic_stress": 75,
+   "confidence": "low"
+  },
+  {
+   "name": "South Sudan",
+   "iso": "SS",
+   "food_stress": 38,
+   "gov_trust_deficit": 88,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Ghana",
+   "iso": "GH",
+   "food_stress": 28,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Senegal",
+   "iso": "SN",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "C\u00f4te d'Ivoire",
+   "iso": "CI",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Cameroon",
+   "iso": "CM",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Uganda",
+   "iso": "UG",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Tanzania",
+   "iso": "TZ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Rwanda",
+   "iso": "RW",
+   "food_stress": 28,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Burundi",
+   "iso": "BI",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Mozambique",
+   "iso": "MZ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Zimbabwe",
+   "iso": "ZW",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 85,
+   "confidence": "low"
+  },
+  {
+   "name": "Zambia",
+   "iso": "ZM",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Angola",
+   "iso": "AO",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Namibia",
+   "iso": "NA",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Botswana",
+   "iso": "BW",
+   "food_stress": 28,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Mali",
+   "iso": "ML",
+   "food_stress": 28,
+   "gov_trust_deficit": 78,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Burkina Faso",
+   "iso": "BF",
+   "food_stress": 28,
+   "gov_trust_deficit": 78,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Niger",
+   "iso": "NE",
+   "food_stress": 28,
+   "gov_trust_deficit": 78,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Chad",
+   "iso": "TD",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Somalia",
+   "iso": "SO",
+   "food_stress": 36,
+   "gov_trust_deficit": 85,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Eritrea",
+   "iso": "ER",
+   "food_stress": 28,
+   "gov_trust_deficit": 82,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Djibouti",
+   "iso": "DJ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Central African Republic",
+   "iso": "CF",
+   "food_stress": 28,
+   "gov_trust_deficit": 80,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Republic of Congo",
+   "iso": "CG",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Gabon",
+   "iso": "GA",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Equatorial Guinea",
+   "iso": "GQ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "S\u00e3o Tom\u00e9 and Pr\u00edncipe",
+   "iso": "ST",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Cabo Verde",
+   "iso": "CV",
+   "food_stress": 28,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Gambia",
+   "iso": "GM",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Guinea-Bissau",
+   "iso": "GW",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Guinea",
+   "iso": "GN",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Sierra Leone",
+   "iso": "SL",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Liberia",
+   "iso": "LR",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Togo",
+   "iso": "TG",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Benin",
+   "iso": "BJ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Mauritania",
+   "iso": "MR",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Mauritius",
+   "iso": "MU",
+   "food_stress": 28,
+   "gov_trust_deficit": 52,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Seychelles",
+   "iso": "SC",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Comoros",
+   "iso": "KM",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Madagascar",
+   "iso": "MG",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Malawi",
+   "iso": "MW",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Lesotho",
+   "iso": "LS",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Eswatini",
+   "iso": "SZ",
+   "food_stress": 28,
+   "gov_trust_deficit": 70,
+   "social_trust_deficit": 68,
+   "economic_stress": 68,
+   "confidence": "low"
+  },
+  {
+   "name": "Bhutan",
+   "iso": "BT",
+   "food_stress": 24,
+   "gov_trust_deficit": 50,
+   "social_trust_deficit": 64,
+   "economic_stress": 58,
+   "confidence": "low"
+  },
+  {
+   "name": "Maldives",
+   "iso": "MV",
+   "food_stress": 24,
+   "gov_trust_deficit": 62,
+   "social_trust_deficit": 64,
+   "economic_stress": 58,
+   "confidence": "low"
+  },
+  {
+   "name": "Mongolia",
+   "iso": "MN",
+   "food_stress": 9,
+   "gov_trust_deficit": 45,
+   "social_trust_deficit": 52,
+   "economic_stress": 34,
+   "confidence": "low"
+  },
+  {
+   "name": "North Korea",
+   "iso": "KP",
+   "food_stress": 28,
+   "gov_trust_deficit": 85,
+   "social_trust_deficit": 52,
+   "economic_stress": 80,
+   "confidence": "low"
+  },
+  {
+   "name": "Taiwan",
+   "iso": "TW",
+   "food_stress": 9,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 52,
+   "economic_stress": 34,
+   "confidence": "low"
+  },
+  {
+   "name": "Cambodia",
+   "iso": "KH",
+   "food_stress": 14,
+   "gov_trust_deficit": 56,
+   "social_trust_deficit": 60,
+   "economic_stress": 44,
+   "confidence": "low"
+  },
+  {
+   "name": "Laos",
+   "iso": "LA",
+   "food_stress": 14,
+   "gov_trust_deficit": 56,
+   "social_trust_deficit": 60,
+   "economic_stress": 44,
+   "confidence": "low"
+  },
+  {
+   "name": "Brunei",
+   "iso": "BN",
+   "food_stress": 14,
+   "gov_trust_deficit": 45,
+   "social_trust_deficit": 60,
+   "economic_stress": 44,
+   "confidence": "low"
+  },
+  {
+   "name": "Timor-Leste",
+   "iso": "TL",
+   "food_stress": 14,
+   "gov_trust_deficit": 56,
+   "social_trust_deficit": 60,
+   "economic_stress": 44,
+   "confidence": "low"
+  },
+  {
+   "name": "Papua New Guinea",
+   "iso": "PG",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Fiji",
+   "iso": "FJ",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Solomon Islands",
+   "iso": "SB",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Vanuatu",
+   "iso": "VU",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "New Caledonia",
+   "iso": "NC",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "French Polynesia",
+   "iso": "PF",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Samoa",
+   "iso": "WS",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Tonga",
+   "iso": "TO",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Kiribati",
+   "iso": "KI",
+   "food_stress": 14,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 55,
+   "economic_stress": 45,
+   "confidence": "low"
+  },
+  {
+   "name": "Luxembourg",
+   "iso": "LU",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Malta",
+   "iso": "MT",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
+  },
+  {
+   "name": "Cyprus",
+   "iso": "CY",
+   "food_stress": 7,
+   "gov_trust_deficit": 55,
+   "social_trust_deficit": 60,
+   "economic_stress": 32,
+   "confidence": "low"
   }
  ],
  "meta": {
