@@ -39,11 +39,12 @@ pub fn routes() -> Router<AppState> {
 }
 
 // Weights for the structural composite. Documented in the response.
-const W_FOOD: f64 = 0.25;
-const W_GOV: f64 = 0.25;
-const W_SOCIAL: f64 = 0.20;
+// Live signal gets 25% so current conditions can move the needle.
+const W_FOOD: f64 = 0.20;
+const W_GOV: f64 = 0.20;
+const W_SOCIAL: f64 = 0.15;
 const W_ECON: f64 = 0.20;
-const W_LIVE: f64 = 0.10;
+const W_LIVE: f64 = 0.25;
 
 #[derive(Debug, Clone, Deserialize)]
 struct BaselineCountry {
@@ -333,21 +334,22 @@ async fn instability(
 
             // Instability score: structural weighted with live.
             let instability = if let Some(l) = live {
-                // Renormalize: structural components sum to 0.9 weight, live 0.1.
-                (structural / 0.9 * (1.0 - W_LIVE)) + l * W_LIVE
+                // Structural components sum to 0.75 weight, live 0.25.
+                structural + l * W_LIVE
             } else {
-                // No live signal: structural only, renormalized.
-                structural / 0.9
+                // No live signal: structural only, renormalized to 0-100.
+                structural / 0.75
             };
 
-            // Unrest probability: structural fragility (60%) + live (40%).
+            // Unrest probability: structural fragility (50%) + live (50%).
+            // Live conditions now have equal voice with structural factors.
             let fragility = (bc2.food_stress * 0.3
                 + bc2.gov_trust_deficit * 0.25
                 + bc2.social_trust_deficit * 0.15
                 + bc2.economic_stress * 0.3)
                 .min(100.0);
             let live_component = live.unwrap_or(fragility * 0.5);
-            let combined = fragility * 0.6 + live_component * 0.4;
+            let combined = fragility * 0.5 + live_component * 0.5;
             let probability = fragility_to_probability(combined);
 
             let components = vec![
