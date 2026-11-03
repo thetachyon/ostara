@@ -708,6 +708,65 @@ window.OST = window.OST || {};
       },
     },
     {
+      id: "darkweb", label: "Dark web", health: null,
+      group: "global",
+      note: "onion search (Ahmia) + ransomware leak-site victim claims · operator claims, not verified breaches · no Tor, never touches stolen data",
+      inputs: [
+        { name: "mode", type: "select", options: ["overview", "victims", "onion search"], value: "overview" },
+        { name: "q", placeholder: "query (victim name or onion search)" },
+        { name: "country", placeholder: "ISO2 (victims mode)" },
+      ],
+      url: (p) => {
+        const mode = p.mode || "overview";
+        if (mode === "onion search") {
+          const q = (p.q || "").trim();
+          return q ? `/api/darkweb/search?q=${encodeURIComponent(q)}` : `/api/darkweb`;
+        }
+        if (mode === "victims") {
+          const q = (p.q || "").trim(), c = (p.country || "").trim();
+          if (q) return `/api/darkweb/ransomware/victims?q=${encodeURIComponent(q)}`;
+          if (c) return `/api/darkweb/ransomware/victims?country=${encodeURIComponent(c)}`;
+          return `/api/darkweb/ransomware/victims`;
+        }
+        return `/api/darkweb`;
+      },
+      render(j, el) {
+        const discl = `<details style="margin:8px 0"><summary class="m" style="cursor:pointer">disclaimer</summary><div class="m" style="margin-top:4px">${esc(j.disclaimer || "")}</div></details>`;
+        // Overview shape
+        if (j.sources && !j.claims && !j.results) {
+          const srcs = j.sources.map((s) =>
+            `<div class="feed-item"><div><span class="chip" style="color:${s.ok ? "#46a758" : "var(--bad)"};border:1px solid;border-radius:3px;padding:0 5px;font-size:10px">${s.ok ? "live" : "down"}</span> <b>${esc(s.name)}</b></div><div class="m">${esc(s.detail || "")}</div></div>`).join("");
+          el.innerHTML =
+            `<div class="m" style="margin-bottom:6px">ransomware groups tracked: <b>${j.ransomware_groups != null ? j.ransomware_groups : "—"}</b> · victim claims indexed: <b>${j.ransomware_victims_total != null ? j.ransomware_victims_total : "—"}</b></div>` +
+            `<div class="m" style="margin-bottom:6px">${esc(j.note || "")}</div>` + srcs + discl + genLine(j);
+          this.count = j.sources.length;
+          return;
+        }
+        // Victim claims shape
+        if (j.claims) {
+          const cards = j.claims.slice(0, ROW_CAP).map((c) =>
+            `<div class="feed-item"><div><b>${esc(c.victim || "(unnamed)")}</b></div>` +
+            `<div class="m">group: ${esc(c.group || "—")} · country: ${esc(c.country || "—")} · discovered: ${esc((c.discovered || "").slice(0, 10))}</div>` +
+            (c.description ? `<div>${esc(c.description)}</div>` : "") +
+            (c.claim_url ? `<div class="m">${mono(c.claim_url)}</div>` : "") + `</div>`
+          ).join("") || `<div class="m">no victim claims${j.source_ok ? "" : " — source unavailable: " + esc(j.source_detail || "")}</div>`;
+          el.innerHTML =
+            `<div class="m" style="margin-bottom:6px"><b>${esc(j.mode || "")}</b> · ${j.count} claim${j.count === 1 ? "" : "s"}</div>` +
+            cards + discl + genLine(j);
+          this.count = j.claims.length;
+          return;
+        }
+        // Onion search shape
+        const rows = (j.results || []).slice(0, ROW_CAP).map((r) =>
+          `<div class="feed-item"><div><b>${esc(r.title || "(untitled)")}</b></div><div class="m">${mono(r.url || "")}</div></div>`
+        ).join("") || `<div class="m">no onion results${j.source_ok ? "" : " — source unavailable: " + esc(j.source_detail || "")}</div>`;
+        el.innerHTML =
+          `<div class="m" style="margin-bottom:6px">onion search: <b>${esc(j.query || "")}</b> · ${j.count} result${j.count === 1 ? "" : "s"}</div>` +
+          rows + discl + genLine(j);
+        this.count = (j.results || []).length;
+      },
+    },
+    {
       id: "storms", label: "Storms", health: "storms", map: "storms",
       group: "global",
       note: "NOAA NHC active tropical cyclones — position, category, wind/pressure",
