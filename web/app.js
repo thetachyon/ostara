@@ -113,7 +113,13 @@ window.OST = window.OST || {};
     });
     map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    map.on("load", () => { ensureLayers(); refreshAll(); });
+    map.on("load", () => { ensureLayers(); refreshAll(); dismissIntro(); });
+    // Dismiss the intro overlay once the map is ready (or after 5s max).
+    function dismissIntro() {
+      const el = document.getElementById("intro");
+      if (el && !el.classList.contains("done")) el.classList.add("done");
+    }
+    setTimeout(dismissIntro, 5000);
     // re-add our layers after any style swap (theme change), then reload data
     map.on("styledata", () => {
       if (styleSwitching) { styleSwitching = false; ensureLayers(); refreshAll(); }
