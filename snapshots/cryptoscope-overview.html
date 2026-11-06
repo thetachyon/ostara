@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cryptoscope — Cross-Chain Crypto Analytics</title>
+<meta name="description" content="Cryptoscope: cross-chain crypto analytics. Market overview, chains, stablecoin pegs, bridge flows, top movers — and one search that routes to the right Scope.">
+<style>
+/* EthScope — Etherscan-like light theme */
+:root{
+  --blue:#0784c3; --blue-dark:#066a9d; --ink:#1e2a38; --muted:#6b7a8d;
+  --line:#e3e9f0; --bg:#f4f7fa; --card:#ffffff;
+  --green:#0d9d58; --red:#d23b3b; --amber:#b7791f;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.5}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1140px;margin:0 auto;padding:0 16px}
+.mono{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* header */
+.topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.topbar-inner{display:flex;align-items:center;gap:18px;height:60px}
+.brand{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:700;color:var(--ink)}
+.brand:hover{text-decoration:none}
+.brand-badge{width:32px;height:32px;border-radius:8px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}
+.brand-accent{color:var(--blue)}
+.search{flex:1;max-width:560px;position:relative;display:flex}
+.search input{flex:1;height:38px;border:1px solid #c8d3df;border-radius:8px 0 0 8px;padding:0 12px;font-size:13px;outline:none;background:#fbfcfe}
+.search input:focus{border-color:var(--blue);background:#fff}
+.search button{width:44px;border:1px solid var(--blue);border-left:0;background:var(--blue);color:#fff;border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.search button:hover{background:var(--blue-dark)}
+.suggest{position:absolute;top:42px;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;z-index:60}
+.suggest a{display:flex;align-items:center;gap:10px;padding:9px 12px;color:var(--ink);font-size:13px}
+.suggest a:hover{background:#f0f6fb;text-decoration:none}
+.suggest .stype{font-size:10px;font-weight:700;text-transform:uppercase;color:#fff;background:var(--blue);border-radius:4px;padding:2px 6px;flex-shrink:0}
+.suggest .stype.block{background:#5b6b7c}.suggest .stype.token{background:#7c4dc4}.suggest .stype.transaction{background:#0d9d58}
+.navlinks{margin-left:auto;display:flex;align-items:center;gap:14px}
+.navlinks a{font-weight:600;color:var(--ink)}
+.netpill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--green);background:#e6f6ec;border:1px solid #bfe6cd;border-radius:999px;padding:4px 10px}
+.netpill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* hero */
+.hero{background:linear-gradient(135deg,#0b3d5c,#0784c3);border-radius:12px;color:#fff;padding:34px 30px;margin:22px 0}
+.hero h1{margin:0 0 6px;font-size:26px}
+.hero p{margin:0 0 18px;opacity:.85}
+.hero .search{max-width:640px}
+.hero .search input{height:46px;font-size:14px}
+.hero .search button{width:56px}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:18px;overflow:hidden}
+.card-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.card-head .spacer{flex:1}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.stat .v{font-size:19px;font-weight:700}
+.stat .v small{font-size:12px;font-weight:400;color:var(--muted)}
+.stat .sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:860px){.cols2{grid-template-columns:1fr}.topbar-inner{flex-wrap:wrap;height:auto;padding:10px 16px}.search{order:3;flex-basis:100%;max-width:none}}
+
+/* tables */
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);background:#fbfcfe;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tr:hover td{background:#f8fbfe}
+.tbl .r{text-align:right}
+
+/* detail grid */
+.detail{display:grid;grid-template-columns:200px 1fr;border-bottom:1px solid var(--line);font-size:13px}
+.detail:last-child{border-bottom:0}
+.detail .dk{padding:11px 16px;color:var(--muted);font-weight:600;background:#fbfcfe}
+.detail .dv{padding:11px 16px;word-break:break-all}
+@media(max-width:640px){.detail{grid-template-columns:1fr}.detail .dk{padding-bottom:2px}}
+
+/* badges & buttons */
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px;text-transform:uppercase;letter-spacing:.3px}
+.badge.ok{background:#e6f6ec;color:var(--green)}
+.badge.fail{background:#fdecec;color:var(--red)}
+.badge.info{background:#e8f3fb;color:var(--blue-dark)}
+.badge.warn{background:#fdf3e0;color:var(--amber)}
+.badge.grey{background:#eef1f5;color:var(--muted)}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue-dark)}
+.copybtn{border:0;background:none;color:var(--muted);cursor:pointer;padding:2px 4px;vertical-align:middle}
+.copybtn:hover{color:var(--blue)}
+.loadmore{display:block;width:100%;padding:12px;border:0;background:#f4f8fc;color:var(--blue);font-weight:700;cursor:pointer;font-size:13px}
+.loadmore:hover{background:#e8f3fb}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 12px;background:#fbfcfe}
+.tab{border:0;background:none;padding:12px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab:hover{color:var(--ink)}
+
+/* misc */
+.pagehead{display:flex;align-items:center;gap:12px;margin:22px 0 14px;flex-wrap:wrap}
+.pagehead h2{margin:0;font-size:20px;word-break:break-all}
+pre.hex{background:#0f1c28;color:#c8e6f5;border-radius:8px;padding:14px;font-size:12px;overflow:auto;max-height:280px;white-space:pre-wrap;word-break:break-all;font-family:var(--mono)}
+.utf8box{background:#f4faf4;border:1px solid #cde8cd;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:10px}
+.utf8box .k{font-weight:700;color:var(--green);font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+.error-banner{background:#fdecec;border:1px solid #f3c2c2;color:#a02a2a;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.spinner{padding:40px;text-align:center;color:var(--muted)}
+.gasbar{height:8px;background:#eef1f5;border-radius:4px;overflow:hidden;margin-top:6px}
+.gasbar i{display:block;height:100%;background:var(--blue);border-radius:4px}
+.addr-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.footer{margin-top:34px;border-top:1px solid var(--line);background:#fff}
+.footer-inner{display:flex;justify-content:space-between;gap:10px;padding:18px 16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.logtopics{display:flex;flex-direction:column;gap:4px}
+
+/* ---- chain switcher / labels ---- */
+.chainselect{height:34px;border:1px solid #c8d3df;border-radius:8px;padding:0 8px;font-size:13px;font-weight:600;color:var(--ink);background:#fbfcfe;cursor:pointer}
+.chainselect:focus{border-color:var(--blue);outline:none}
+.netpill.warn{color:var(--amber);background:#fdf3e0;border-color:#ecd9a8}
+.label-pill{display:inline-block;font-size:10.5px;font-weight:700;color:#5b4a8a;background:#efe9f9;border:1px solid #d9c8f5;border-radius:999px;padding:1px 8px;vertical-align:middle;white-space:nowrap}
+
+/* ---- toolbars / export ---- */
+.toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:#fbfcfe;flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+.btn:disabled{opacity:.55;cursor:wait}
+
+/* ---- gas tracker ---- */
+.gascards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.gascard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.gascard .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.gascard .v{font-size:24px;font-weight:700}
+.gascard .v small{font-size:13px;font-weight:400;color:var(--muted)}
+.gascard .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.explainer{background:#f0f6fb;border:1px solid #cfe3f2;border-radius:10px;padding:14px 16px;font-size:13px;margin-bottom:18px}
+
+/* ---- charts ---- */
+.chart-wrap{padding:16px}
+.chart-svg{width:100%;height:auto;display:block}
+.chart-tick{font-size:11px;fill:var(--muted)}
+.daybtns{display:flex;gap:6px}
+.daybtns .btn{padding:5px 11px;font-size:12px}
+.daybtns .btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* ---- contract page ---- */
+.fncard{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:12px 16px}
+.fn-sig{font-size:13px;font-weight:700;margin-bottom:10px;word-break:break-all}
+.fncard form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;min-width:180px;flex:1}
+.field>span{font-weight:600}
+.field input[type=text],.field select,.field textarea{border:1px solid #c8d3df;border-radius:6px;padding:8px 10px;font-size:13px;font-family:var(--mono);background:#fbfcfe}
+.field input[type=text]:focus,.field textarea:focus{border-color:var(--blue);outline:none;background:#fff}
+.field textarea{font-family:var(--mono);width:100%;min-height:180px;resize:vertical}
+.fn-out{margin-top:10px;font-size:13px}
+.fn-out table{width:100%;border-collapse:collapse}
+.fn-out td,.fn-out th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;font-size:13px}
+.fn-out .mono{word-break:break-all}
+pre.source{background:#0f1c28;color:#c8e6f5;border-radius:8px;padding:14px;font-size:12px;overflow:auto;max-height:560px;white-space:pre-wrap;word-break:break-all;font-family:var(--mono);margin:12px 16px}
+.notice{background:#fdf3e0;border:1px solid #ecd9a8;border-radius:8px;padding:12px 14px;font-size:13px;margin:12px 16px}
+.notice.info{background:#e8f3fb;border-color:#cfe3f2}
+.walletbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);background:#fbfcfe;font-size:13px}
+
+/* ---- NFT ---- */
+.nftgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:16px}
+.nft-card{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.nft-card:hover{border-color:var(--blue);text-decoration:none}
+.nft-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#eef1f5}
+.nft-card .nft-id{padding:9px 10px;font-size:13px;font-weight:700;color:var(--ink)}
+.nft-card .nft-sub{padding:0 10px 9px;font-size:12px;color:var(--muted)}
+.nft-hero{display:grid;grid-template-columns:minmax(240px,360px) 1fr;gap:20px;padding:16px}
+@media(max-width:640px){.nft-hero{grid-template-columns:1fr}}
+.nft-hero img{width:100%;border-radius:10px;border:1px solid var(--line);background:#eef1f5}
+
+/* ---- api docs ---- */
+.docgroup{margin-bottom:8px}
+.docgroup h3{margin:18px 0 8px;font-size:15px}
+.docitem{border:1px solid var(--line);border-radius:8px;padding:11px 14px;margin-bottom:8px;background:#fff}
+.docitem .dpath{font-family:var(--mono);font-size:13px;font-weight:700;word-break:break-all}
+.docitem .ddesc{font-size:13px;color:var(--ink);margin-top:4px}
+.docitem .dmeta{font-size:12px;color:var(--muted);margin-top:6px}
+.docitem code{background:#f0f3f7;border-radius:4px;padding:1px 5px;font-size:12px}
+.method{display:inline-block;font-size:11px;font-weight:800;border-radius:5px;padding:2px 7px;margin-right:8px;vertical-align:middle}
+.method.get{background:#e6f6ec;color:var(--green)}
+.method.post{background:#fdf3e0;color:var(--amber)}
+
+/* ---- wallet dashboard ---- */
+.chain-badge{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue-dark);background:#e8f3fb;border:1px solid #cfe3f2;border-radius:999px;padding:1px 8px;vertical-align:middle;white-space:nowrap}
+.wallet-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;padding:16px}
+.wallet-hero .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.wallet-hero .v{font-size:24px;font-weight:700}
+.wallet-hero .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.wchain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;padding:16px}
+.wchain{border:1px solid var(--line);border-radius:10px;padding:14px}
+.wchain .k{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.wchain .v{font-size:19px;font-weight:700;margin-bottom:4px}
+.wchain .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.suggest-row{display:flex;align-items:stretch}
+.suggest-row>a:first-child{flex:1}
+.suggest-row .wallet-link{flex-shrink:0;font-weight:700;color:var(--blue);border-left:1px solid var(--line);padding:9px 12px}
+.suggest-row .wallet-link:hover{background:#f0f6fb;text-decoration:none}
+.nft-card .nft-id .chain-badge{margin-left:4px}
+
+/* ---- misc ---- */
+.sample-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px;background:#fdf3e0;color:var(--amber);border:1px solid #ecd9a8;text-transform:none;letter-spacing:0}
+.total-row{display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line);font-weight:700;background:#fbfcfe}
+
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230784c3'/%3E%3Ctext x='16' y='22' font-size='17' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EC%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#/">
+      <span class="brand-badge" id="brand-badge">C</span>
+      <span class="brand-name" id="brand-name">Crypto<span class="brand-accent">Scope</span></span>
+    </a>
+    <form id="search-form" class="search" autocomplete="off">
+      <input id="search-input" type="text" placeholder="Search address / tx / block / slot / stablecoin" aria-label="Search">
+      <button type="submit" title="Search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <div id="search-suggest" class="suggest hidden"></div>
+    </form>
+    <nav class="navlinks">
+      <a href="#/" data-nav>Home</a>
+      <a href="#/wallet" id="nav-wallet">Wallet</a>
+      <a href="#/api-docs">API</a>
+      <select id="scope-select" class="chainselect" aria-label="Other scopes" title="Other scopes"></select>
+      <span class="netpill" id="netpill" title="Cross-chain analytics — keyless, no API keys"><span class="dot"></span><span id="netpill-text">Cross-chain</span></span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="error-banner" class="error-banner hidden"></div>
+  <div id="view"></div>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span><span id="footer-brand">Cryptoscope</span> · <a href="#/wallet" id="footer-wallet">Wallet</a> · <a href="#/api-docs">API Docs</a></span>
+    <span class="muted">Data: CoinGecko · DeFiLlama · Wormholescan · Blockscout · public RPCs · No API keys</span>
+  </div>
+  <div class="wrap footer-inner" style="border-top:1px solid var(--line)">
+    <span id="footer-scopes" class="muted"></span>
+  </div>
+</footer>
+
+<script>
+// GENERATED by scripts/sync-common.py from overview/config.py — do not hand-edit.
+// Regenerate: python3 scripts/sync-common.py sync
+window.SCOPE_CONFIG = {
+  "scope": "overview",
+  "title": "Cryptoscope",
+  "brandLetter": "C",
+  "chain": null,
+  "apiPrefix": "/api/overview",
+  "walletOnly": false,
+  "walletUrl": "https://walletscope.vercel.app",
+  "netpill": "Cross-chain overview",
+  "siblings": [
+    {
+      "chain": "ethereum",
+      "name": "EthScope",
+      "url": "https://ethscope.vercel.app"
+    },
+    {
+      "chain": "sepolia",
+      "name": "SepoliaScope",
+      "url": "https://sepoliascope.vercel.app"
+    },
+    {
+      "chain": "optimism",
+      "name": "OptimismScope",
+      "url": "https://optimismscope.vercel.app"
+    },
+    {
+      "chain": "gnosis",
+      "name": "GnosisScope",
+      "url": "https://gnosisscope.vercel.app"
+    },
+    {
+      "chain": "solana",
+      "name": "SolScope",
+      "url": "https://solscope.vercel.app"
+    },
+    {
+      "chain": "bitcoin",
+      "name": "BitScope",
+      "url": "https://bitscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "WalletScope",
+      "url": "https://walletscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "USDT Scope",
+      "url": "https://usdtscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "USDC Scope",
+      "url": "https://usdcscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "DAI Scope",
+      "url": "https://daiscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "USDe Scope",
+      "url": "https://usdescope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "FDUSD Scope",
+      "url": "https://fdusdsscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "PYUSD Scope",
+      "url": "https://pyusdsscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "TUSD Scope",
+      "url": "https://tusdscope.vercel.app"
+    },
+    {
+      "chain": null,
+      "name": "USDD Scope",
+      "url": "https://usddscope.vercel.app"
+    }
+  ]
+};
+
+</script>
+<script>
+window.__BAKED__ = {"/overview": {"generated_at": 1793928591, "global": {"total_market_cap_usd": 2575539178969.463, "market_cap_change_24h_pct": -7.414736284703205, "btc_dominance_pct": 59.227224102581864, "eth_dominance_pct": 10.574133526495734, "active_cryptocurrencies": 22807, "markets": 1525, "total_stablecoin_supply_usd": 262629044488.57388, "sources": ["CoinGecko keyless API", "DeFiLlama stablecoins API"]}, "chains": {"rows": [{"id": "ethereum", "label": "Ethereum", "scope": "ethscope", "scope_url": "https://ethscope.vercel.app", "native": "ETH", "price_usd": 2238.03, "change_24h_pct": -7.65, "latest": "26352163", "latest_label": "block", "tps": null, "avg_block_time_s": 12.1, "fee": "0.39 gwei", "total_transactions": "3842612297", "error": null}, {"id": "optimism", "label": "Optimism", "scope": "optimismscope", "scope_url": "https://optimismscope.vercel.app", "native": "ETH", "price_usd": 2230.41, "change_24h_pct": -7.65, "latest": "159163953", "latest_label": "block", "tps": null, "avg_block_time_s": 2.0, "fee": "0.01 gwei", "total_transactions": "1448652577", "error": null}, {"id": "gnosis", "label": "Gnosis", "scope": "gnosisscope", "scope_url": "https://gnosisscope.vercel.app", "native": "xDAI", "price_usd": 1.0, "change_24h_pct": -0.02, "latest": "49130913", "latest_label": "block", "tps": null, "avg_block_time_s": 5.1, "fee": "0.28 gwei", "total_transactions": "434203040", "error": null}, {"id": "sepolia", "label": "Sepolia", "scope": "sepoliascope", "scope_url": "https://sepoliascope.vercel.app", "native": "ETH", "price_usd": null, "change_24h_pct": null, "latest": "12073027", "latest_label": "block", "tps": null, "avg_block_time_s": 12.0, "fee": "1.0 gwei", "total_transactions": "1165384745", "error": null}, {"id": "solana", "label": "Solana", "scope": "solscope", "scope_url": "https://solscope.vercel.app", "native": "SOL", "price_usd": 89.76, "change_24h_pct": -6.082357812683041, "latest": 465924587, "latest_label": "slot", "tps": 2119.1, "avg_block_time_s": null, "fee": null, "total_transactions": 565446943158, "error": null}, {"id": "bitcoin", "label": "Bitcoin", "scope": "bitscope", "scope_url": "https://bitscope.vercel.app", "native": "BTC", "price_usd": 76221.0, "change_24h_pct": -5.28, "latest": 974744, "latest_label": "block", "tps": null, "avg_block_time_s": null, "fee": "1 sat/vB", "total_transactions": null, "mempool_count": 51044, "error": null}]}, "stablecoins": {"rows": [{"scope": "usdtscope", "scope_url": "https://usdtscope.vercel.app", "symbol": "USDT", "name": "Tether USD", "issuer": "Tether", "price_usd": 0.99852, "deviation_bps": -14.8, "peg_health": "watch", "supply_usd": 177716289731.5766, "market_cap_usd": 177569630061.0, "supply_change_7d_pct": -1.53, "error": null}, {"scope": "usdcscope", "scope_url": "https://usdcscope.vercel.app", "symbol": "USDC", "name": "USD Coin", "issuer": "Circle", "price_usd": 0.9998631345, "deviation_bps": -1.37, "peg_health": "pegged", "supply_usd": 70725780103.9497, "market_cap_usd": 70462481819.0, "supply_change_7d_pct": -1.05, "error": null}, {"scope": "daiscope", "scope_url": "https://daiscope.vercel.app", "symbol": "DAI", "name": "Dai", "issuer": "MakerDAO / Sky", "price_usd": 1.0001627834193174, "deviation_bps": 1.63, "peg_health": "pegged", "supply_usd": 4680186991.316475, "market_cap_usd": 4492520753.0, "supply_change_7d_pct": -1.88, "error": null}, {"scope": "usdescope", "scope_url": "https://usdescope.vercel.app", "symbol": "USDe", "name": "Ethena USDe", "issuer": "Ethena Labs", "price_usd": 0.9988645694999999, "deviation_bps": -11.35, "peg_health": "watch", "supply_usd": 4563462954.063329, "market_cap_usd": 4516267942.0, "supply_change_7d_pct": 0.71, "error": null}, {"scope": "fdusdsscope", "scope_url": "https://fdusdsscope.vercel.app", "symbol": "FDUSD", "name": "First Digital USD", "issuer": "First Digital Labs", "price_usd": 0.9960685874999999, "deviation_bps": -39.31, "peg_health": "watch", "supply_usd": 289781506.35059, "market_cap_usd": 288709492.0, "supply_change_7d_pct": -3.54, "error": null}, {"scope": "pyusdsscope", "scope_url": "https://pyusdsscope.vercel.app", "symbol": "PYUSD", "name": "PayPal USD", "issuer": "PayPal (issued by Paxos)", "price_usd": 0.9994637084999998, "deviation_bps": -5.36, "peg_health": "watch", "supply_usd": 2662902108.593487, "market_cap_usd": 2697783752.0, "supply_change_7d_pct": -12.46, "error": null}, {"scope": "tusdscope", "scope_url": "https://tusdscope.vercel.app", "symbol": "TUSD", "name": "TrueUSD", "issuer": "TrueUSD (Techteryx)", "price_usd": 0.9983793160809058, "deviation_bps": -16.21, "peg_health": "watch", "supply_usd": 484484718.87, "market_cap_usd": 494046314.0, "supply_change_7d_pct": -0.0, "error": null}, {"scope": "usddscope", "scope_url": "https://usddscope.vercel.app", "symbol": "USDD", "name": "Decentralized USD", "issuer": "TRON DAO Reserve", "price_usd": 0.9974691245851237, "deviation_bps": -25.31, "peg_health": "watch", "supply_usd": 1506156373.8536983, "market_cap_usd": 1503514189.0, "supply_change_7d_pct": 2.76, "error": null}], "total_supply_usd": 262629044488.57388}, "bridges": {"provider": "Wormholescan (Wormhole)", "note": "Wormhole bridge only. DeFiLlama's bridges API is paywalled (probed 2026-11-06), so no all-bridge total is available keyless.", "volume_24h_usd": 52106836.14462426, "volume_7d_usd": 327638536.3784062, "volume_30d_usd": 1252711034.2926116, "volume_total_usd": 77611756774.33778, "messages_24h": 19406.0, "messages_7d": 109929.0, "tvl_usd": 1325439524.4103315, "hourly_tx_counts": [{"time": "2026-11-06T02:00:00Z", "count": 51}, {"time": "2026-11-06T00:00:00Z", "count": 831}, {"time": "2026-11-05T23:00:00Z", "count": 849}, {"time": "2026-11-05T22:00:00Z", "count": 952}, {"time": "2026-11-05T21:00:00Z", "count": 876}, {"time": "2026-11-05T20:00:00Z", "count": 780}, {"time": "2026-11-05T19:00:00Z", "count": 1009}, {"time": "2026-11-05T18:00:00Z", "count": 1075}, {"time": "2026-11-05T17:00:00Z", "count": 1137}, {"time": "2026-11-05T16:00:00Z", "count": 1201}, {"time": "2026-11-05T15:00:00Z", "count": 1502}, {"time": "2026-11-05T14:00:00Z", "count": 953}, {"time": "2026-11-05T13:00:00Z", "count": 820}, {"time": "2026-11-05T12:00:00Z", "count": 755}, {"time": "2026-11-05T11:00:00Z", "count": 755}, {"time": "2026-11-05T10:00:00Z", "count": 656}, {"time": "2026-11-05T09:00:00Z", "count": 766}, {"time": "2026-11-05T08:00:00Z", "count": 664}, {"time": "2026-11-05T07:00:00Z", "count": 650}, {"time": "2026-11-05T06:00:00Z", "count": 611}, {"time": "2026-11-05T05:00:00Z", "count": 548}, {"time": "2026-11-05T04:00:00Z", "count": 589}, {"time": "2026-11-05T03:00:00Z", "count": 429}, {"time": "2026-11-05T02:00:00Z", "count": 451}, {"time": "2026-11-05T01:00:00Z", "count": 496}], "sources": ["Wormholescan keyless API"]}, "movers": {"gainers": [{"id": "rain", "symbol": "RAIN", "name": "Rain", "price_usd": 0.00637427, "market_cap_usd": 4555602848.0, "change_24h_pct": 7.03319}, {"id": "zcash", "symbol": "ZEC", "name": "Zcash", "price_usd": 1306.62, "market_cap_usd": 22241125078.0, "change_24h_pct": 1.20415}, {"id": "falcon-finance", "symbol": "USDF", "name": "Falcon USD", "price_usd": 0.994258, "market_cap_usd": 1822525010.0, "change_24h_pct": 0.13861}, {"id": "ripple-usd", "symbol": "RLUSD", "name": "Ripple USD", "price_usd": 1.0, "market_cap_usd": 2648484335.0, "change_24h_pct": 0.02943}, {"id": "global-dollar", "symbol": "USDG", "name": "Global Dollar", "price_usd": 1.0, "market_cap_usd": 2783320880.0, "change_24h_pct": 0.01819}, {"id": "hashnote-usyc", "symbol": "USYC", "name": "Circle USYC", "price_usd": 1.14, "market_cap_usd": 2185180334.0, "change_24h_pct": 0.00968}, {"id": "usds", "symbol": "USDS", "name": "USDS", "price_usd": 1.0, "market_cap_usd": 9529165977.0, "change_24h_pct": 0.00409}, {"id": "dai", "symbol": "DAI", "name": "Dai", "price_usd": 1.0, "market_cap_usd": 4492142483.0, "change_24h_pct": 0.0035}, {"id": "paypal-usd", "symbol": "PYUSD", "name": "PayPal USD", "price_usd": 1.0, "market_cap_usd": 2697561056.0, "change_24h_pct": 0.00202}, {"id": "blackrock-usd-institutional-digital-liquidity-fund", "symbol": "BUIDL", "name": "BlackRock USD Institutional Digital Liquidity Fund", "price_usd": 1.0, "market_cap_usd": 1883515472.0, "change_24h_pct": 0.0}], "losers": [{"id": "ethena", "symbol": "ENA", "name": "Ethena", "price_usd": 0.162028, "market_cap_usd": 2183968873.0, "change_24h_pct": -10.5219}, {"id": "uniswap", "symbol": "UNI", "name": "Uniswap", "price_usd": 6.91, "market_cap_usd": 4212639711.0, "change_24h_pct": -9.46233}, {"id": "hyperliquid", "symbol": "HYPE", "name": "Hyperliquid", "price_usd": 77.18, "market_cap_usd": 18463974279.0, "change_24h_pct": -8.13162}, {"id": "ethereum", "symbol": "ETH", "name": "Ethereum", "price_usd": 2230.06, "market_cap_usd": 272409409495.0, "change_24h_pct": -7.60942}, {"id": "stellar", "symbol": "XLM", "name": "Stellar", "price_usd": 0.154242, "market_cap_usd": 5451843880.0, "change_24h_pct": -7.57562}, {"id": "sui", "symbol": "SUI", "name": "Sui", "price_usd": 0.856244, "market_cap_usd": 3540799981.0, "change_24h_pct": -7.51816}, {"id": "near", "symbol": "NEAR", "name": "NEAR Protocol", "price_usd": 3.71, "market_cap_usd": 4859454650.0, "change_24h_pct": -7.35414}, {"id": "litecoin", "symbol": "LTC", "name": "Litecoin", "price_usd": 52.11, "market_cap_usd": 4051194789.0, "change_24h_pct": -7.04896}, {"id": "bittensor", "symbol": "TAO", "name": "Bittensor", "price_usd": 218.85, "market_cap_usd": 2559086417.0, "change_24h_pct": -6.81939}, {"id": "ripple", "symbol": "XRP", "name": "XRP", "price_usd": 1.21, "market_cap_usd": 77037222899.0, "change_24h_pct": -6.66663}], "universe": "Top 50 coins by market cap (CoinGecko)"}}};
+(function(){
+  var origFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    try {
+      var u = new URL(url, location.href);
+      var key = u.pathname.replace(/^\/api\/(overview|ethscope)/, "");
+      if (key in window.__BAKED__) {
+        return Promise.resolve(new Response(JSON.stringify(window.__BAKED__[key]), {status: 200, headers: {"Content-Type": "application/json"}}));
+      }
+    } catch (e) {}
+    return origFetch(url, opts);
+  };
+})();
+"use strict";
+/* Cryptoscope overview frontend — cross-chain analytics landing page.
+   No build step, no CDN. Per-app behaviour comes from /config.js
+   (window.SCOPE_CONFIG). API: /api/overview/* — the aggregate endpoint
+   returns every section; each section degrades independently server-side.
+   Same light Etherscan-like theme/classes as the other Scope apps
+   (styles.css is shared): .hero, .card, .tbl, .badge, .statgrid, .cols2,
+   .gascards, .topbar, .wrap, .error-banner, .footer. */
+const CFG = window.SCOPE_CONFIG || {};
+const SCOPE = CFG.scope || "overview";
+const TITLE = CFG.title || "Cryptoscope";
+const API = CFG.apiPrefix || "/api/overview";
+const WALLET_URL = CFG.walletUrl || "https://walletscope.vercel.app";
+const SIBLINGS = Array.isArray(CFG.siblings) ? CFG.siblings : [];
+
+/* ---------------- helpers ---------------- */
+const $ = (s) => document.querySelector(s);
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+async function fetchJson(url, opts, timeoutMs) {
+  // 25s client-side guard so a stalled upstream can never hang the UI.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs || 25000);
+  try {
+    const r = await fetch(url, { ...(opts || {}), signal: ctrl.signal });
+    let j = null;
+    try { j = await r.json(); } catch (e) { throw new Error("Bad response from server"); }
+    if (!r.ok || (j && j.error)) throw new Error((j && j.error) || ("HTTP " + r.status));
+    return j;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Request timed out");
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+async function get(path) { return fetchJson(API + path); }
+function num(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  return Number.isFinite(x) ? x.toLocaleString("en-US") : String(n);
+}
+/* Big USD values: $2.58T, $177.71B, $289.80M, $1.23K. */
+function usdBig(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  const abs = Math.abs(x);
+  const sign = x < 0 ? "-" : "";
+  if (abs >= 1e12) return sign + "$" + (abs / 1e12).toFixed(2) + "T";
+  if (abs >= 1e9) return sign + "$" + (abs / 1e9).toFixed(2) + "B";
+  if (abs >= 1e6) return sign + "$" + (abs / 1e6).toFixed(2) + "M";
+  if (abs >= 1e3) return sign + "$" + (abs / 1e3).toFixed(2) + "K";
+  return "$" + x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function usd(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  return Number.isFinite(x) ? "$" + x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+}
+/* USD price that can be tiny (token prices): up to 6 decimals below $1. */
+function usdPrice(n) {
+  if (n == null || n === "") return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  if (x > 0 && x < 1) return "$" + x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return usd(x);
+}
+function pctChange(v, suffix) {
+  if (v == null || v === "") return "";
+  const x = Number(v);
+  if (!Number.isFinite(x)) return "";
+  const color = x >= 0 ? "var(--green)" : "var(--red)";
+  return ` <small style="color:${color}">(${x >= 0 ? "+" : ""}${x.toFixed(2)}%${suffix || ""})</small>`;
+}
+function bpsFmt(v) {
+  if (v == null || v === "") return "—";
+  const x = Number(v);
+  if (!Number.isFinite(x)) return "—";
+  const color = Math.abs(x) <= 5 ? "var(--green)" : Math.abs(x) <= 50 ? "var(--amber)" : "var(--red)";
+  return `<span style="color:${color};font-weight:700">${x >= 0 ? "+" : ""}${x.toFixed(1)} bps</span>`;
+}
+function healthBadge(h) {
+  if (h === "pegged") return '<span class="badge ok">Pegged</span>';
+  if (h === "watch") return '<span class="badge warn">Watch</span>';
+  if (h === "depegged") return '<span class="badge fail">Depegged</span>';
+  return `<span class="badge grey">${esc(h || "—")}</span>`;
+}
+function scopeLink(url, text) {
+  return `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(text)} ↗</a>`;
+}
+
+/* ---------------- banner / view ---------------- */
+function banner(msg) {
+  const b = $("#error-banner");
+  if (!b) return;
+  if (!msg) { b.classList.add("hidden"); b.textContent = ""; return; }
+  b.textContent = msg;
+  b.classList.remove("hidden");
+}
+function render(html) { $("#view").innerHTML = html; banner(null); }
+function spinner() { return '<div class="spinner">Loading…</div>'; }
+function emptyBox(msg) { return `<div class="empty">${esc(msg)}</div>`; }
+function errBox(msg) { return `<div class="error-banner" style="margin:16px">${esc(msg)}</div>`; }
+function sectionError(name, msg) {
+  return `<div class="card"><div class="card-head">${esc(name)}</div><div style="padding:16px"><div class="notice info" style="margin:0">${esc(msg || "Data unavailable.")}</div></div></div>`;
+}
+
+/* ---------------- polling ---------------- */
+let pollTimer = null;
+function clearPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+/* ---------------- section renderers ---------------- */
+function renderGlobal(g) {
+  const el = $("#market-stats");
+  if (!el) return;
+  if (!g || g.error) {
+    el.innerHTML = `<div class="card" style="grid-column:1/-1">${errBox("Market overview unavailable: " + (g && g.error ? g.error : "unknown error"))}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="stat"><div class="k">Total Market Cap</div><div class="v">${usdBig(g.total_market_cap_usd)}</div><div class="sub">Crypto total${pctChange(g.market_cap_change_24h_pct, " 24h")}</div></div>
+    <div class="stat"><div class="k">BTC Dominance</div><div class="v">${g.btc_dominance_pct != null ? Number(g.btc_dominance_pct).toFixed(1) + "%" : "—"}</div><div class="sub">ETH dominance ${g.eth_dominance_pct != null ? Number(g.eth_dominance_pct).toFixed(1) + "%" : "—"}</div></div>
+    <div class="stat"><div class="k">Total Stablecoin Supply</div><div class="v">${usdBig(g.total_stablecoin_supply_usd)}</div><div class="sub">Sum of the 8 stablecoin scopes</div></div>
+    <div class="stat"><div class="k">Active Cryptocurrencies</div><div class="v">${num(g.active_cryptocurrencies)}</div><div class="sub">${num(g.markets)} markets tracked</div></div>`;
+}
+function renderChains(c) {
+  const el = $("#chains-body");
+  if (!el) return;
+  if (!c || c.error || !Array.isArray(c.rows) || !c.rows.length) {
+    el.innerHTML = sectionError("Chains", (c && c.error) || "Chain data unavailable.");
+    return;
+  }
+  el.innerHTML = `<table class="tbl"><thead><tr><th>Chain</th><th class="r">Price</th><th class="r">24h</th><th class="r">Latest</th><th class="r">Block Time / TPS</th><th class="r">Fee</th><th></th></tr></thead><tbody>
+    ${c.rows.map((r) => {
+      const latest = r.latest != null
+        ? `<span class="mono">${num(r.latest)}</span> <span class="muted">${esc(r.latest_label || "block")}</span>` : "—";
+      const speed = r.tps != null
+        ? `${Number(r.tps).toLocaleString("en-US", { maximumFractionDigits: 1 })} TPS`
+        : r.avg_block_time_s != null ? `${num(r.avg_block_time_s)}s avg block` : "—";
+      const chg = r.change_24h_pct != null
+        ? `<span style="color:${Number(r.change_24h_pct) >= 0 ? "var(--green)" : "var(--red)"}">${Number(r.change_24h_pct) >= 0 ? "+" : ""}${Number(r.change_24h_pct).toFixed(2)}%</span>` : "—";
+      return `<tr>
+        <td><strong>${esc(r.label || r.id)}</strong> <span class="chain-badge">${esc(r.native || "")}</span>${r.error ? ` <span class="muted" title="${esc(r.error)}">(degraded)</span>` : ""}</td>
+        <td class="r">${usdPrice(r.price_usd)}</td>
+        <td class="r">${chg}</td>
+        <td class="r">${latest}</td>
+        <td class="r">${speed}</td>
+        <td class="r">${esc(r.fee || "—")}</td>
+        <td class="r">${r.scope_url ? scopeLink(r.scope_url + "/#/", "Open →") : "—"}</td>
+      </tr>`;
+    }).join("")}
+  </tbody></table>`;
+}
+function renderStablecoins(s) {
+  const el = $("#stablecoins-body");
+  if (!el) return;
+  if (!s || s.error || !Array.isArray(s.rows) || !s.rows.length) {
+    el.innerHTML = sectionError("Stablecoins", (s && s.error) || "Stablecoin data unavailable.");
+    return;
+  }
+  el.innerHTML = `<table class="tbl"><thead><tr><th>Stablecoin</th><th class="r">Price</th><th class="r">Deviation</th><th class="r">Health</th><th class="r">Supply</th><th></th></tr></thead><tbody>
+    ${s.rows.map((r) => `<tr>
+      <td><strong>${esc(r.symbol || "")}</strong> <span class="muted">${esc(r.name || "")}</span>${r.error ? ` <span class="muted" title="${esc(r.error)}">(degraded)</span>` : ""}</td>
+      <td class="r">${usdPrice(r.price_usd)}</td>
+      <td class="r">${bpsFmt(r.deviation_bps)}</td>
+      <td class="r">${healthBadge(r.peg_health)}</td>
+      <td class="r">${usdBig(r.supply_usd)}</td>
+      <td class="r">${r.scope_url ? scopeLink(r.scope_url + "/#/", "Open →") : "—"}</td>
+    </tr>`).join("")}
+  </tbody></table>
+  <div class="total-row"><span>Total stablecoin supply (8 scopes)</span><span>${usdBig(s.total_supply_usd)}</span></div>`;
+}
+function renderBridges(b) {
+  const el = $("#bridges-body");
+  if (!el) return;
+  if (!b || b.error) {
+    el.innerHTML = `<div style="padding:16px"><div class="notice" style="margin:0"><strong>Bridge flows unavailable.</strong> ${esc((b && b.error) || "")}</div></div>`;
+    return;
+  }
+  const hourly = (b.hourly_tx_counts || []).slice(-24);
+  const maxC = hourly.reduce((m, h) => Math.max(m, Number(h.count) || 0), 0) || 1;
+  el.innerHTML = `
+    <div class="gascards" style="margin:0;padding:16px 16px 0">
+      <div class="gascard"><div class="k">Volume · 24h</div><div class="v">${usdBig(b.volume_24h_usd)}</div><div class="sub">${num(b.messages_24h)} messages</div></div>
+      <div class="gascard"><div class="k">Volume · 7d</div><div class="v">${usdBig(b.volume_7d_usd)}</div><div class="sub">${num(b.messages_7d)} messages</div></div>
+      <div class="gascard"><div class="k">Volume · 30d</div><div class="v">${usdBig(b.volume_30d_usd)}</div><div class="sub">Total ${usdBig(b.volume_total_usd)}</div></div>
+      <div class="gascard"><div class="k">TVL</div><div class="v">${usdBig(b.tvl_usd)}</div><div class="sub">Wormhole total value locked</div></div>
+    </div>
+    <div style="padding:16px">
+      <div class="muted" style="font-size:12px;margin-bottom:8px">Transactions per hour (last 24h) — ${esc(b.provider || "Wormhole")}</div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:64px">
+        ${hourly.map((h) => `<div title="${esc(h.time || "")}: ${num(h.count)} txs" style="flex:1;height:${Math.max(4, Math.round((Number(h.count) || 0) / maxC * 100))}%;background:var(--blue);border-radius:2px 2px 0 0;opacity:.75"></div>`).join("")}
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">${esc(b.note || "")}</div>
+    </div>`;
+}
+function moverRows(list) {
+  if (!list || !list.length) return emptyBox("No movers in this set.");
+  return `<table class="tbl"><thead><tr><th>Coin</th><th class="r">Price</th><th class="r">24h</th><th class="r">Market Cap</th></tr></thead><tbody>
+    ${list.map((m) => `<tr>
+      <td><strong>${esc(m.symbol || "")}</strong> <span class="muted">${esc(m.name || "")}</span></td>
+      <td class="r">${usdPrice(m.price_usd)}</td>
+      <td class="r"><span style="color:${Number(m.change_24h_pct) >= 0 ? "var(--green)" : "var(--red)"};font-weight:700">${Number(m.change_24h_pct) >= 0 ? "+" : ""}${Number(m.change_24h_pct).toFixed(2)}%</span></td>
+      <td class="r">${usdBig(m.market_cap_usd)}</td>
+    </tr>`).join("")}
+  </tbody></table>`;
+}
+function renderMovers(m) {
+  const g = $("#movers-gainers");
+  const l = $("#movers-losers");
+  if (!m || m.error) {
+    const msg = sectionError("Top Movers", (m && m.error) || "Movers data unavailable.");
+    if (g) g.innerHTML = msg;
+    if (l) l.innerHTML = "";
+    return;
+  }
+  if (g) g.innerHTML = moverRows(m.gainers);
+  if (l) l.innerHTML = moverRows(m.losers);
+}
+
+/* ---------------- home ---------------- */
+async function refreshHome() {
+  let d = null;
+  try {
+    d = await get("/overview");
+  } catch (e) {
+    const el = $("#market-stats");
+    if (el && !el.children.length) el.innerHTML = `<div class="card" style="grid-column:1/-1">${errBox("Could not load the overview: " + e.message)}</div>`;
+    return;
+  }
+  renderGlobal(d.global);
+  renderChains(d.chains);
+  renderStablecoins(d.stablecoins);
+  renderBridges(d.bridges);
+  renderMovers(d.movers);
+}
+async function homePage() {
+  document.title = TITLE + " — Cross-Chain Crypto Analytics";
+  render(`
+    <div class="hero">
+      <h1>Cryptoscope</h1>
+      <p>Cross-chain crypto analytics — one search across every chain, every Scope.</p>
+      <form id="hero-search-form" class="search" autocomplete="off">
+        <input id="hero-search-input" type="text" placeholder="Search address / transaction / block / slot / stablecoin (e.g. vitalik.eth, USDC)" aria-label="Search">
+        <button type="submit" title="Search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+      </form>
+      <div id="search-results" style="margin-top:14px"></div>
+    </div>
+    <div class="statgrid" id="market-stats">${spinner()}</div>
+    <div class="card">
+      <div class="card-head">Chains <span class="spacer"></span><span class="muted" style="font-weight:400;font-size:12px">Live latest block / slot per chain</span></div>
+      <div id="chains-body">${spinner()}</div>
+    </div>
+    <div class="card">
+      <div class="card-head">Stablecoin Pegs <span class="spacer"></span><span class="muted" style="font-weight:400;font-size:12px">All 8 stablecoin scopes</span></div>
+      <div id="stablecoins-body">${spinner()}</div>
+    </div>
+    <div class="card">
+      <div class="card-head">Bridge Flows — Wormhole <span class="spacer"></span><span class="muted" style="font-weight:400;font-size:12px">via Wormholescan</span></div>
+      <div id="bridges-body">${spinner()}</div>
+    </div>
+    <div class="cols2">
+      <div class="card">
+        <div class="card-head">Top Gainers <span class="spacer"></span><span class="muted" style="font-weight:400;font-size:12px">24h · top 50 by market cap</span></div>
+        <div id="movers-gainers">${spinner()}</div>
+      </div>
+      <div class="card">
+        <div class="card-head">Top Losers <span class="spacer"></span><span class="muted" style="font-weight:400;font-size:12px">24h · top 50 by market cap</span></div>
+        <div id="movers-losers">${spinner()}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">All Scopes</div>
+      <div id="scopes-grid" style="padding:16px;display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>`);
+  wireSearch($("#hero-search-form"), $("#hero-search-input"));
+  const grid = $("#scopes-grid");
+  if (grid) {
+    grid.innerHTML = SIBLINGS.map((s) => `<a class="btn" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)} ↗</a>`).join("")
+      + ` <a class="btn primary" href="${WALLET_URL}/#/wallet" target="_blank" rel="noopener">Wallet Dashboard ↗</a>`;
+  }
+  await refreshHome();
+  pollTimer = setInterval(refreshHome, 60000);
+}
+
+/* ---------------- API docs ---------------- */
+async function apiDocsPage() {
+  document.title = "API Docs — " + TITLE;
+  render(`<div class="pagehead"><h2>API Documentation</h2></div><div class="card">${spinner()}</div>`);
+  try {
+    const d = await get("/docs");
+    const eps = (d && d.endpoints) || [];
+    const chains = (d && d.chains) || [];
+    render(`
+      <div class="pagehead"><h2>API Documentation</h2></div>
+      <div class="card"><div style="padding:14px 16px">Cryptoscope's overview API aggregates ${esc(chains.join(", "))}. All responses are JSON; errors are <span class="mono">{"error": "..."}</span> with a non-2xx status. No API keys required. Each section of <span class="mono">/overview</span> degrades independently — a failed upstream blanks its section, never the whole page.</div></div>
+      <div class="card">
+        ${eps.length ? `<table class="tbl"><thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Params</th></tr></thead><tbody>
+          ${eps.map((ep) => `<tr>
+            <td><span class="method get">${esc(ep.method || "GET")}</span></td>
+            <td class="mono" style="word-break:break-all">${esc(ep.path || "")}${ep.example ? `<br><span class="muted" style="font-size:12px">e.g. <span class="mono">${esc(ep.example)}</span></span>` : ""}</td>
+            <td>${esc(ep.description || "—")}</td>
+            <td>${Array.isArray(ep.params) && ep.params.length ? ep.params.map((p) => `<code>${esc(typeof p === "string" ? p : (p.name || JSON.stringify(p)))}</code>`).join(" ") : "—"}</td>
+          </tr>`).join("")}
+        </tbody></table>` : emptyBox("No endpoints listed by the server.")}
+      </div>`);
+  } catch (e) {
+    render(`<div class="pagehead"><h2>API Documentation</h2></div>
+      <div class="card">${errBox("Could not load API docs: " + e.message)}</div>`);
+  }
+}
+
+/* ---------------- search ---------------- */
+async function doSearch(q) {
+  q = String(q || "").trim();
+  if (!q) return;
+  const box = $("#search-results");
+  try {
+    const d = await get("/search?q=" + encodeURIComponent(q));
+    if (!d) { banner("No results for “" + q + "”"); return; }
+    if (d.type === "ambiguous" && Array.isArray(d.candidates)) {
+      if (box) {
+        box.innerHTML = `<div class="card" style="background:rgba(255,255,255,.95);color:var(--ink)"><div class="card-head">“${esc(q)}” could be more than one thing</div>
+          <div style="padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px">
+            ${d.candidates.map((c) => `<a class="btn" href="${esc(c.url)}">${esc(c.label)} →</a>`).join("")}
+          </div></div>`;
+      } else {
+        banner("“" + q + "” is ambiguous: " + d.candidates.map((c) => c.label).join(", "));
+      }
+      return;
+    }
+    if (d.url) { window.location.href = d.url; return; }
+    banner("No results for “" + q + "”");
+  } catch (e) {
+    banner(e.message);
+  }
+}
+function wireSearch(form, input) {
+  if (!form || !input) return;
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    doSearch(input.value);
+  });
+}
+
+/* ---------------- router ---------------- */
+const routes = [
+  [/^#\/$/, () => homePage()],
+  [/^#\/api-docs$/, () => apiDocsPage()],
+  [/^#\/wallet(?:\/([^/]+))?$/, (m) => {
+    // Wallet lives in the separate WalletScope app — redirect out.
+    window.location.href = WALLET_URL + "/#/wallet" + (m[1] ? "/" + m[1] : "");
+  }],
+];
+function route() {
+  banner(null);
+  clearPoll();
+  const h = location.hash || "#/";
+  for (const [re, fn] of routes) {
+    const m = h.match(re);
+    if (m) { fn(m); return; }
+  }
+  document.title = "Not found — " + TITLE;
+  render(`<div class="card" style="margin-top:22px"><div class="empty">Page not found: <span class="mono">${esc(h)}</span><br><a href="#/">Back to home</a></div></div>`);
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Per-app branding + navigation from /config.js.
+  document.title = TITLE + " — Cross-Chain Crypto Analytics";
+  const badge = document.getElementById("brand-badge");
+  if (badge) badge.textContent = CFG.brandLetter || "C";
+  const bname = document.getElementById("brand-name");
+  if (bname) bname.innerHTML = esc(TITLE.replace(/Scope$/, "")) + '<span class="brand-accent">Scope</span>';
+  const fbrand = document.getElementById("footer-brand");
+  if (fbrand) fbrand.textContent = TITLE;
+  const fav = document.querySelector('link[rel="icon"]');
+  if (fav && CFG.brandLetter) {
+    fav.href = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230784c3'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>" + CFG.brandLetter + "</text></svg>");
+  }
+  // Scope switcher: jump between sibling Scope apps.
+  const scopeSel = document.getElementById("scope-select");
+  if (scopeSel) {
+    scopeSel.innerHTML = `<option value="">${esc(TITLE)}</option>` + SIBLINGS.map((s) => `<option value="${esc(s.url)}">${esc(s.name)}</option>`).join("");
+    scopeSel.onchange = () => { if (scopeSel.value) window.location.href = scopeSel.value; };
+  }
+  // Wallet links point at WalletScope.
+  const nw = document.getElementById("nav-wallet");
+  if (nw && WALLET_URL) nw.href = WALLET_URL + "/#/wallet";
+  const fw = document.getElementById("footer-wallet");
+  if (fw && WALLET_URL) fw.href = WALLET_URL + "/#/wallet";
+  // Footer: every Scope app.
+  const fs = document.getElementById("footer-scopes");
+  if (fs) {
+    fs.innerHTML = "Scopes: " + SIBLINGS.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a>`).join(" · ");
+  }
+  // Net pill.
+  const np = document.getElementById("netpill-text");
+  if (np) np.textContent = CFG.netpill || "Cross-chain";
+  wireSearch($("#search-form"), $("#search-input"));
+  window.addEventListener("hashchange", route);
+  route();
+});
+
+</script>
+</body>
+</html>
